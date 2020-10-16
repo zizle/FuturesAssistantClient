@@ -1,0 +1,15 @@
+certifi==2020.6.20
+chardet==3.0.4
+idna==2.10
+numpy==1.19.1
+pandas==1.0.3
+PyMuPDF==1.17.6
+PyQt5==5.10.1
+python-dateutil==2.8.1
+pytz==2020.1
+pywin32==228
+requests==2.23.0
+sip==4.19.8
+six==1.15.0
+urllib3==1.25.10
+WMI==1.5.1
