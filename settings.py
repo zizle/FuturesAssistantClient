@@ -84,6 +84,10 @@ SYSTEM_MENUS = [
 
 # 首页左侧的菜单(2级)
 HOMEPAGE_MENUS = [
+    {"id": "l_2", "name": "品 种\n数 据", "logo": "", "children": [
+        {"id": "l_2_0", "name": "xxx"},
+        {"id": "l_2_1", "name": "xxx"},
+    ] * 32},
     {"id": "l_0", "name": "研 究\n报 告", "logo": "", "children": [
         {"id": "l_0_0", "name": "收盘日评"},
         {"id": "l_0_1", "name": "研究周报"},

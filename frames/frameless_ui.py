@@ -41,7 +41,7 @@ class TitleBarUI(QWidget):
         self.minimum_button.setFocusPolicy(Qt.NoFocus)
         main_layout.addWidget(self.minimum_button, alignment=Qt.AlignRight | Qt.AlignTop)
 
-        self.maximum_button = QPushButton('1', self)
+        self.maximum_button = QPushButton('2', self)
         self.maximum_button.setFont(font)
         self.maximum_button.clicked.connect(self.window_shown_maximum)
         self.maximum_button.setFocusPolicy(Qt.NoFocus)
@@ -79,8 +79,8 @@ class TitleBarUI(QWidget):
         self.setStyleSheet(
             "#titleBar{background-color:rgb(34,102,175);border-top-left-radius:5px;border-top-right-radius:5px;}"
             "#titleText{color:rgb(245,245,245)}"
-            "#minimumButton,#maximumButton{border:none;background-color:rgb(34,102,175);}"
-            "#closeButton{border:none;background-color:rgb(34,102,175);border-top-right-radius:5px;}"
+            "#minimumButton,#maximumButton{border:none;background-color:rgb(34,102,175);font-size:12px}"
+            "#closeButton{border:none;background-color:rgb(34,102,175);border-top-right-radius:5px;font-size:12px}"
             "#minimumButton:hover,#maximumButton:hover{background-color:rgb(33,165,229)}"
             "#closeButton:hover{background-color:rgb(200,49,61);border-top-right-radius:5px;}"
             "#minimumButton:pressed,#maximumButton:pressed{background-color:rgb(37,39,41)}"
@@ -182,8 +182,9 @@ class NavigationBar(QWidget):
             "#usernameButton:hover{border:none;color:rgb(255,255,255)}"
             "#logoutButton{border-image:url(media/icons/logout.png);}"
             "#logoutButton:hover{border-image:url(media/icons/logout_hover.png);}"
-            "#menuBar{background-color:rgb(34,102,175);color:rgb(255,255,255)}"
-            "#menuBar::item{background-color:rgb(34,102,175);border:1px solid rgb(34,142,155);padding:0 5px;margin:0 1px}"
+            "#menuBar{background-color:rgb(34,102,175);color:rgb(255,255,255);font-size:12px}"
+            "#menuBar::item{background-color:rgb(34,102,175);border:1px solid rgb(34,142,155);"
+            "padding:2px 5px;margin:0 1px;}"
             "#menuBar::item:selected{background-color:rgb(34,132,200);color:rgb(255,255,255)}"
             "#menuBar::item:pressed{background:rgb(34,142,175)}"
         )
@@ -264,9 +265,9 @@ class FrameLessWindowUI(QWidget):
 
         available_size = QDesktopWidget().availableGeometry()               # 用户的桌面信息,来改变自身窗体大小
         available_width, available_height = available_size.width(), available_size.height()
-        self.resize(available_width * 0.75, available_height * 0.8)
+        # self.resize(available_width * 0.75, available_height * 0.8)
         self.setMaximumSize(available_width, available_height)              # 最大为用户桌面大小
-        self.setMinimumSize(available_width * 0.5, available_height * 0.5)  # 最小为用户桌面大小的一半
+        self.setMinimumSize(available_width * 0.8, available_height * 0.8)  # 最小为用户桌面大小的一半
         self.setAttribute(Qt.WA_TranslucentBackground, True)                # 窗口透明
         self.center_widget.setAutoFillBackground(True)                      # 被窗口透明影响,自动填充
         self.center_widget.setObjectName("centerWidget")
@@ -274,6 +275,9 @@ class FrameLessWindowUI(QWidget):
             "#centerWidget{background-color:rgb(255,255,255);border:2px solid rgb(34,102,175);border-top:none;"
             "border-bottom-right-radius:5px;border-bottom-left-radius:5px}"
         )
+
+        # 初始最大化
+        self.showMaximized()
 
     def eventFilter(self, obj, event):
         """ 事件过滤器, 用于解决鼠标进入其它控件后还原为标准鼠标样式 """
