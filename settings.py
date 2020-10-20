@@ -13,8 +13,8 @@ SERVER_ADDR = "http://127.0.0.1:5000/"
 # 与后端对应的静态文件路径
 STATIC_PREFIX = SERVER_ADDR + 'ads/'
 
-# SERVER_API = "http://127.0.0.1:8000/api/"
-SERVER_API = "http://210.13.218.130:9004/api/"
+SERVER_API = "http://127.0.0.1:8000/api/"
+# SERVER_API = "http://210.13.218.130:9004/api/"
 
 STATIC_URL = SERVER_API[:-4] + 'static/'
 
@@ -42,6 +42,8 @@ IMAGE_SLIDER_RATE = 3000
 TITLE_BAR_HEIGHT = 27
 # 菜单栏高度
 NAVIGATION_BAR_HEIGHT = 20
+# 首页表格行高
+HOMEPAGE_TABLE_ROW_HEIGHT = 32  # 由于字体需要必须大于24
 
 # 支持多级(但模块权限仅遍历3级)
 SYSTEM_MENUS = [
