@@ -22,7 +22,7 @@ class LeftChildrenMenuWidget(QWidget):
         super(LeftChildrenMenuWidget, self).__init__(*args, **kwargs)
         layout = QGridLayout()
         layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        layout.setContentsMargins(QMargins(10, 10, 10, 10))
+        layout.setContentsMargins(QMargins(0, 0, 0, 0))
         layout.setSpacing(10)
         # 增加button按钮
         row, col = 0, 0
@@ -77,6 +77,7 @@ class AdImageThread(QThread):
 
 class PixMapLabel(QLabel):
     """ 显示图片的label """
+
     def __init__(self, ad_data, *args, **kwargs):
         super(PixMapLabel, self).__init__(*args)
         self.ad_data = ad_data
@@ -98,6 +99,7 @@ class PixMapLabel(QLabel):
 
 class ControlButton(QPushButton):
     """ 跳转轮播位置按钮 """
+
     def __init__(self, icon_path, hover_icon_path, *args):
         super(ControlButton, self).__init__(*args)
         self.icon_path = icon_path
@@ -228,26 +230,23 @@ class ModuleWidget(QWidget):
                 self.content_table.setItem(row, col, item)
 
 
-
-
 # 首页布局
 #  ——————————————————————————————
-# | 侧 |              |           |
-# | 边 |    菜单      |    广告    |
-# | 菜 |——————————————————————————
-# | 单 |                           |
-# |    |       模块方块展示         |
-# |    |                           |
-#  ————————————————————————————————
+# | 侧 |          |              |
+# | 边 |    菜单   |    广告      |
+# | 菜 |          | ————————————
+# | 单 |          |              |
+# |    |          |模块方块展示   |
+# |    |          |              |
+#  ——————————————————————————————
 
-
-class HomepageUI(QScrollArea):
+class HomepageUI(QWidget):
     """ 首页UI """
     CONTROL_LEFT_DISTANCE = 428
 
     def __init__(self, *args, **kwargs):
         super(HomepageUI, self).__init__(*args, **kwargs)
-        self.container = QWidget(self)  # 全局控件(scrollArea的幕布)
+        # self.container = QWidget(self)  # 全局控件(scrollArea的幕布)
         layout = QHBoxLayout()
         layout.setContentsMargins(QMargins(0, 0, 0, 0))
 
@@ -256,19 +255,29 @@ class HomepageUI(QScrollArea):
         # 固定宽度
         self.left_menu.setFixedWidth(42)
         layout.addWidget(self.left_menu)
+
+        content_layout = QHBoxLayout()
+        content_layout.setContentsMargins(QMargins(28, 28, 28, 28))
+
         # 左侧菜单对应的stackedWidget
+        menu_layout = QVBoxLayout()
+        menu_layout.setContentsMargins(QMargins(0, 0, 28, 0))
         self.left_stacked = QStackedWidget(self)
         # 固定宽度
-        self.left_stacked.setFixedSize(370, 300)   # 固定宽度,广告的高度
+        # self.left_stacked.setFixedSize(370, 300)  # 固定宽度,广告的高度
+        menu_layout.addWidget(self.left_stacked)
+        menu_layout.addStretch()
+
+        content_layout.addLayout(menu_layout)
 
         right_layout = QVBoxLayout()
-        menu_ad_layout = QHBoxLayout()  # 菜单与广告布局
-        menu_ad_layout.addWidget(self.left_stacked)
+        right_layout.setContentsMargins(QMargins(0, 0, 0, 0))
         # 图片轮播控件
         self.slide_stacked = SlidingStackedWidget(self)
         # 广告图片的高度
         self.slide_stacked.setFixedHeight(300)
-        self.slide_stacked.setMaximumWidth(745)
+        right_layout.addWidget(self.slide_stacked)
+
         # 在轮播控件上选择按钮
         self.control_widget = QWidget(self)
         self.control_widget.setFixedHeight(300)
@@ -277,65 +286,63 @@ class HomepageUI(QScrollArea):
         control_layout.setAlignment(Qt.AlignVCenter)
         self.control_widget.setLayout(control_layout)
 
-        menu_ad_layout.addWidget(self.slide_stacked)
-        menu_ad_layout.addStretch()
-
-        right_layout.addLayout(menu_ad_layout)
-
         # 其他模块
         modules_layout = QGridLayout()
-        modules_layout.setContentsMargins(QMargins(0, 0, 0, 0))
+        modules_layout.setContentsMargins(QMargins(0, 28, 0, 0))
+        modules_layout.setSpacing(13)
         modules_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
         # 短信通
         self.instant_message_widget = ModuleWidget(self)
-        self.instant_message_widget.setFixedSize(370, 300)
+        # self.instant_message_widget.setFixedSize(370, 300)
         self.instant_message_widget.setObjectName("moduleWidget")
         self.instant_message_widget.set_title("即时资讯")
-        modules_layout.addWidget(self.instant_message_widget, 0, 0)
+        modules_layout.addWidget(self.instant_message_widget, 0, 0, 1, 2)
 
         # 现货报价
         self.spot_price_widget = ModuleWidget(self)
-        self.spot_price_widget.setFixedSize(370, 300)
+        # self.spot_price_widget.setFixedSize(370, 300)
         self.spot_price_widget.setObjectName("moduleWidget")
         self.spot_price_widget.set_title("现货报价")
-        modules_layout.addWidget(self.spot_price_widget, 0, 1)
+        modules_layout.addWidget(self.spot_price_widget, 1, 0)
 
         # 日报
         self.daily_report_widget = ModuleWidget(self)
-        self.daily_report_widget.setFixedSize(370, 300)
+        # self.daily_report_widget.setFixedSize(370, 300)
         self.daily_report_widget.setObjectName("moduleWidget")
         self.daily_report_widget.set_title("收盘日评")
-        modules_layout.addWidget(self.daily_report_widget, 0, 2)
-        # 周报
-        self.weekly_report_widget = ModuleWidget(self)
-        self.weekly_report_widget.setFixedSize(370, 300)
-        self.weekly_report_widget.setObjectName("moduleWidget")
-        self.weekly_report_widget.set_title("研究周报")
-        modules_layout.addWidget(self.weekly_report_widget, 1, 0)
-
-        # 月季报告
-        self.monthly_report_widget = ModuleWidget(self)
-        self.monthly_report_widget.setFixedSize(370, 300)
-        self.monthly_report_widget.setObjectName("moduleWidget")
-        self.monthly_report_widget.set_title("月季报告")
-        modules_layout.addWidget(self.monthly_report_widget, 1, 1)
-
-        # 月季报告
-        self.annual_report_widget = ModuleWidget(self)
-        self.annual_report_widget.setFixedSize(370, 300)
-        self.annual_report_widget.setObjectName("moduleWidget")
-        self.annual_report_widget.set_title("年度报告")
-        modules_layout.addWidget(self.annual_report_widget, 1, 2)
+        modules_layout.addWidget(self.daily_report_widget, 1, 1)
+        # # 周报
+        # self.weekly_report_widget = ModuleWidget(self)
+        # # self.weekly_report_widget.setFixedSize(370, 300)
+        # self.weekly_report_widget.setObjectName("moduleWidget")
+        # self.weekly_report_widget.set_title("研究周报")
+        # modules_layout.addWidget(self.weekly_report_widget, 1, 0)
+        #
+        # # 月季报告
+        # self.monthly_report_widget = ModuleWidget(self)
+        # # self.monthly_report_widget.setFixedSize(370, 300)
+        # self.monthly_report_widget.setObjectName("moduleWidget")
+        # self.monthly_report_widget.set_title("月季报告")
+        # modules_layout.addWidget(self.monthly_report_widget, 1, 1)
+        #
+        # # 月季报告
+        # self.annual_report_widget = ModuleWidget(self)
+        # # self.annual_report_widget.setFixedSize(370, 300)
+        # self.annual_report_widget.setObjectName("moduleWidget")
+        # self.annual_report_widget.set_title("年度报告")
+        # modules_layout.addWidget(self.annual_report_widget, 1, 2)
 
         right_layout.addLayout(modules_layout)
 
-        layout.addLayout(right_layout)
-        self.container.setLayout(layout)
-        self.setWidget(self.container)
-        self.setWidgetResizable(True)
-        self.horizontalScrollBar().setStyleSheet(HORIZONTAL_SCROLL_STYLE)
-        self.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
+        content_layout.addLayout(right_layout)
+
+        layout.addLayout(content_layout)
+        self.setLayout(layout)
+        # self.setWidget(self.container)
+        # self.setWidgetResizable(True)
+        # self.horizontalScrollBar().setStyleSheet(HORIZONTAL_SCROLL_STYLE)
+        # self.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
         self.left_menu.setObjectName("LeftMenuList")
         self.setStyleSheet(
             "#LeftMenuList{border:none;color:rgb(254,254,254);font-size:14px;"
@@ -348,6 +355,7 @@ class HomepageUI(QScrollArea):
 
 class HomepageUI1(QWidget):
     """ 首页UI """
+
     def __init__(self, *args, **kwargs):
         super(HomepageUI1, self).__init__(*args, **kwargs)
         layout = QVBoxLayout()
@@ -360,4 +368,3 @@ class HomepageUI1(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.drawPixmap(self.rect(), QPixmap("media/home_bg.png"), QRect())
-

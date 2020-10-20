@@ -7,13 +7,14 @@
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QFrame, QSpinBox, QPushButton, QLabel, QAbstractItemView
 from PyQt5.QtCore import QMargins, Qt
+from PyQt5.QtGui import QFont
 
 
 class NetPositionUI(QWidget):
     def __init__(self, *args, **kwargs):
         super(NetPositionUI, self).__init__(*args, **kwargs)
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(QMargins(2, 1, 2, 1))
+        main_layout.setAlignment(Qt.AlignHCenter)
         main_layout.setSpacing(1)
 
         # 操作栏
@@ -32,6 +33,17 @@ class NetPositionUI(QWidget):
         self.tip_label = QLabel('左侧可选择间隔天数,确定查询数据. ', self)
         opt_layout.addWidget(self.tip_label)
 
+        opt_layout.addStretch()
+
+        opt_layout.addWidget(QLabel("字体大小:", self))
+        font_size_smaller = QPushButton("-", self)
+        font_size_smaller.setFixedWidth(20)
+        font_size_larger = QPushButton("+", self)
+        font_size_larger.setFixedWidth(20)
+        opt_layout.addWidget(font_size_smaller)
+        opt_layout.addWidget(font_size_larger)
+        font_size_smaller.clicked.connect(self.content_font_size_smaller)
+        font_size_larger.clicked.connect(self.content_font_size_larger)
         opt_layout.addStretch()
 
         main_layout.addLayout(opt_layout)
@@ -76,9 +88,25 @@ class NetPositionUI(QWidget):
             "QHeaderView::section,QTableCornerButton::section{height:25px;background-color:rgb(243,245,248);"
             "font-weight:bold;font-size:13px}"
         )
+        font = QFont()
+        font.setPointSize(10)
+        self.data_table.setFont(font)
         self.setStyleSheet(
             "#tipLabel{color:rgb(230,50,50);font-weight:bold;}"
             "#dataTable{selection-color:rgb(80,100,200);selection-background-color:rgb(220,220,220);"
             "alternate-background-color:rgb(245,250,248)}"
             "#dataTable::item{padding:2px}"
         )
+
+    def content_font_size_larger(self):
+        """ 字体变小 """
+        font = self.data_table.font()
+        font.setPointSize(font.pointSize() + 1)
+        self.data_table.setFont(font)
+
+    def content_font_size_smaller(self):
+        """ 字体变小 """
+        font = self.data_table.font()
+        font.setPointSize(font.pointSize() - 1)
+        self.data_table.setFont(font)
+

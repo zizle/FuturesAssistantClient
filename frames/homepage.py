@@ -4,7 +4,7 @@
 # @Author: zizle
 import webbrowser
 import json
-from PyQt5.QtWidgets import qApp, QListWidgetItem
+from PyQt5.QtWidgets import qApp, QListWidgetItem, QTableWidgetItem
 from PyQt5.QtGui import QIcon, QColor
 from PyQt5.QtCore import QUrl, QEventLoop, pyqtSignal, Qt
 from PyQt5.QtNetwork import QNetworkRequest
@@ -23,8 +23,8 @@ class Homepage(HomepageUI):
         super(Homepage, self).__init__(*args, **kwargs)
         self.event_loop = QEventLoop(self)
         # 滚动条的滚动移动相对于父窗口的控制button位置
-        self.horizontalScrollBar().valueChanged.connect(self.horizontal_scroll_value_changed)
-        self.verticalScrollBar().valueChanged.connect(self.vertical_scroll_value_changed)
+        # self.horizontalScrollBar().valueChanged.connect(self.horizontal_scroll_value_changed)
+        # self.verticalScrollBar().valueChanged.connect(self.vertical_scroll_value_changed)
 
         """ 左侧菜单及显示业务 """
         self.add_left_menus()
@@ -56,26 +56,26 @@ class Homepage(HomepageUI):
         # 每日收盘评论点击更多
         self.daily_report_widget.more_button.clicked.connect(self.view_more_daily_report)
 
-        # 获取周度报告
-        self.get_latest_weekly_report()
-        # 周度报告的内容表格点击事件
-        self.weekly_report_widget.content_table.cellClicked.connect(self.view_detail_weekly_report)
-        # 周度报告评论点击更多
-        self.weekly_report_widget.more_button.clicked.connect(self.view_more_weekly_report)
-
-        # 获取月季报告
-        self.get_latest_monthly_report()
-        # 月季报告的内容表格点击事件
-        self.monthly_report_widget.content_table.cellClicked.connect(self.view_detail_monthly_report)
-        # 周度报告评论点击更多
-        self.monthly_report_widget.more_button.clicked.connect(self.view_more_monthly_report)
-
-        # 获取年度报告
-        self.get_latest_annual_report()
-        # 月季报告的内容表格点击事件
-        self.annual_report_widget.content_table.cellClicked.connect(self.view_annual_monthly_report)
-        # 周度报告评论点击更多
-        self.annual_report_widget.more_button.clicked.connect(self.view_more_annual_report)
+        # # 获取周度报告
+        # self.get_latest_weekly_report()
+        # # 周度报告的内容表格点击事件
+        # self.weekly_report_widget.content_table.cellClicked.connect(self.view_detail_weekly_report)
+        # # 周度报告评论点击更多
+        # self.weekly_report_widget.more_button.clicked.connect(self.view_more_weekly_report)
+        #
+        # # 获取月季报告
+        # self.get_latest_monthly_report()
+        # # 月季报告的内容表格点击事件
+        # self.monthly_report_widget.content_table.cellClicked.connect(self.view_detail_monthly_report)
+        # # 周度报告评论点击更多
+        # self.monthly_report_widget.more_button.clicked.connect(self.view_more_monthly_report)
+        #
+        # # 获取年度报告
+        # self.get_latest_annual_report()
+        # # 月季报告的内容表格点击事件
+        # self.annual_report_widget.content_table.cellClicked.connect(self.view_annual_monthly_report)
+        # # 周度报告评论点击更多
+        # self.annual_report_widget.more_button.clicked.connect(self.view_more_annual_report)
 
     def add_left_menus(self):
         """ 添加左侧菜单列表 """
@@ -283,10 +283,11 @@ class Homepage(HomepageUI):
         """ 查看报告的详细内容 """
         if col == 0:
             item = self.daily_report_widget.content_table.item(row, col)
-            title = item.text()
-            file_url = STATIC_URL + item.data(Qt.UserRole).get("filepath", 'no-found.pdf')
-            p = PDFContentPopup(file=file_url, title=title)
-            p.exec_()
+            if item and isinstance(item, QTableWidgetItem):
+                title = item.text()
+                file_url = STATIC_URL + item.data(Qt.UserRole).get("filepath", 'no-found.pdf')
+                p = PDFContentPopup(file=file_url, title=title)
+                p.exec_()
 
     def view_more_daily_report(self):
         """ 查看更多的日常报告 """

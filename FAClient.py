@@ -6,11 +6,16 @@
 # ---------------------------
 import sys
 from PyQt5.QtWidgets import QApplication
+from PyQt5.QtGui import QFont
 import pandas
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from frames import WelcomePage, ClientMainApp
 
 app = QApplication(sys.argv)
+font = QFont()
+font.setPointSize(11)
+font.setStyleStrategy(QFont.PreferAntialias | QFont.NoSubpixelAntialias)
+app.setFont(font)
 splash = WelcomePage()
 splash.show()
 app.processEvents()  # non-blocking
