@@ -21,7 +21,8 @@ class ContentWidget(QWidget):
         self.auto_request_timer = QTimer(self)  # 定时请求数据
         self.auto_request_timer.timeout.connect(self._get_last_short_message)
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(QMargins(3, 0, 5, 0))
+        main_layout.setContentsMargins(QMargins(20, 16, 20, 10))
+        main_layout.setSpacing(18)
         main_layout.addStretch()
         self.setLayout(main_layout)
 

@@ -6,7 +6,7 @@ import webbrowser
 import json
 from PyQt5.QtWidgets import qApp, QListWidgetItem, QTableWidgetItem
 from PyQt5.QtGui import QIcon, QColor
-from PyQt5.QtCore import QUrl, QEventLoop, pyqtSignal, Qt
+from PyQt5.QtCore import QUrl, QEventLoop, pyqtSignal, Qt, QTimer
 from PyQt5.QtNetwork import QNetworkRequest
 from widgets.pdf_shower import PDFContentPopup
 from popup.advertisement import TextPopup
@@ -232,7 +232,7 @@ class Homepage(HomepageUI):
     def get_latest_spot_price(self):
         """ 获取最新现货报价 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-spotprice/?count=8"
+        url = SERVER_API + "latest-spotprice/?count=7"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_spot_price_reply)
 
@@ -259,7 +259,7 @@ class Homepage(HomepageUI):
     def get_latest_daily_report(self):
         """ 获取最新日报信息 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-report/?report_type=daily&count=8"
+        url = SERVER_API + "latest-report/?report_type=daily&count=6"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_daily_report_reply)
 

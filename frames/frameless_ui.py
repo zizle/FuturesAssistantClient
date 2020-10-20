@@ -41,7 +41,7 @@ class TitleBarUI(QWidget):
         self.minimum_button.setFocusPolicy(Qt.NoFocus)
         main_layout.addWidget(self.minimum_button, alignment=Qt.AlignRight | Qt.AlignTop)
 
-        self.maximum_button = QPushButton('2', self)
+        self.maximum_button = QPushButton('1', self)
         self.maximum_button.setFont(font)
         self.maximum_button.clicked.connect(self.window_shown_maximum)
         self.maximum_button.setFocusPolicy(Qt.NoFocus)
@@ -265,9 +265,9 @@ class FrameLessWindowUI(QWidget):
 
         available_size = QDesktopWidget().availableGeometry()               # 用户的桌面信息,来改变自身窗体大小
         available_width, available_height = available_size.width(), available_size.height()
-        # self.resize(available_width * 0.75, available_height * 0.8)
+        self.resize(available_width * 0.85, available_height * 0.88)
         self.setMaximumSize(available_width, available_height)              # 最大为用户桌面大小
-        self.setMinimumSize(available_width * 0.8, available_height * 0.8)  # 最小为用户桌面大小的一半
+        self.setMinimumSize(available_width * 0.5, available_height * 0.5)  # 最小为用户桌面大小的一半
         self.setAttribute(Qt.WA_TranslucentBackground, True)                # 窗口透明
         self.center_widget.setAutoFillBackground(True)                      # 被窗口透明影响,自动填充
         self.center_widget.setObjectName("centerWidget")
@@ -277,7 +277,7 @@ class FrameLessWindowUI(QWidget):
         )
 
         # 初始最大化
-        self.showMaximized()
+        # self.showMaximized()
 
     def eventFilter(self, obj, event):
         """ 事件过滤器, 用于解决鼠标进入其它控件后还原为标准鼠标样式 """

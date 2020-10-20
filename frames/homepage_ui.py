@@ -2,16 +2,16 @@
 # @File  : homepage_ui.py
 # @Time  : 2020-07-19 15:12
 # @Author: zizle
-import os
+import math
 from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QPushButton, QListWidget,
                              QStackedWidget, QGridLayout, QTableWidget, QFrame, QHeaderView, QTableWidgetItem,
-                             QAbstractItemView)
-from PyQt5.QtCore import Qt, QRect, QEasingCurve, QMargins, QSize, QUrl, QThread, pyqtSignal
+                             QAbstractItemView, QScrollBar)
+from PyQt5.QtCore import Qt, QRect, QTimer, QMargins, QSize, QUrl, QThread, pyqtSignal
 from PyQt5.QtGui import QPainter, QPixmap, QIcon, QImage, QFont, QBrush, QColor
 from PyQt5.QtNetwork import QNetworkRequest
 from widgets.sliding_stacked import SlidingStackedWidget
 from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE
-from settings import STATIC_URL
+from settings import STATIC_URL, HOMEPAGE_TABLE_ROW_HEIGHT
 
 
 class LeftChildrenMenuWidget(QWidget):
@@ -20,26 +20,41 @@ class LeftChildrenMenuWidget(QWidget):
 
     def __init__(self, menus, *args, **kwargs):
         super(LeftChildrenMenuWidget, self).__init__(*args, **kwargs)
-        layout = QGridLayout()
-        layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        layout.setContentsMargins(QMargins(0, 0, 0, 0))
-        layout.setSpacing(10)
-        # 增加button按钮
-        row, col = 0, 0
-        for menu_item in menus:
-            button = QPushButton(menu_item["name"], self)
-            setattr(button, "menu_id", menu_item["id"])
-            button.setObjectName("pushButton")
-            button.setFixedSize(110, 22)
-            button.clicked.connect(self.menu_selected)
-            layout.addWidget(button, row, col)
-            col += 1
-            if col >= 3:
-                col = 0
-                row += 1
-        self.setLayout(layout)
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(QMargins(0, 0, 0, 0))
+        for menu_item in [
+                             {"id": "1", "name": "主菜单1", "children": [
+                                                                         {"id": "1_1", "name": "菜单1"}
+                                                                     ] * 5},
+
+                         ] * 3:
+            menu_label = QLabel(menu_item["name"], self)
+            main_layout.addWidget(menu_label)
+            layout = QGridLayout()
+            layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+            layout.setContentsMargins(QMargins(0, 0, 0, 0))
+            layout.setSpacing(15)
+            # 增加button按钮
+            row, col = 0, 0
+            for children_item in menu_item["children"]:
+                button = QPushButton(children_item["name"], self)
+                setattr(button, "menu_id", children_item["id"])
+                button.setObjectName("pushButton")
+                button.setFixedSize(110, 22)
+                button.clicked.connect(self.menu_selected)
+                layout.addWidget(button, row, col)
+                col += 1
+                if col >= 3:
+                    col = 0
+                    row += 1
+            main_layout.addLayout(layout)
+
+        self.setLayout(main_layout)
+        main_layout.addStretch()
+        self.setObjectName("menuWidget")
 
         self.setStyleSheet(
+            "#menuWidget{background-color:rgb(100,225,225)}"
             "#pushButton{border:none;background-color:rgb(225,225,225)}"
             "#pushButton:hover{border:none;background-color:rgb(205,205,205)}"
         )
@@ -126,9 +141,9 @@ class ControlButton(QPushButton):
 class ModuleWidgetTable(QTableWidget):
     def __init__(self, *args, **kwargs):
         super(ModuleWidgetTable, self).__init__(*args)
-        self.setFrameShape(QFrame.NoFrame)
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
+        self.setFrameShape(QFrame.NoFrame)
         self.setFocusPolicy(Qt.NoFocus)
         self.setEditTriggers(QHeaderView.NoEditTriggers)
         self.setSelectionMode(QAbstractItemView.NoSelection)
@@ -136,8 +151,65 @@ class ModuleWidgetTable(QTableWidget):
         self.setWordWrap(False)
         self.setObjectName("contentTable")
         self.setStyleSheet(
-            "#contentTable::item:hover{color:rgb(248,121,27)}"
+            "#contentTable::item:hover{color:rgb(248,121,27);}"
         )
+
+        # 保存显示的内容信息和参数
+        self.content_values = []
+        self.content_keys = []
+        self.data_keys = []
+        self.resize_cols = []
+        self.column_text_color = {}
+        self.zero_text_color = []
+        self.center_alignment_columns = []
+
+    def set_contents(
+            self, content_values, content_keys, data_keys, resize_cols, column_text_color: dict,
+            zero_text_color: list, center_alignment_columns: list
+    ):
+        self.content_values = content_values
+        self.content_keys = content_keys
+        self.data_keys = data_keys
+        self.resize_cols = resize_cols
+        self.column_text_color = column_text_color
+        self.zero_text_color = zero_text_color
+        self.center_alignment_columns = center_alignment_columns
+
+    def show_contents(self, row_count):
+        self.clearContents()
+        self.setRowCount(row_count)
+        self.setColumnCount(len(self.content_keys))
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        for col in self.resize_cols:
+            self.horizontalHeader().setSectionResizeMode(col, QHeaderView.ResizeToContents)
+        for row, row_item in enumerate(self.content_values):
+            self.setRowHeight(row, HOMEPAGE_TABLE_ROW_HEIGHT)
+            for col, col_key in enumerate(self.content_keys):
+                item = QTableWidgetItem(str(row_item[col_key]))
+                if col == 0:
+                    item.setData(Qt.UserRole, {key: row_item[key] for key in self.data_keys})
+                if col in self.column_text_color.keys():
+                    item.setForeground(QBrush(self.column_text_color.get(col)))
+                if col in self.zero_text_color:
+                    if int(row_item[col_key]) > 0:  # 将内容转数字与0比较大小设置颜色
+                        color = QColor(203, 0, 0)
+                    elif int(row_item[col_key]) < 0:
+                        color = QColor(0, 124, 0)
+                    else:
+                        color = QColor(0, 0, 0)
+                    item.setForeground(QBrush(color))
+                if col in self.center_alignment_columns:
+                    item.setTextAlignment(Qt.AlignCenter)
+                else:
+                    item.setTextAlignment(Qt.AlignVCenter)
+                self.setItem(row, col, item)
+
+    def resizeEvent(self, e):
+        super(ModuleWidgetTable, self).resizeEvent(e)
+        # 计算能显示的行数
+        max_row_count = math.ceil(self.height() / HOMEPAGE_TABLE_ROW_HEIGHT)
+        self.show_contents(max_row_count)
 
 
 """ 各模块控件 """
@@ -200,34 +272,10 @@ class ModuleWidget(QWidget):
         :params: column_text_color 设置改变文字颜色的列
         :params: zero_text_color 根据比0大小设置颜色的列
         """
-        self.content_table.clearContents()
-        self.content_table.setRowCount(8)
-        self.content_table.setColumnCount(len(content_keys))
-        self.content_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.content_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        for col in resize_cols:
-            self.content_table.horizontalHeader().setSectionResizeMode(col, QHeaderView.ResizeToContents)
-        for row, row_item in enumerate(content_values):
-            for col, col_key in enumerate(content_keys):
-                item = QTableWidgetItem(str(row_item[col_key]))
-                if col == 0:
-                    item.setData(Qt.UserRole, {key: row_item[key] for key in data_keys})
-                if col in column_text_color.keys():
-                    item.setForeground(QBrush(column_text_color.get(col)))
-                if col in zero_text_color:
-                    # 将内容转数字与0比较大小
-                    if int(row_item[col_key]) > 0:
-                        color = QColor(203, 0, 0)
-                    elif int(row_item[col_key]) < 0:
-                        color = QColor(0, 124, 0)
-                    else:
-                        color = QColor(0, 0, 0)
-                    item.setForeground(QBrush(color))
-                if col in center_alignment_columns:
-                    item.setTextAlignment(Qt.AlignCenter)
-                else:
-                    item.setTextAlignment(Qt.AlignVCenter)
-                self.content_table.setItem(row, col, item)
+        self.content_table.set_contents(
+            content_values, content_keys, data_keys, resize_cols, column_text_color, zero_text_color,
+            center_alignment_columns
+        )
 
 
 # 首页布局
@@ -242,13 +290,14 @@ class ModuleWidget(QWidget):
 
 class HomepageUI(QWidget):
     """ 首页UI """
-    CONTROL_LEFT_DISTANCE = 428
+    LEFT_STACKED_WIDTH = 360  # 110 * 3 + 15 + 15
 
     def __init__(self, *args, **kwargs):
         super(HomepageUI, self).__init__(*args, **kwargs)
         # self.container = QWidget(self)  # 全局控件(scrollArea的幕布)
         layout = QHBoxLayout()
         layout.setContentsMargins(QMargins(0, 0, 0, 0))
+        layout.setSpacing(0)
 
         # 左侧的菜单列表控件
         self.left_menu = QListWidget(self)
@@ -257,21 +306,21 @@ class HomepageUI(QWidget):
         layout.addWidget(self.left_menu)
 
         content_layout = QHBoxLayout()
-        content_layout.setContentsMargins(QMargins(28, 28, 28, 28))
+        content_layout.setContentsMargins(QMargins(0, 0, 0, 0))
 
         # 左侧菜单对应的stackedWidget
         menu_layout = QVBoxLayout()
-        menu_layout.setContentsMargins(QMargins(0, 0, 28, 0))
+        menu_layout.setContentsMargins(QMargins(28, 20, 28, 28))  # 上方稍微小些
         self.left_stacked = QStackedWidget(self)
         # 固定宽度
-        # self.left_stacked.setFixedSize(370, 300)  # 固定宽度,广告的高度
+        self.left_stacked.setFixedWidth(self.LEFT_STACKED_WIDTH)  # 固定宽度,广告的高度
         menu_layout.addWidget(self.left_stacked)
         menu_layout.addStretch()
 
         content_layout.addLayout(menu_layout)
 
         right_layout = QVBoxLayout()
-        right_layout.setContentsMargins(QMargins(0, 0, 0, 0))
+        right_layout.setContentsMargins(QMargins(0, 28, 28, 28))  # 左侧在menu_layout处理
         # 图片轮播控件
         self.slide_stacked = SlidingStackedWidget(self)
         # 广告图片的高度
@@ -281,15 +330,15 @@ class HomepageUI(QWidget):
         # 在轮播控件上选择按钮
         self.control_widget = QWidget(self)
         self.control_widget.setFixedHeight(300)
-        self.control_widget.move(self.CONTROL_LEFT_DISTANCE, 0)
+        self.control_widget.move(self.LEFT_STACKED_WIDTH + 66, 0)  # 66 = 28(左侧间距) + 15(菜单内距) + 15 + 8(距离控件左侧)
         control_layout = QVBoxLayout()
         control_layout.setAlignment(Qt.AlignVCenter)
         self.control_widget.setLayout(control_layout)
 
         # 其他模块
         modules_layout = QGridLayout()
-        modules_layout.setContentsMargins(QMargins(0, 28, 0, 0))
-        modules_layout.setSpacing(13)
+        modules_layout.setContentsMargins(QMargins(0, 20, 0, 0))
+        modules_layout.setSpacing(15)
         modules_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
         # 短信通
@@ -312,6 +361,7 @@ class HomepageUI(QWidget):
         self.daily_report_widget.setObjectName("moduleWidget")
         self.daily_report_widget.set_title("收盘日评")
         modules_layout.addWidget(self.daily_report_widget, 1, 1)
+
         # # 周报
         # self.weekly_report_widget = ModuleWidget(self)
         # # self.weekly_report_widget.setFixedSize(370, 300)
