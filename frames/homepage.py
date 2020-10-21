@@ -17,6 +17,12 @@ from settings import SERVER_API, STATIC_URL, HOMEPAGE_MENUS
 
 class Homepage(HomepageUI):
     """ 首页业务 """
+    EXCHANGE_LIB = {
+        "cffex": "中国金融期货交易所",
+        "shfe": "上海期货交易所",
+        "czce": "郑州商品交易所",
+        "dce": "大连商品交易所",
+    }
     SkipPage = pyqtSignal(str, str)
 
     def __init__(self, *args, **kwargs):
@@ -27,7 +33,7 @@ class Homepage(HomepageUI):
         # self.verticalScrollBar().valueChanged.connect(self.vertical_scroll_value_changed)
 
         """ 左侧菜单及显示业务 """
-        self.add_left_menus()
+        self.get_exchange_lib_variety()
         self.left_menu.currentRowChanged.connect(self.left_menu_selected)
 
         """ 右侧广告及其他相关业务 """
@@ -56,12 +62,12 @@ class Homepage(HomepageUI):
         # 每日收盘评论点击更多
         self.daily_report_widget.more_button.clicked.connect(self.view_more_daily_report)
 
-        # # 获取周度报告
-        # self.get_latest_weekly_report()
-        # # 周度报告的内容表格点击事件
-        # self.weekly_report_widget.content_table.cellClicked.connect(self.view_detail_weekly_report)
-        # # 周度报告评论点击更多
-        # self.weekly_report_widget.more_button.clicked.connect(self.view_more_weekly_report)
+        # 获取周度报告
+        self.get_latest_weekly_report()
+        # 周度报告的内容表格点击事件
+        self.weekly_report_widget.content_table.cellClicked.connect(self.view_detail_weekly_report)
+        # 周度报告评论点击更多
+        self.weekly_report_widget.more_button.clicked.connect(self.view_more_weekly_report)
         #
         # # 获取月季报告
         # self.get_latest_monthly_report()
@@ -77,10 +83,31 @@ class Homepage(HomepageUI):
         # # 周度报告评论点击更多
         # self.annual_report_widget.more_button.clicked.connect(self.view_more_annual_report)
 
+    def get_exchange_lib_variety(self):
+        """ 获取以交易所分组的品种 """
+        url = SERVER_API + "exchange/variety-all/"
+        network_manager = getattr(qApp, "_network")
+        reply = network_manager.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.add_left_menus)
+
     def add_left_menus(self):
         """ 添加左侧菜单列表 """
+        reply = self.sender()
+        varieties = {"id": "l_0", "name": "品 种\n数 据", "logo": "", "children": []}
+        if reply.error():
+            pass
+        else:
+            data = json.loads(reply.readAll().data().decode("utf-8"))
+            for exchange, exchange_varieties in data["varieties"].items():
+                variety_menus = {"id": exchange, "name": self.EXCHANGE_LIB.get(exchange, ''), "children": []}
+                for variety_item in exchange_varieties:
+                    variety_menus["children"].append({"id": variety_item["variety_en"], "name": variety_item["variety_name"]})
+                varieties["children"].append(variety_menus)
+        reply.deleteLater()
+        all_menus = HOMEPAGE_MENUS.copy()
+        all_menus.insert(0, varieties)
         # 遍历菜单,增加QListWidgetItem和新增stackedWidget
-        for list_menu in HOMEPAGE_MENUS:
+        for list_menu in all_menus:
             menu_item = QListWidgetItem(list_menu["name"])
             self.left_menu.addItem(menu_item)
             left_widget = LeftChildrenMenuWidget(list_menu["children"], self)
@@ -259,7 +286,7 @@ class Homepage(HomepageUI):
     def get_latest_daily_report(self):
         """ 获取最新日报信息 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-report/?report_type=daily&count=6"
+        url = SERVER_API + "latest-report/?report_type=daily&count=30"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_daily_report_reply)
 
@@ -291,28 +318,28 @@ class Homepage(HomepageUI):
 
     def view_more_daily_report(self):
         """ 查看更多的日常报告 """
-        self.SkipPage.emit("l_0_0", "收盘日评")
+        self.SkipPage.emit("l_0_0_1", "收盘日评")
 
     def view_more_weekly_report(self):
         """ 查看更多的周报 """
-        self.SkipPage.emit("l_0_1", "周度报告")
+        self.SkipPage.emit("l_0_0_2", "周度报告")
 
     def view_more_monthly_report(self):
         """ 查看更多的周报 """
-        self.SkipPage.emit("l_0_2", "月季报告")
+        self.SkipPage.emit("l_0_1_1", "月季报告")
 
     def view_more_annual_report(self):
         """ 查看更多的年度报 """
-        self.SkipPage.emit("l_0_3", "年度报告")
+        self.SkipPage.emit("l_0_1_2", "年度报告")
 
     def view_more_instant_message(self):
         """ 查看更多的年度报 """
-        self.SkipPage.emit("l_1_0", "短信通")
+        self.SkipPage.emit("l_1_0_1", "短信通")
 
     def get_latest_weekly_report(self):
         """ 获取最新周报信息 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-report/?report_type=weekly&count=8"
+        url = SERVER_API + "latest-report/?report_type=weekly&count=30"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_weekly_report_reply)
 
@@ -344,7 +371,7 @@ class Homepage(HomepageUI):
     def get_latest_monthly_report(self):
         """ 获取最新月报信息 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-report/?report_type=monthly&count=8"
+        url = SERVER_API + "latest-report/?report_type=monthly&count=30"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_monthly_report_reply)
 
@@ -376,7 +403,7 @@ class Homepage(HomepageUI):
     def get_latest_annual_report(self):
         """ 获取最新年报半年报信息 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-report/?report_type=annual&count=8"
+        url = SERVER_API + "latest-report/?report_type=annual&count=30"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_annual_report_reply)
 

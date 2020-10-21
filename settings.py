@@ -13,8 +13,8 @@ SERVER_ADDR = "http://127.0.0.1:5000/"
 # 与后端对应的静态文件路径
 STATIC_PREFIX = SERVER_ADDR + 'ads/'
 
-SERVER_API = "http://127.0.0.1:8000/api/"
-# SERVER_API = "http://210.13.218.130:9004/api/"
+# SERVER_API = "http://127.0.0.1:8000/api/"
+SERVER_API = "http://210.13.218.130:9004/api/"
 
 STATIC_URL = SERVER_API[:-4] + 'static/'
 
@@ -86,18 +86,20 @@ SYSTEM_MENUS = [
 
 # 首页左侧的菜单(2级)
 HOMEPAGE_MENUS = [
-    {"id": "l_2", "name": "品 种\n数 据", "logo": "", "children": [
-        {"id": "l_2_0", "name": "xxx"},
-        {"id": "l_2_1", "name": "xxx"},
-    ] * 32},
     {"id": "l_0", "name": "研 究\n报 告", "logo": "", "children": [
-        {"id": "l_0_0", "name": "收盘日评"},
-        {"id": "l_0_1", "name": "研究周报"},
-        {"id": "l_0_2", "name": "月季报告"},
-        {"id": "l_0_3", "name": "年度报告"},
+        {"id": "l_0_0", "name": "日报周报", "children": [
+            {"id": "l_0_0_1", "name": "收盘日评"},
+            {"id": "l_0_0_2", "name": "品种周报"},
+        ]},
+        {"id": "l_0_1", "name": "月报年报", "children": [
+            {"id": "l_0_1_1", "name": "月季报告"},
+            {"id": "l_0_1_2", "name": "年度报告"},
+        ]},
     ]},
     {"id": "l_1", "name": "产 品\n服 务", "logo": "", "children": [
-        {"id": "l_1_0", "name": "短信通"},
+        {"id": "l_1_0", "name": "资讯服务", "children": [
+            {"id": "l_1_0_1", "name": "短信通"},
+        ]},
     ]}
 ]
 

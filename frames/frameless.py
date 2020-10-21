@@ -5,6 +5,7 @@
 
 """ 主窗口事件处理 """
 import os
+import re
 import json
 from PyQt5.QtWidgets import qApp, QLabel
 from PyQt5.QtNetwork import QNetworkRequest
@@ -152,6 +153,7 @@ class ClientMainApp(FrameLessWindowUI):
         else:
             center_widget = UserPassport()
             center_widget.username_signal.connect(self.user_login_successfully)
+            self.current_page_id = "login"  # 赋予id,登录成功可以跳转到首页
         self.center_widget.setCentralWidget(center_widget)
 
     def user_login_successfully(self, username):
@@ -230,15 +232,17 @@ class ClientMainApp(FrameLessWindowUI):
     @staticmethod
     def get_homepage_skip_page(page_id, page_name):
         """ 获取主页跳转的页面 """
-        if page_id == "l_0_0":
+        if re.match(r"^[A-Z]{1,2}$", page_id):  # 如果是品种则请求权限跳转到品种数据库
+            page = VarietyData(page_id)
+        elif page_id == "l_0_0_1":
             page = DailyReport()   # 日常报告
-        elif page_id == "l_0_1":
+        elif page_id == "l_0_0_2":
             page = WeeklyReport()  # 周度报告
-        elif page_id == "l_0_2":
+        elif page_id == "l_0_1_1":
             page = MonthlyReport()  # 月度报告
-        elif page_id == "l_0_3":
+        elif page_id == "l_0_1_2":
             page = AnnualReport()   # 年度报告
-        elif page_id == "l_1_0":
+        elif page_id == "l_1_0_1":
             page = ShortMessage()   # 短信通
         else:
             page = QLabel(

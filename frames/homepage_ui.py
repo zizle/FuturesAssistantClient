@@ -3,15 +3,44 @@
 # @Time  : 2020-07-19 15:12
 # @Author: zizle
 import math
-from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QPushButton, QListWidget,
+from datetime import datetime
+from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QListWidget,
                              QStackedWidget, QGridLayout, QTableWidget, QFrame, QHeaderView, QTableWidgetItem,
-                             QAbstractItemView, QScrollBar)
-from PyQt5.QtCore import Qt, QRect, QTimer, QMargins, QSize, QUrl, QThread, pyqtSignal
-from PyQt5.QtGui import QPainter, QPixmap, QIcon, QImage, QFont, QBrush, QColor
+                             QAbstractItemView, QGraphicsDropShadowEffect)
+from PyQt5.QtCore import Qt, QRect, QMargins, QSize, QUrl, QThread, pyqtSignal
+from PyQt5.QtGui import QPainter, QPixmap, QIcon, QImage, QBrush, QColor
 from PyQt5.QtNetwork import QNetworkRequest
 from widgets.sliding_stacked import SlidingStackedWidget
-from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE
-from settings import STATIC_URL, HOMEPAGE_TABLE_ROW_HEIGHT
+from settings import STATIC_URL, HOMEPAGE_TABLE_ROW_HEIGHT, HOMEPAGE_MENUS
+
+
+class MenusContainerWidget(QWidget):
+    """ 左侧菜单容器控件 """
+    def __init__(self, *args, **kwargs):
+        super(MenusContainerWidget, self).__init__(*args, **kwargs)
+        self.setAttribute(Qt.WA_StyledBackground, True)  # 必须设置,如果不设置将导致子控件产生阴影
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setOffset(0, 1)
+        shadow.setColor(QColor(100, 100, 100))
+        shadow.setBlurRadius(5)
+        self.setGraphicsEffect(shadow)
+        self.setObjectName("menuContainer")
+        # background-color:rgb(250,250,250);必须设置,不设置将导致子控件产生阴影
+        self.setStyleSheet(
+            "#menuContainer{background-color:rgb(250,250,250);border-radius:2px}"
+            "#pushButton{border:none;text-align:left;padding:2px 1px 2px 8px;}"
+            "#pushButton:hover{border:none;background-color:rgb(220,220,220);color:rgb(248,121,27)}"
+        )
+
+    def enterEvent(self, event):
+        effect = self.graphicsEffect()
+        effect.setOffset(1, 2)
+        self.setGraphicsEffect(effect)
+
+    def leaveEvent(self, event):
+        effect = self.graphicsEffect()
+        effect.setOffset(0, 1)
+        self.setGraphicsEffect(effect)
 
 
 class LeftChildrenMenuWidget(QWidget):
@@ -21,42 +50,47 @@ class LeftChildrenMenuWidget(QWidget):
     def __init__(self, menus, *args, **kwargs):
         super(LeftChildrenMenuWidget, self).__init__(*args, **kwargs)
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(QMargins(0, 0, 0, 0))
-        for menu_item in [
-                             {"id": "1", "name": "主菜单1", "children": [
-                                                                         {"id": "1_1", "name": "菜单1"}
-                                                                     ] * 5},
-
-                         ] * 3:
+        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(QMargins(0, 0, 0, 5))
+        for menu_item in menus:
+            menu_layout = QVBoxLayout()
+            menu_layout.setSpacing(5)
+            menu_layout.setContentsMargins(QMargins(5, 0, 5, 5))
             menu_label = QLabel(menu_item["name"], self)
-            main_layout.addWidget(menu_label)
+            menu_label.setObjectName("menuLabel")
+            menu_layout.addWidget(menu_label)
+
+            # 子菜单控件
+            menus_widget = MenusContainerWidget(self)
             layout = QGridLayout()
             layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-            layout.setContentsMargins(QMargins(0, 0, 0, 0))
-            layout.setSpacing(15)
+            layout.setContentsMargins(QMargins(5, 5, 5, 5))
+            layout.setSpacing(0)
+
             # 增加button按钮
             row, col = 0, 0
             for children_item in menu_item["children"]:
-                button = QPushButton(children_item["name"], self)
+                button = QPushButton(children_item["name"], menus_widget)
                 setattr(button, "menu_id", children_item["id"])
                 button.setObjectName("pushButton")
                 button.setFixedSize(110, 22)
+                button.setCursor(Qt.PointingHandCursor)
                 button.clicked.connect(self.menu_selected)
                 layout.addWidget(button, row, col)
                 col += 1
                 if col >= 3:
                     col = 0
                     row += 1
-            main_layout.addLayout(layout)
+
+            menus_widget.setLayout(layout)
+            menu_layout.addWidget(menus_widget)
+
+            main_layout.addLayout(menu_layout)
 
         self.setLayout(main_layout)
         main_layout.addStretch()
-        self.setObjectName("menuWidget")
-
         self.setStyleSheet(
-            "#menuWidget{background-color:rgb(100,225,225)}"
-            "#pushButton{border:none;background-color:rgb(225,225,225)}"
-            "#pushButton:hover{border:none;background-color:rgb(205,205,205)}"
+            "#menuLabel{padding-left:0px;font-weight:bold}"
         )
 
     def menu_selected(self):
@@ -149,6 +183,7 @@ class ModuleWidgetTable(QTableWidget):
         self.setSelectionMode(QAbstractItemView.NoSelection)
         self.setShowGrid(False)
         self.setWordWrap(False)
+        self.setCursor(Qt.PointingHandCursor)
         self.setObjectName("contentTable")
         self.setStyleSheet(
             "#contentTable::item:hover{color:rgb(248,121,27);}"
@@ -175,9 +210,12 @@ class ModuleWidgetTable(QTableWidget):
         self.zero_text_color = zero_text_color
         self.center_alignment_columns = center_alignment_columns
 
-    def show_contents(self, row_count):
+        self.show_contents()
+
+    def show_contents(self):
+        max_row_count = math.ceil(self.height() / HOMEPAGE_TABLE_ROW_HEIGHT)
         self.clearContents()
-        self.setRowCount(row_count)
+        self.setRowCount(max_row_count)
         self.setColumnCount(len(self.content_keys))
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -205,11 +243,10 @@ class ModuleWidgetTable(QTableWidget):
                     item.setTextAlignment(Qt.AlignVCenter)
                 self.setItem(row, col, item)
 
-    def resizeEvent(self, e):
-        super(ModuleWidgetTable, self).resizeEvent(e)
-        # 计算能显示的行数
-        max_row_count = math.ceil(self.height() / HOMEPAGE_TABLE_ROW_HEIGHT)
-        self.show_contents(max_row_count)
+    def resizeEvent(self, *args, **kwargs):
+        super(ModuleWidgetTable, self).resizeEvent(*args, **kwargs)
+        # 计算能显示的行数,重新显示数据
+        self.show_contents()
 
 
 """ 各模块控件 """
@@ -249,11 +286,31 @@ class ModuleWidget(QWidget):
 
         self.setLayout(main_layout)
         self.more_button.setObjectName("moreButton")
+
+        # 设置阴影
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setOffset(0, 1)
+        shadow.setColor(QColor(100, 100, 100))
+        shadow.setBlurRadius(5)
+        self.setGraphicsEffect(shadow)
+        self.setObjectName("moduleWidget")
+
         self.setStyleSheet(
+            "#moduleWidget{background-color:rgb(254,254,254);border:1px solid rgb(240,240,240)}"
             "#titleLabel{color:rgb(233,66,66);font-size:15px;font-weight:bold}"
             "#moreButton{border:none;font-size:12px;color:rgb(104,104,104)}"
             "#moreButton:hover{color:rgb(233,66,66)}"
         )
+
+    def enterEvent(self, event):
+        effect = self.graphicsEffect()
+        effect.setOffset(1, 2)
+        self.setGraphicsEffect(effect)
+
+    def leaveEvent(self, event):
+        effect = self.graphicsEffect()
+        effect.setOffset(0, 1)
+        self.setGraphicsEffect(effect)
 
     def set_title(self, title: str):
         """ 设置标题 """
@@ -310,7 +367,7 @@ class HomepageUI(QWidget):
 
         # 左侧菜单对应的stackedWidget
         menu_layout = QVBoxLayout()
-        menu_layout.setContentsMargins(QMargins(28, 20, 28, 28))  # 上方稍微小些
+        menu_layout.setContentsMargins(QMargins(28, 16, 28, 28))  # 上方稍微小些
         self.left_stacked = QStackedWidget(self)
         # 固定宽度
         self.left_stacked.setFixedWidth(self.LEFT_STACKED_WIDTH)  # 固定宽度,广告的高度
@@ -344,42 +401,44 @@ class HomepageUI(QWidget):
         # 短信通
         self.instant_message_widget = ModuleWidget(self)
         # self.instant_message_widget.setFixedSize(370, 300)
-        self.instant_message_widget.setObjectName("moduleWidget")
         self.instant_message_widget.set_title("即时资讯")
         modules_layout.addWidget(self.instant_message_widget, 0, 0, 1, 2)
 
         # 现货报价
         self.spot_price_widget = ModuleWidget(self)
         # self.spot_price_widget.setFixedSize(370, 300)
-        self.spot_price_widget.setObjectName("moduleWidget")
         self.spot_price_widget.set_title("现货报价")
         modules_layout.addWidget(self.spot_price_widget, 1, 0)
 
         # 日报
         self.daily_report_widget = ModuleWidget(self)
         # self.daily_report_widget.setFixedSize(370, 300)
-        self.daily_report_widget.setObjectName("moduleWidget")
         self.daily_report_widget.set_title("收盘日评")
-        modules_layout.addWidget(self.daily_report_widget, 1, 1)
+        # 周报
+        self.weekly_report_widget = ModuleWidget(self)
+        # self.weekly_report_widget.setFixedSize(370, 300)
+        self.weekly_report_widget.set_title("研究周报")
 
-        # # 周报
-        # self.weekly_report_widget = ModuleWidget(self)
-        # # self.weekly_report_widget.setFixedSize(370, 300)
-        # self.weekly_report_widget.setObjectName("moduleWidget")
-        # self.weekly_report_widget.set_title("研究周报")
-        # modules_layout.addWidget(self.weekly_report_widget, 1, 0)
-        #
+        # 根据当前时间显示日报还是周报
+        current_day = datetime.today()
+        week = current_day.weekday()
+        current_time = current_day.time().strftime("%H:%M")
+        if week < 4 or (week == 4 and current_time < "16:00"):
+            modules_layout.addWidget(self.daily_report_widget, 1, 1)
+            self.weekly_report_widget.hide()
+        else:
+            modules_layout.addWidget(self.weekly_report_widget, 1, 1)
+            self.daily_report_widget.hide()
+
         # # 月季报告
         # self.monthly_report_widget = ModuleWidget(self)
         # # self.monthly_report_widget.setFixedSize(370, 300)
-        # self.monthly_report_widget.setObjectName("moduleWidget")
         # self.monthly_report_widget.set_title("月季报告")
         # modules_layout.addWidget(self.monthly_report_widget, 1, 1)
         #
         # # 月季报告
         # self.annual_report_widget = ModuleWidget(self)
         # # self.annual_report_widget.setFixedSize(370, 300)
-        # self.annual_report_widget.setObjectName("moduleWidget")
         # self.annual_report_widget.set_title("年度报告")
         # modules_layout.addWidget(self.annual_report_widget, 1, 2)
 
@@ -399,7 +458,6 @@ class HomepageUI(QWidget):
             "background-color:rgb(233,26,46);outline:none;}"
             "#LeftMenuList::item{padding:5px 0 5px 0px}"
             "#LeftMenuList::item:selected{background-color:rgb(240,240,240);color:rgb(0,0,0);out-line:none}"
-            "#moduleWidget{background-color:rgb(254,254,254);border:1px solid rgb(240,240,240)}"
         )
 
 

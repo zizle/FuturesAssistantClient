@@ -340,6 +340,10 @@ class ReportFileAdmin(ReportFileAdminUI):
             item6.setTextAlignment(Qt.AlignCenter)
             self.manager_table.setItem(row, 6, item6)
 
+            item7 = QTableWidgetItem("修改名称")
+            item7.setTextAlignment(Qt.AlignCenter)
+            self.manager_table.setItem(row, 7, item7)
+
     def clicked_manager_report(self, row, col):
         """ 点击管理报告 """
         report_id = self.manager_table.item(row, 0).data(Qt.UserRole)
@@ -353,8 +357,30 @@ class ReportFileAdmin(ReportFileAdminUI):
             url = STATIC_URL + filepath
             p = PDFContentPopup(title=filename, file=url)
             p.exec_()
+        elif col == 7:  # 修改名称
+            new_filename = self.manager_table.item(row, 3).text()
+            self.modify_report_filename(report_id, new_filename)
         else:
             pass
+
+    def modify_report_filename(self, report_id, filename):
+        """ 修改报告名称 """
+        url = SERVER_API + "report-filename/{}/?filename={}".format(report_id, filename)
+        network_manger = getattr(qApp, "_network")
+        request = QNetworkRequest(QUrl(url))
+        request.setRawHeader("Authorization".encode("utf-8"), get_user_token().encode("utf-8"))
+        reply = network_manger.put(request, None)
+        reply.finished.connect(self.modify_filename_reply)
+
+    def modify_filename_reply(self):
+        """ 修改报告名称返回 """
+        reply = self.sender()
+        if reply.error():
+            p = InformationPopup("修改失败!", self)
+        else:
+            p = InformationPopup("修改成功!", self)
+        reply.deleteLater()
+        p.exec_()
 
     def change_report_opened(self, current_row, report_id):
         """ 改变报告是否公开的情况 """
