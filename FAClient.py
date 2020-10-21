@@ -14,7 +14,7 @@ from frames import WelcomePage, ClientMainApp
 app = QApplication(sys.argv)
 font = QFont()
 font.setPointSize(11)
-font.setStyleStrategy(QFont.PreferAntialias | QFont.NoSubpixelAntialias)
+font.setStyleStrategy(QFont.PreferAntialias)
 app.setFont(font)
 splash = WelcomePage()
 splash.show()

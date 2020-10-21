@@ -85,7 +85,7 @@ class VarietyDataUI(QWidget):
         )
         self.setStyleSheet(
             "#tabBar::tab{min-height:20px;}"
-            "#sheetTable{background-color:rgb(240,240,240);font-size:12px;"
+            "#sheetTable{background-color:rgb(240,240,240);"
             "selection-background-color:qlineargradient(x1:0,y1:0, x2:0, y2:1,"
             "stop:0 #cccccc,stop:0.5 white,stop:0.6 white,stop: 1 #cccccc);"
             "alternate-background-color:rgb(245,250,248);}"

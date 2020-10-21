@@ -13,15 +13,19 @@ from .variety_data_ui import VarietyDataUI, OperateButton
 
 
 class VarietyData(VarietyDataUI):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, variety_en=None, *args, **kwargs):
         super(VarietyData, self).__init__(*args, **kwargs)
         self.variety_tree.left_mouse_clicked.connect(self.selected_variety_event)
-        # 默认显示股指的数据
-        self._get_variety_sheets("GP")
-        # 默认加载主页显示的图形
-        self._load_default_page()
         # 双击数据库下的条目
         self.sheet_table.doubleClicked.connect(self.popup_show_chart_sheet)
+        if variety_en is None:
+            # 默认显示股指的数据
+            self._get_variety_sheets("GP")
+            # 默认加载主页显示的图形
+            self._load_default_page()
+        else:
+            self._get_variety_sheets(variety_en)
+            self._load_variety_charts(variety_en)
 
     def _load_default_page(self):
         """ 加载主页默认页面 """
