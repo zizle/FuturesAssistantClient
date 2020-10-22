@@ -5,7 +5,7 @@ import sys
 import time
 import logging
 from PyQt5.QtCore import QSettings
-WINDOW_TITLE = '期货分析助手管理端'  # 1.3.1
+WINDOW_TITLE = '分析决策系统管理端'  # 1.4.5
 SYS_BIT = "32" if sys.maxsize < 2 ** 32 else "64"
 PLATE_FORM = "WIN10"
 # SERVER_ADDR = "http://210.13.218.130:9002/"
@@ -81,6 +81,7 @@ SYSTEM_MENUS = [
     ]},
     {"id": "0_0", "name": "关于系统", "logo": "", "children": [
         {"id": "0_0_1", "name": "版本检查", "logo": "", "children": None},
+        {"id": "0_0_2", "name": "权限刷新", "logo": "", "children": None},
     ]},
 ]
 

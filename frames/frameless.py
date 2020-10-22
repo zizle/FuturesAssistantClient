@@ -7,12 +7,14 @@
 import os
 import re
 import json
+import pickle
 from PyQt5.QtWidgets import qApp, QLabel
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtCore import Qt, QUrl, QSettings, QTimer
 from frames.passport import UserPassport
 from frames.user_center import UserCenter
-from settings import SERVER_API, ADMINISTRATOR, BASE_DIR, ONLINE_COUNT_INTERVAL, PLATE_FORM, SYS_BIT
+from settings import SERVER_API, ADMINISTRATOR, BASE_DIR, ONLINE_COUNT_INTERVAL, PLATE_FORM, SYS_BIT, logger
+from utils.client import get_user_token, is_module_verify
 from .frameless_ui import FrameLessWindowUI
 
 from admin.operator.user_manager import UserManager
@@ -36,7 +38,7 @@ from frames.industry.net_position import NetPosition
 from frames.about_us import CheckVersion
 from frames.delivery import DeliveryPage
 from popup.update import NewVersionPopup
-from popup.message import ExitAppPopup
+from popup.message import ExitAppPopup, InformationPopup
 
 
 class ClientMainApp(FrameLessWindowUI):
@@ -164,6 +166,8 @@ class ClientMainApp(FrameLessWindowUI):
         # 当前不是首页就跳转到首页(防止启动自动登录2次跳转首页)
         if self.current_page_id is not None:
             self.set_default_homepage()
+        # 刷新当前用户权限
+        self.refresh_authorization()
 
     def _user_login_automatic(self):
         """ 用户自动登录 """
@@ -212,11 +216,50 @@ class ClientMainApp(FrameLessWindowUI):
         # 跳转到首页
         if to_homepage:
             self.set_default_homepage()
+        # 刷新权限
+        self.refresh_authorization()
+
+    def refresh_authorization(self):
+        """ 刷新当前用户的权限 """
+        print("刷新权限")
+        is_logged = self.navigation_bar.get_user_login_status()
+        # 用户未登录,权限为[],直接写入
+        if not is_logged:
+            auth_filepath = os.path.join(BASE_DIR, "dawn/auth.dat")
+            with open(auth_filepath, "wb") as fp:
+                pickle.dump({"role": '', "auth": []}, fp)
+            return
+        # 用户已登录,后端请求权限
+        network_manager = getattr(qApp, '_network')
+        url = SERVER_API + "user/module-authenticate/"
+        request = QNetworkRequest(QUrl(url))
+        request.setRawHeader("Authorization".encode("utf-8"), get_user_token().encode("utf-8"))
+        reply = network_manager.get(request)
+        reply.finished.connect(self.user_authorization_reply)
+
+    def user_authorization_reply(self):
+        """ 获取用户的权限返回 """
+        reply = self.sender()
+        if reply.error():
+            logger.error("Refresh authorization fail! Qt error code: {}".format(reply.error()))
+        else:
+            data = json.loads(reply.readAll().data().decode("utf-8"))
+            user_info = data["user"]
+            auth = data["modules"]
+            auth_filepath = os.path.join(BASE_DIR, "dawn/auth.dat")
+            with open(auth_filepath, "wb") as fp:
+                pickle.dump({"role": user_info.get("role", ""), "auth": auth}, fp)
+        reply.deleteLater()
 
     def set_system_page(self, module_id):
         """ 进入关于系统 """
         if module_id == "0_0_1":
             page = CheckVersion()  # 版本检查页面
+        elif module_id == "0_0_2":
+            self.refresh_authorization()  # 刷新权限
+            p = InformationPopup("权限刷新成功!", self)
+            p.exec_()
+            return
         else:
             page = QLabel(
                 "暂未开放···\n更多资讯请访问【首页】查看.",
@@ -227,13 +270,21 @@ class ClientMainApp(FrameLessWindowUI):
 
     def homepage_menu_selected(self, menu_id, menu_text):
         """ 主页需要跳转页面的菜单 """
-        self.center_widget.setCentralWidget(self.get_homepage_skip_page(menu_id, menu_text))
+        page = self.get_homepage_skip_page(menu_id, menu_text)
+        if page:
+            self.center_widget.setCentralWidget(page)
 
-    @staticmethod
-    def get_homepage_skip_page(page_id, page_name):
+    def get_homepage_skip_page(self, page_id, page_name):
         """ 获取主页跳转的页面 """
         if re.match(r"^[A-Z]{1,2}$", page_id):  # 如果是品种则请求权限跳转到品种数据库
-            page = VarietyData(page_id)
+            # 验证用户的品种数据库权限
+            can_enter, tips = is_module_verify("2_0", "品种数据")
+            if can_enter:
+                page = VarietyData(page_id)
+            else:
+                p = InformationPopup(tips, self)
+                p.exec_()
+                return None
         elif page_id == "l_0_0_1":
             page = DailyReport()   # 日常报告
         elif page_id == "l_0_0_2":
@@ -254,60 +305,67 @@ class ClientMainApp(FrameLessWindowUI):
     def enter_module_page(self, module_id, module_text):
         """ 根据菜单,进入不同的功能界面 """
         self.current_page_id = module_id
-        if module_id == "0":
+        if module_id == "0":                 # 进入首页
             self.set_default_homepage()
             return
         if module_id[:3] == "0_0":
             self.set_system_page(module_id)  # 进入关于系统的菜单
             return
-
-        client_params = QSettings('dawn/client.ini', QSettings.IniFormat)
-
-        network_manager = getattr(qApp, '_network')
-        url = SERVER_API + 'user/module-authenticate/'
-        request = QNetworkRequest(QUrl(url))
-        request.setHeader(QNetworkRequest.ContentTypeHeader, "application/json;charset=utf-8")
-        user_token = client_params.value("USER/BEARER") if self.navigation_bar.get_user_login_status() else ''
-        body_data = {
-            "module_id": module_id,
-            "module_text": module_text,
-            "client_uuid": client_params.value("TOKEN/UUID"),
-            "user_token": user_token
-        }
-        reply = network_manager.post(request, json.dumps(body_data).encode("utf-8"))
-        reply.finished.connect(self.access_module_reply)
-
-    def access_module_reply(self):
-        reply = self.sender()
-        data = reply.readAll().data()
-        data = json.loads(data.decode('utf-8'))
-        reply.deleteLater()
-        if reply.error():
-            center_widget = QLabel(
-                data.get("detail", reply.error()),
-                styleSheet='font-size:16px;font-weight:bold;color:rgb(230,50,50)',
-                alignment=Qt.AlignCenter
-            )
-            if reply.error() == 201 and self.navigation_bar.get_user_login_status():
-                self.user_logout(to_homepage=False)  # 不跳转首页
-
+        # 其他模块菜单验证权限
+        can_enter, tips = is_module_verify(module_id, module_text)
+        if can_enter:
+            page = self.get_module_page(module_id, module_text)
+            self.center_widget.setCentralWidget(page)
         else:
-            if data["authenticate"]:
-                # 进入相应模块
-                center_widget = self.get_module_page(data["module_id"], data["module_text"])
-            else:
-                center_widget = QLabel(
-                    data["message"],
-                    styleSheet='font-size:16px;font-weight:bold;color:rgb(230,50,50)',
-                    alignment=Qt.AlignCenter
-                )
+            p = InformationPopup(tips, self)
+            p.exec_()
 
-        self.center_widget.setCentralWidget(center_widget)
+    #     client_params = QSettings('dawn/client.ini', QSettings.IniFormat)
+    #
+    #     network_manager = getattr(qApp, '_network')
+    #     url = SERVER_API + 'user/module-authenticate/'
+    #     request = QNetworkRequest(QUrl(url))
+    #     request.setHeader(QNetworkRequest.ContentTypeHeader, "application/json;charset=utf-8")
+    #     user_token = client_params.value("USER/BEARER") if self.navigation_bar.get_user_login_status() else ''
+    #     body_data = {
+    #         "module_id": module_id,
+    #         "module_text": module_text,
+    #         "client_uuid": client_params.value("TOKEN/UUID"),
+    #         "user_token": user_token
+    #     }
+    #     reply = network_manager.post(request, json.dumps(body_data).encode("utf-8"))
+    #     reply.finished.connect(self.access_module_reply)
+    #
+    # def access_module_reply(self):
+    #     reply = self.sender()
+    #     data = reply.readAll().data()
+    #     data = json.loads(data.decode('utf-8'))
+    #     reply.deleteLater()
+    #     if reply.error():
+    #         center_widget = QLabel(
+    #             data.get("detail", reply.error()),
+    #             styleSheet='font-size:16px;font-weight:bold;color:rgb(230,50,50)',
+    #             alignment=Qt.AlignCenter
+    #         )
+    #         if reply.error() == 201 and self.navigation_bar.get_user_login_status():
+    #             self.user_logout(to_homepage=False)  # 不跳转首页
+    #
+    #     else:
+    #         if data["authenticate"]:
+    #             # 进入相应模块
+    #             center_widget = self.get_module_page(data["module_id"], data["module_text"])
+    #         else:
+    #             center_widget = QLabel(
+    #                 data["message"],
+    #                 styleSheet='font-size:16px;font-weight:bold;color:rgb(230,50,50)',
+    #                 alignment=Qt.AlignCenter
+    #             )
+    #
+    #     self.center_widget.setCentralWidget(center_widget)
 
     @staticmethod
     def get_module_page(module_id, module_text):
         """ 通过权限验证,进入功能页面 """
-        print(module_id, module_text, "允许进入")
         if module_id == "1":             # 产品服务
             page = ProductPage()
         elif module_id == "2_0":         # 产业数据库
