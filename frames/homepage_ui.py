@@ -457,7 +457,7 @@ class HomepageUI(QWidget):
             "#LeftMenuList{border:none;color:rgb(254,254,254);font-size:14px;"
             "background-color:rgb(233,26,46);outline:none;}"
             "#LeftMenuList::item{padding:5px 0 5px 0px}"
-            "#LeftMenuList::item:selected{background-color:rgb(240,240,240);color:rgb(0,0,0);out-line:none}"
+            "#LeftMenuList::item:selected{background-color:rgb(255,255,255);color:rgb(0,0,0);out-line:none}"
         )
 
 
