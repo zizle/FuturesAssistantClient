@@ -175,6 +175,7 @@ class ControlButton(QPushButton):
 class ModuleWidgetTable(QTableWidget):
     def __init__(self, *args, **kwargs):
         super(ModuleWidgetTable, self).__init__(*args)
+        self.setMouseTracking(True)
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
         self.setFrameShape(QFrame.NoFrame)
@@ -185,9 +186,9 @@ class ModuleWidgetTable(QTableWidget):
         self.setWordWrap(False)
         self.setCursor(Qt.PointingHandCursor)
         self.setObjectName("contentTable")
-        self.setStyleSheet(
-            "#contentTable::item:hover{color:rgb(248,121,27);}"
-        )
+        # self.setStyleSheet(
+        #     "#contentTable::item:hover{color:rgb(248,121,27);}"
+        # )
 
         # 保存显示的内容信息和参数
         self.content_values = []
@@ -197,6 +198,41 @@ class ModuleWidgetTable(QTableWidget):
         self.column_text_color = {}
         self.zero_text_color = []
         self.center_alignment_columns = []
+
+        # 鼠标移动整行颜色变化
+        self.mouse_last_row = -1
+        self.itemEntered.connect(self.mouse_enter_item)
+
+    def mouse_enter_item(self, item):
+        current_row = self.row(item)
+        # 改变当前行的颜色
+        for col in range(self.columnCount()):
+            self.item(current_row, col).setForeground(QBrush(QColor(248, 121, 27)))
+        # 恢复离开行的颜色
+        self.recover_row_color()
+        self.mouse_last_row = current_row
+
+    def recover_row_color(self):
+        if self.mouse_last_row >= 0:
+            for col in range(self.columnCount()):
+                self.item(self.mouse_last_row, col).setForeground(QBrush(QColor(0, 0, 0)))
+                # 如果原来有设置颜色的恢复原来的颜色
+                if col in self.column_text_color.keys():
+                    self.item(self.mouse_last_row, col).setForeground(QBrush(self.column_text_color.get(col)))
+                if col in self.zero_text_color:
+                    num = self.item(self.mouse_last_row, col).text()
+                    if int(num) > 0:
+                        self.item(self.mouse_last_row, col).setForeground(QBrush(QColor(203, 0, 0)))
+                    elif int(num) < 0:
+                        self.item(self.mouse_last_row, col).setForeground(QBrush(QColor(0, 124, 0)))
+                    else:  # 已经设置为黑色了
+                        pass
+
+    def leaveEvent(self, *args, **kwargs):
+        """ 鼠标离开事件 """
+        # 将最后记录行颜色变为原来的样子,且修改记录行为-1
+        self.recover_row_color()
+        self.mouse_last_row = -1
 
     def set_contents(
             self, content_values, content_keys, data_keys, resize_cols, column_text_color: dict,
@@ -448,10 +484,6 @@ class HomepageUI(QWidget):
 
         layout.addLayout(content_layout)
         self.setLayout(layout)
-        # self.setWidget(self.container)
-        # self.setWidgetResizable(True)
-        # self.horizontalScrollBar().setStyleSheet(HORIZONTAL_SCROLL_STYLE)
-        # self.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
         self.left_menu.setObjectName("LeftMenuList")
         self.setStyleSheet(
             "#LeftMenuList{border:none;color:rgb(254,254,254);font-size:14px;"

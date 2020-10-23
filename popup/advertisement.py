@@ -4,10 +4,10 @@
 # @Author: zizle
 """ 弹窗显示广告的信息 """
 
-from PyQt5.QtWidgets import QDialog, qApp, QVBoxLayout, QLabel
+from PyQt5.QtWidgets import QDialog, qApp, QVBoxLayout, QLabel, QScrollArea, QFrame
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtNetwork import QNetworkRequest
-from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtCore import Qt, QUrl, QMargins
 
 
 # 显示图片的弹窗
@@ -46,11 +46,20 @@ class TextPopup(QDialog):
         super(TextPopup, self).__init__(*args, **kwargs)
         self.setAttribute(Qt.WA_DeleteOnClose)
         layout = QVBoxLayout()
+        layout.setContentsMargins(QMargins(0, 0, 0, 0))
+        self.scroll_area = QScrollArea(self)
         self.text_label = QLabel(self)
-        message = "<div style=font-size:13px;line-height:25px>" + message + "</div>"
+        self.text_label.setContentsMargins(QMargins(30, 10, 30, 10))
+        self.text_label.setAlignment(Qt.AlignTop)
         self.text_label.setText(message)
         self.text_label.setWordWrap(True)
         self.text_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        layout.addWidget(self.text_label)
+
+        self.scroll_area.setWidget(self.text_label)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.NoFrame)
+
+        layout.addWidget(self.scroll_area)
+        layout.addStretch()
         self.setLayout(layout)
-        self.resize(660, 400)
+        self.resize(600, 350)

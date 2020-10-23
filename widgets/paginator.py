@@ -61,9 +61,15 @@ class Paginator(QWidget):
         self.current_page = self.current_page
         self.setCurrentPageLable()
 
-    # 设置当前页
+    def setCurrentPage(self, page):
+        self.current_page = page
+
+    # 设置当前页显示
     def setCurrentPageLable(self):
-        self.current_label.setText(str(self.current_page) + '/' + str(self.total_pages))
+        if self.total_pages == 0:
+            self.current_label.setText('0/0')
+        else:
+            self.current_label.setText(str(self.current_page) + '/' + str(self.total_pages))
 
     # 点击首页
     def go_home_page(self):

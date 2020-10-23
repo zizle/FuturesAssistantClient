@@ -14,29 +14,17 @@ class AnnualReport(ReportAbstract):
     def __init__(self, *args, **kwargs):
         super(AnnualReport, self).__init__(*args, **kwargs)
         self.set_page_name("年度报告")
-        self.date_edit.hide()  # 隐藏日期
-        # 获取报告
-        self.get_annual_reports()
-        # 点击查询
-        self.query_button.clicked.connect(self.get_annual_reports)
+        # 获取初始页报告
+        self.get_current_page_report(report_type="annual", current_page=1)
+        # 品种下拉框选择
+        self.variety_combobox.currentIndexChanged.connect(self.query_current_report)
         # 点击页码的事件
-        self.paginator.clicked.connect(self.get_annual_reports)
+        self.paginator.clicked.connect(self.query_current_page)
 
-    def get_annual_reports(self):
-        """ 分页查询月报数据 """
-        current_page = self.paginator.get_current_page()
-        current_variety = self.variety_combobox.currentData()
-        url = SERVER_API + "report-file/paginator/?report_type=annual&variety_en={}&page={}&page_size=50".format(current_variety, current_page)
-        network_manager = getattr(qApp, "_network")
-        reply = network_manager.get(QNetworkRequest(QUrl(url)))
-        reply.finished.connect(self.current_report_reply)
+    def query_current_report(self):
+        # 点击查询得先重置当前页码
+        self.paginator.setCurrentPage(1)
+        self.get_current_page_report(report_type="annual", current_page=1)
 
-    def current_report_reply(self):
-        """ 当前报告返回 """
-        reply = self.sender()
-        if reply.error():
-            pass
-        else:
-            data = json.loads(reply.readAll().data().decode("utf-8"))
-            self.show_report_content(data["reports"])
-        reply.deleteLater()
+    def query_current_page(self):
+        self.get_current_page_report(report_type="annual")
