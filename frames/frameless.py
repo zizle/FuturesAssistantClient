@@ -11,10 +11,9 @@ import pickle
 from PyQt5.QtWidgets import qApp, QLabel
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtCore import Qt, QUrl, QSettings, QTimer
-from frames.passport import UserPassport
-from frames.user_center import UserCenter
+
 from settings import SERVER_API, ADMINISTRATOR, BASE_DIR, ONLINE_COUNT_INTERVAL, PLATE_FORM, SYS_BIT, logger
-from utils.client import get_user_token, is_module_verify
+from utils.client import get_user_token, is_module_verify, remove_user_logged
 from .frameless_ui import FrameLessWindowUI
 
 from admin.operator.user_manager import UserManager
@@ -36,9 +35,12 @@ from frames.industry.variety_data import VarietyData
 from frames.industry.exchange_query import ExchangeQuery
 from frames.industry.net_position import NetPosition
 from frames.about_us import CheckVersion
+from frames.passport import UserPassport
+from frames.user_center import UserCenter
 from frames.delivery import DeliveryPage
 from popup.update import NewVersionPopup
 from popup.message import ExitAppPopup, InformationPopup
+from popup.password import EditPasswordPopup
 
 
 class ClientMainApp(FrameLessWindowUI):
@@ -152,6 +154,7 @@ class ClientMainApp(FrameLessWindowUI):
         is_user_logged = getattr(username_button, 'is_logged')
         if is_user_logged:
             center_widget = UserCenter()
+            center_widget.reset_password_signal.connect(self.user_logout_proxy)
         else:
             center_widget = UserPassport()
             center_widget.username_signal.connect(self.user_login_successfully)
@@ -218,6 +221,8 @@ class ClientMainApp(FrameLessWindowUI):
             self.set_default_homepage()
         # 刷新权限
         self.refresh_authorization()
+        # 去除自动登录
+        remove_user_logged()
 
     def refresh_authorization(self):
         """ 刷新当前用户的权限 """
@@ -258,6 +263,16 @@ class ClientMainApp(FrameLessWindowUI):
         elif module_id == "0_0_2":
             self.refresh_authorization()  # 刷新权限
             p = InformationPopup("权限刷新成功!", self)
+            p.exec_()
+            return
+        elif module_id == "0_0_3":
+            is_logged = self.navigation_bar.get_user_login_status()
+            if not is_logged:
+                p = InformationPopup("您还未登录,不能进行这个操作!", self)
+                p.exec_()
+                return
+            p = EditPasswordPopup(self)
+            p.re_login.connect(self.user_logout_proxy)  # 修改成功退出登录
             p.exec_()
             return
         else:

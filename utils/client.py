@@ -22,6 +22,19 @@ def get_client_uuid():
     return result_list[1]
 
 
+def get_client_uuid_with_ini():
+    config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
+    config = QSettings(config_filepath, QSettings.IniFormat)
+    client_uuid = config.value("TOKEN/UUID") if config.value("TOKEN/UUID") else '未知'
+    return client_uuid
+
+
+def remove_user_logged():
+    config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
+    config = QSettings(config_filepath, QSettings.IniFormat)
+    config.remove("USER/AUTOLOGIN")
+
+
 def get_user_token():
     params_path = os.path.join(BASE_DIR, "dawn/client.ini")
     app_params = QSettings(params_path, QSettings.IniFormat)
