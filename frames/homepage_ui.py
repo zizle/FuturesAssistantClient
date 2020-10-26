@@ -491,20 +491,3 @@ class HomepageUI(QWidget):
             "#LeftMenuList::item{padding:5px 0 5px 0px}"
             "#LeftMenuList::item:selected{background-color:rgb(255,255,255);color:rgb(0,0,0);out-line:none}"
         )
-
-
-class HomepageUI1(QWidget):
-    """ 首页UI """
-
-    def __init__(self, *args, **kwargs):
-        super(HomepageUI1, self).__init__(*args, **kwargs)
-        layout = QVBoxLayout()
-        label = QLabel("期货分析助手", self)
-        label.setAlignment(Qt.AlignCenter)
-        label.setStyleSheet("color:rgb(250,20,10);font-size:30px")
-        layout.addWidget(label)
-        self.setLayout(layout)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.drawPixmap(self.rect(), QPixmap("media/home_bg.png"), QRect())

@@ -82,6 +82,7 @@ SYSTEM_MENUS = [
     {"id": "0_0", "name": "关于系统", "logo": "", "children": [
         {"id": "0_0_1", "name": "版本检查", "logo": "", "children": None},
         {"id": "0_0_2", "name": "权限刷新", "logo": "", "children": None},
+        {"id": "0_0_3", "name": "密码修改", "logo": "", "children": None},
     ]},
 ]
 

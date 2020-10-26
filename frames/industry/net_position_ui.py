@@ -30,11 +30,6 @@ class NetPositionUI(QWidget):
         self.query_button = QPushButton('确定', self)
         opt_layout.addWidget(self.query_button)
 
-        self.tip_label = QLabel('左侧可选择间隔天数,确定查询数据. ', self)
-        opt_layout.addWidget(self.tip_label)
-
-        opt_layout.addStretch()
-
         opt_layout.addWidget(QLabel("字体大小:", self))
         font_size_smaller = QPushButton("-", self)
         font_size_smaller.setFixedWidth(20)
@@ -44,7 +39,13 @@ class NetPositionUI(QWidget):
         opt_layout.addWidget(font_size_larger)
         font_size_smaller.clicked.connect(self.content_font_size_smaller)
         font_size_larger.clicked.connect(self.content_font_size_larger)
+
+        self.tip_label = QLabel('左侧可选择间隔天数,确定查询数据. ', self)
+        opt_layout.addWidget(self.tip_label)
+
         opt_layout.addStretch()
+
+
 
         main_layout.addLayout(opt_layout)
 
