@@ -101,7 +101,8 @@ class Homepage(HomepageUI):
             for exchange, exchange_varieties in data["varieties"].items():
                 variety_menus = {"id": exchange, "name": self.EXCHANGE_LIB.get(exchange, ''), "children": []}
                 for variety_item in exchange_varieties:
-                    variety_menus["children"].append({"id": variety_item["variety_en"], "name": variety_item["variety_name"]})
+                    variety_menus["children"].append(
+                        {"id": variety_item["variety_en"], "name": variety_item["variety_name"]})
                 varieties["children"].append(variety_menus)
         reply.deleteLater()
         all_menus = HOMEPAGE_MENUS.copy()
@@ -237,7 +238,7 @@ class Homepage(HomepageUI):
             # 将数据进行展示
             self.instant_message_widget.set_contents(
                 content_values=data["short_messages"], content_keys=["content", "time_str"],
-                data_keys=["create_time"], resize_cols=[1], column_text_color={1: QColor(100,100,100)},
+                data_keys=["create_time"], resize_cols=[1], column_text_color={1: QColor(100, 100, 100)},
                 zero_text_color=[], center_alignment_columns=[]
             )
         reply.deleteLater()
@@ -248,12 +249,12 @@ class Homepage(HomepageUI):
             item = self.instant_message_widget.content_table.item(row, col)
             create_time = item.data(Qt.UserRole).get("create_time", "未知时间")
             create_time = create_time.replace("T", " ")[:16]
-            text = "<div style='text-indent:30px;line-height:25px;font-size:13px;'>" \
-                    "<span style='font-size:15px;font-weight:bold;color:rgb(233,20,20);'>{}</span>" \
-                    "{}</div>".format(create_time, item.text())
+            text = "<div style='text-indent:30px;line-height:28px;'>" \
+                   "<span style='font-size:16px;font-weight:bold;color:rgb(233,20,20);'>{}</span>" \
+                   "</div>" \
+                   "<div style='text-indent:30px;line-height:28px;'>{}</div>".format(create_time, item.text())
             p = TextPopup(text, self)
             p.setWindowTitle("即时资讯")
-            p.resize(550, 180)
             p.exec_()
 
     def get_latest_spot_price(self):
@@ -272,7 +273,8 @@ class Homepage(HomepageUI):
             data = json.loads(reply.readAll().data().decode("utf-8"))
             # 将数据进行展示
             self.spot_price_widget.set_contents(
-                content_values=data["sport_prices"], content_keys=["variety_zh", "spot_price", "price_increase", "date"],
+                content_values=data["sport_prices"],
+                content_keys=["variety_zh", "spot_price", "price_increase", "date"],
                 data_keys=[], resize_cols=[3], column_text_color={3: QColor(100, 100, 100)},
                 zero_text_color=[2], center_alignment_columns=[1, 2]
             )
@@ -312,7 +314,7 @@ class Homepage(HomepageUI):
             item = self.daily_report_widget.content_table.item(row, col)
             if item and isinstance(item, QTableWidgetItem):
                 title = item.text()
-                file_url = STATIC_URL + item.data(Qt.UserRole).get("filepath", 'no-found.pdf')
+                file_url = STATIC_URL + item.data(Qt.UserRole).get("filepath", 'not-found.pdf')
                 p = PDFContentPopup(file=file_url, title=title)
                 p.exec_()
 
@@ -431,4 +433,3 @@ class Homepage(HomepageUI):
             file_url = STATIC_URL + item.data(Qt.UserRole).get("filepath", 'no-found.pdf')
             p = PDFContentPopup(file=file_url, title=title)
             p.exec_()
-

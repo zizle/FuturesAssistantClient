@@ -7,67 +7,109 @@
 import json
 from PyQt5.QtWidgets import (qApp, QWidget, QVBoxLayout, QHBoxLayout, QDateEdit, QPushButton, QTableWidget, QLabel, QComboBox,
                              QHeaderView, QFrame, QAbstractItemView, QTableWidgetItem)
-from PyQt5.QtCore import QDate, Qt, QTime, QRect, QUrl
+from PyQt5.QtCore import QDate, Qt, QTime, QRect, QUrl, QMargins
 from PyQt5.QtGui import QPixmap, QPainter, QPalette, QBrush, QColor
 from PyQt5.QtNetwork import QNetworkRequest
-from utils.constant import VERTICAL_SCROLL_STYLE
+from utils.constant import VERTICAL_SCROLL_STYLE, HORIZONTAL_SCROLL_STYLE, HORIZONTAL_HEADER_STYLE
 from widgets.paginator import Paginator
 from widgets.pdf_shower import PDFContentPopup
 from settings import STATIC_URL, SERVER_API
+
+
+class ReportTable(QTableWidget):
+    def __init__(self, *args, **kwargs):
+        super(ReportTable, self).__init__(*args, **kwargs)
+        self.verticalHeader().hide()
+        self.setEditTriggers(QHeaderView.NoEditTriggers)
+        self.setFrameShape(QFrame.NoFrame)
+        self.setFocusPolicy(Qt.NoFocus)
+        self.setAlternatingRowColors(True)
+        # 不能选中
+        self.setSelectionMode(QAbstractItemView.NoSelection)
+        # 背景透明
+        table_palette = self.palette()
+        table_palette.setBrush(QPalette.Base, QBrush(QColor(255, 255, 255, 0)))
+        self.setPalette(table_palette)
+        self.setCursor(Qt.PointingHandCursor)
+        self.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
+        self.horizontalScrollBar().setStyleSheet(HORIZONTAL_SCROLL_STYLE)
+
+        # 设置鼠标进入整行颜色变化
+        self.setMouseTracking(True)
+        self.mouse_last_row = -1
+        self.last_row_background = None
+        self.itemEntered.connect(self.mouse_enter_item)
+
+        self.horizontalHeader().setStyleSheet(HORIZONTAL_HEADER_STYLE)
+
+    def mouse_enter_item(self, item):
+        current_row = self.row(item)
+        # 改变当前行的颜色
+        for col in range(self.columnCount()):
+            self.item(current_row, col).setForeground(QBrush(QColor(248, 121, 27)))
+            self.item(current_row, col).setBackground(QBrush(QColor(220, 220, 220)))
+        # 恢复离开行的颜色
+        self.recover_row_color()
+        self.mouse_last_row = current_row
+
+    def recover_row_color(self):
+        if self.mouse_last_row >= 0:
+            for col in range(self.columnCount()):
+                self.item(self.mouse_last_row, col).setForeground(QBrush(QColor(0, 0, 0)))
+                self.item(self.mouse_last_row, col).setBackground(QBrush(QColor(245, 245, 245, 0)))  # 透明
+
+    def leaveEvent(self, *args, **kwargs):
+        """ 鼠标离开事件 """
+        # 将最后记录行颜色变为原来的样子,且修改记录行为-1
+        self.recover_row_color()
+        self.mouse_last_row = -1
 
 
 class ReportAbstract(QWidget):
     def __init__(self, *args, **kwargs):
         super(ReportAbstract, self).__init__(*args, **kwargs)
         main_layout = QVBoxLayout()
-        opts_layout = QHBoxLayout()
+        main_layout.setContentsMargins(QMargins(58, 28, 58, 28))
+
+        # 操作的控制控件
+        title_widget = QWidget(self)
+        title_widget.setMinimumWidth(1080)  # 与显示的table一样宽
+        title_layout = QVBoxLayout()
+        title_layout.setContentsMargins(QMargins(0, 0, 0, 0))
         self.page_name = QLabel(self)
-        main_layout.addWidget(self.page_name, alignment=Qt.AlignTop | Qt.AlignLeft)
-        self.date_edit = QDateEdit(self)
-        self.date_edit.setDisplayFormat("yyyy-MM-dd")
-        self.date_edit.setCalendarPopup(True)
-        current_hour = QTime.currentTime().hour()
-        current_date = QDate.currentDate() if current_hour >= 16 else QDate.currentDate().addDays(-1)
-        self.date_edit.setDate(current_date)
-        opts_layout.addWidget(self.date_edit)
+        title_layout.addWidget(self.page_name, alignment=Qt.AlignLeft)
+
+        opts_layout = QHBoxLayout()
+        opts_layout.addWidget(QLabel("品种:", self))
+        # self.date_edit = QDateEdit(self)
+        # self.date_edit.setDisplayFormat("yyyy-MM-dd")
+        # self.date_edit.setCalendarPopup(True)
+        # current_hour = QTime.currentTime().hour()
+        # current_date = QDate.currentDate() if current_hour >= 16 else QDate.currentDate().addDays(-1)
+        # self.date_edit.setDate(current_date)
+        # opts_layout.addWidget(self.date_edit)
         self.variety_combobox = QComboBox(self)
         self.variety_combobox.addItem("全部", "0")
         self.variety_combobox.setFixedWidth(100)
         opts_layout.addWidget(self.variety_combobox)
-        self.query_button = QPushButton("查询", self)
-        opts_layout.addWidget(self.query_button)
+        opts_layout.addStretch()
         # 分页器
         self.paginator = Paginator(parent=self)
         opts_layout.addWidget(self.paginator)
-        opts_layout.addStretch()
-        main_layout.addLayout(opts_layout)
-        self.report_table = QTableWidget(self)
-        self.report_table.verticalHeader().hide()
-        self.report_table.horizontalHeader().hide()
-        self.report_table.setEditTriggers(QHeaderView.NoEditTriggers)
-        self.report_table.setFrameShape(QFrame.NoFrame)
-        self.report_table.horizontalHeader().setDefaultSectionSize(100)
-        self.report_table.setFocusPolicy(Qt.NoFocus)
-        self.report_table.setAlternatingRowColors(True)
-        self.report_table.setShowGrid(False)
-        # 选中一行
-        # self.report_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        # self.report_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        # 不能选中
-        self.report_table.setSelectionMode(QAbstractItemView.NoSelection)
-        # 背景透明
-        table_palette = self.report_table.palette()
-        table_palette.setBrush(QPalette.Base, QBrush(QColor(255,255,255,0)))
-        self.report_table.setPalette(table_palette)
-        self.report_table.setCursor(Qt.PointingHandCursor)
-        self.report_table.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
+
+        title_layout.addLayout(opts_layout)
+
+        title_widget.setLayout(title_layout)
+
+        main_layout.addWidget(title_widget)
+
+        self.report_table = ReportTable(self)
+        self.report_table.setMinimumWidth(1080)
         main_layout.addWidget(self.report_table)
         self.setLayout(main_layout)
         self.page_name.setObjectName("pageName")
-        self.report_table.setObjectName("reportTable")
         self.setStyleSheet(
-            "#pageName{color:rgb(233,66,66);font-style:italic;font-size:15px}"
-            "#reportTable::item:hover{color:rgb(248,121,27)}"
+            "#pageName{color:rgb(233,66,66);font-style:italic;font-size:25px}"
         )
         self.get_all_variety()  # 获取所有品种
         # 点击事件
@@ -96,27 +138,54 @@ class ReportAbstract(QWidget):
                     self.variety_combobox.addItem(variety_item["variety_name"], variety_item["variety_en"])
         reply.deleteLater()
 
+    def get_current_page_report(self, report_type, current_page=None):
+        """ 获取当前页的报告"""
+        if current_page is None:
+            current_page = self.paginator.get_current_page()
+        variety_en = self.variety_combobox.currentData()
+        url = SERVER_API + "report-file/paginator/?report_type={}&variety_en={}&page={}&page_size=22".format(report_type, variety_en, current_page)
+        network_manager = getattr(qApp, "_network")
+        reply = network_manager.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.current_report_reply)
+
+    def current_report_reply(self):
+        """ 当前报告返回 """
+        reply = self.sender()
+        if reply.error():
+            pass
+        else:
+            data = json.loads(reply.readAll().data().decode("utf-8"))
+            self.paginator.setTotalPages(data["total_page"])
+            self.show_report_content(data["reports"])
+        reply.deleteLater()
+
     def set_page_name(self, name: str):
         self.page_name.setText(name)
 
     def show_report_content(self, reports):
         """ 显示报告 """
-        header_keys = ["title", "date"]
+        self.report_table.clear()
+        header_keys = ["variety_zh", "title", "type_text", "date"]
         self.report_table.setColumnCount(len(header_keys))
+        self.report_table.setHorizontalHeaderLabels(["相关品种", "标题", "报告类型", "日期"])
         self.report_table.setRowCount(len(reports))
-        # QHeaderView
         self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        if len(reports) >= 20:
+            self.report_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        else:
+            self.report_table.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
         for row, row_item in enumerate(reports):
             for col, col_key in enumerate(header_keys):
                 item = QTableWidgetItem(str(row_item[col_key]))
                 if col == 0:
                     item.setData(Qt.UserRole, row_item["filepath"])
+                item.setTextAlignment(Qt.AlignCenter)
                 self.report_table.setItem(row, col, item)
 
     def view_detail_report(self, row, col):
         """ 查看报告内容 """
         item = self.report_table.item(row, 0)
+        title = self.report_table.item(row, 1).text()
         file_url = STATIC_URL + item.data(Qt.UserRole)
-        p = PDFContentPopup(file=file_url, title=item.text(), parent=self)
+        p = PDFContentPopup(file=file_url, title=title, parent=self)
         p.exec_()

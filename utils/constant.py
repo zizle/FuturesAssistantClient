@@ -166,3 +166,8 @@ VERTICAL_SCROLL_STYLE = "QScrollBar:vertical{background: transparent; width:10px
             "QScrollBar::sub-page:vertical{width:10px;background:transparent;}" \
             "QScrollBar::sub-line:vertical{height:0px}" \
             "QScrollBar::add-line:vertical{height:0px}"
+
+HORIZONTAL_HEADER_STYLE = "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1," \
+            "stop:0 #49aa54, stop: 0.48 #49cc54,stop: 0.52 #49cc54, stop:1 #49aa54);" \
+            "border:1px solid rgb(201,202,202);border-left:none;" \
+            "min-height:25px;min-width:40px;font-weight:bold;font-size:13px};"

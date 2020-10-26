@@ -23,7 +23,7 @@ class ShortMessageUI(QWidget):
     def __init__(self, *args, **kwargs):
         super(ShortMessageUI, self).__init__(*args, **kwargs)
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(QMargins(1, 1, 1, 1))
+        main_layout.setContentsMargins(QMargins(15, 15, 15, 15))
         option_layout = QHBoxLayout()
 
         today = datetime.today()
