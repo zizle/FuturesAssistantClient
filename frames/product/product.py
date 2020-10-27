@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt
 from .product_ui import ProductUI
 from .short_message import ShortMessage
+from .regular_report import RegularReport
 
 
 class ProductPage(ProductUI):
@@ -15,7 +16,7 @@ class ProductPage(ProductUI):
         menus = [
             {"menu_id": "1", "menu_name": "资讯服务", "children": [
                 {"menu_id": "1_1", "menu_name": "短信通"},
-                {"menu_id": "1_2", "menu_name": "市场分析"},
+                {"menu_id": "1_2", "menu_name": "定期报告"},
             ]}
         ]
 
@@ -31,9 +32,12 @@ class ProductPage(ProductUI):
 
     def create_menu_tab(self, menu_id, parent_text, menu_name):
         """ 进入功能页面 """
+        print(menu_id)
         if menu_id == "1_1":
             # 短信通页面
-            tab = ShortMessage(self.frame_tab)
+            tab = ShortMessage()
+        elif menu_id == "1_2":
+            tab = RegularReport()
         else:
             tab = QLabel(
                 "「" + menu_name + "」暂未开放···\n更多资讯请访问【首页】查看.",

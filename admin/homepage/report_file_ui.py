@@ -124,9 +124,10 @@ class ReportFileAdminUI(QTabWidget):
         manager_option_layout.addStretch()
 
         self.manager_table = QTableWidget(self)
-        self.manager_table.setColumnCount(8)
-        self.manager_table.setHorizontalHeaderLabels(["日期", "关联品种", "报告类型", "报告名称", "", "是否公开", "", ""])
+        self.manager_table.setColumnCount(7)
+        self.manager_table.setHorizontalHeaderLabels(["日期", "关联品种", "报告类型", "报告名称", "", "是否公开", ""])
         self.manager_table.horizontalHeader().setDefaultSectionSize(80)
+        self.manager_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.manager_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         manager_layout.addWidget(self.manager_table)
 
