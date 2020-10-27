@@ -77,12 +77,16 @@ class LoginUI(QWidget):
 
         # 记住密码
         remember_layout = QHBoxLayout(spacing=2)
-        self.remember_psd = QCheckBox('记住密码')
+        self.remember_psd = QCheckBox('记住密码', self)
         remember_layout.addWidget(self.remember_psd)
         # 记住登录
-        self.remember_login = QCheckBox('自动登录')
+        self.remember_login = QCheckBox('自动登录', self)
         remember_layout.addWidget(self.remember_login)
         remember_layout.addStretch()
+        # 忘记密码
+        self.forget_password = QPushButton('忘记密码', self)
+        self.forget_password.setCursor(Qt.PointingHandCursor)
+        remember_layout.addWidget(self.forget_password)
         layout.addLayout(remember_layout)
         # 登录错误框
         self.login_error = QLabel(self)
@@ -107,11 +111,13 @@ class LoginUI(QWidget):
         self.password_edit.setFixedHeight(35)
         self.setLayout(layout)
         self.setMaximumWidth(500)
+        self.forget_password.setObjectName("forgetPsdBtn")
         # 样式
         self.setStyleSheet(
             "#phoneError,#psdError,#loginError{color:rgb(200,50,30)}"
             "#loginBtn{background-color:rgb(46,158,224);color: rgb(240,240,240);font-weight:bold;min-height:28px;border:none;}"
             "#loginBtn:pressed{background-color:rgb(28,76,202);}"
+            "#forgetPsdBtn{border:none;color:rgb(16,25,180)}#forgetPsdBtn:hover{color:rgb(100,36,125)}"
         )
 
 

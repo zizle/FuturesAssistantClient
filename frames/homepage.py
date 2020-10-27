@@ -260,7 +260,7 @@ class Homepage(HomepageUI):
     def get_latest_spot_price(self):
         """ 获取最新现货报价 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-spotprice/?count=7"
+        url = SERVER_API + "latest-spotprice/?count=30"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_spot_price_reply)
 

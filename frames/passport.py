@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import qApp
 from PyQt5.QtCore import pyqtSignal, QUrl, QSettings, QTimer, Qt
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
 from PyQt5.QtGui import QPixmap
+from popup.password import ResetPasswordPopup
 from settings import SERVER_API, BASE_DIR
 from utils.multipart import generate_multipart_data
 from .passport_ui import PassportUI
@@ -35,6 +36,8 @@ class UserPassport(PassportUI):
 
         self.login_widget.login_button.clicked.connect(self.user_commit_login)                  # 用户点击登录
         self.register_widget.register_button.clicked.connect(self.user_commit_register)         # 用户点击注册
+
+        self.login_widget.forget_password.clicked.connect(self.forget_password_popup)           # 忘记秘密弹窗重置密码
 
         self.get_image_code()  # 初始获取验证码
 
@@ -278,3 +281,8 @@ class UserPassport(PassportUI):
         app_configs.setValue("USER/TTYPE", "bearer")
         # 发出登录成功的信号
         self.username_signal.emit(data["show_username"])
+
+    def forget_password_popup(self):
+        """ 弹窗用户重置密码 """
+        reset_popup = ResetPasswordPopup(self.login_widget.phone_edit.text(), self)
+        reset_popup.exec_()
