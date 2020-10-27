@@ -222,6 +222,7 @@ class ReportFileAdmin(ReportFileAdminUI):
                 message = "创建报告成功!"
                 self.local_file_edit.clear()
                 self.clear_relative_variety()
+                self.rename_edit.clear()
             reply.deleteLater()
             p = InformationPopup(message, self)
             p.exec_()
@@ -248,7 +249,11 @@ class ReportFileAdmin(ReportFileAdminUI):
             else:
                 message = "创建报告成功!"
                 self.file_table.removeRow(self.file_table.currentRow())
+                self.selected_file_path = None
+                self.filename.setText("从表格选择文件")
+                self.no_selected_file()
                 self.clear_relative_variety()
+                self.rename_edit.clear()
             reply.deleteLater()
             p = InformationPopup(message, self)
             p.exec_()

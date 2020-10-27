@@ -6,7 +6,7 @@
 """ 日报，周报的后台处理 """
 
 from PyQt5.QtWidgets import (QWidget, QTabWidget, QHBoxLayout, QVBoxLayout, QDateEdit, QLabel, QComboBox, QPushButton,
-                             QTableWidget, QHeaderView, QAbstractItemView, QLineEdit)
+                             QTableWidget, QHeaderView, QAbstractItemView, QLineEdit, QCompleter)
 from PyQt5.QtCore import QDate, Qt
 from widgets.path_edit import FilePathLineEdit
 
@@ -59,6 +59,10 @@ class ReportFileAdminUI(QTabWidget):
 
         option_layout.addWidget(QLabel("备选品种:", self))
         self.variety_combobox = QComboBox(self)
+        self.variety_combobox.setMinimumWidth(100)
+        self.variety_combobox.setEditable(True)
+        self.completer = QCompleter(self.variety_combobox.model(), self)
+        self.variety_combobox.setCompleter(self.completer)
         option_layout.addWidget(self.variety_combobox)
 
         option_layout.addWidget(QLabel("关联品种:", self))
