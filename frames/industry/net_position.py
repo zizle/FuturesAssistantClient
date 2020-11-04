@@ -87,16 +87,31 @@ class NetPosition(NetPositionUI):
         self.data_table.setRowCount(row_count)
         # 设置表头数据
         interval_day = self.interval_days.value()
-        for count in range(2):
-            for index, h_key in enumerate(header_keys):
-                if index == 0:
-                    item = QTableWidgetItem('品种')
-                elif index == 1:
-                    item = QTableWidgetItem(h_key)
-                else:
-                    item = QTableWidgetItem(str((index - 1) * interval_day) + "天前")
-                setattr(item, 'key', h_key)
-                self.data_table.setHorizontalHeaderItem(index + count * len(header_keys), item)
+        # 2020.11.02: 新增1天前数据的显示
+        if interval_day == 1:  # 2020.11.02:当间隔为1天的表头数据
+            for count in range(2):
+                for index, h_key in enumerate(header_keys):
+                    if index == 0:
+                        item = QTableWidgetItem('品种')
+                    elif index == 1:
+                        item = QTableWidgetItem(h_key)
+                    else:
+                        item = QTableWidgetItem(str((index - 1) * interval_day) + "天前")
+                    setattr(item, 'key', h_key)
+                    self.data_table.setHorizontalHeaderItem(index + count * len(header_keys), item)
+        else:  # 当间隔不为1天的表头数据
+            for count in range(2):
+                for index, h_key in enumerate(header_keys):
+                    if index == 0:
+                        item = QTableWidgetItem('品种')
+                    elif index == 1:
+                        item = QTableWidgetItem(h_key)
+                    elif index == 2:  # 新增第二列固定为1天前2020.11.02
+                        item = QTableWidgetItem("1天前")
+                    else:
+                        item = QTableWidgetItem(str((index - 2) * interval_day) + "天前")
+                    setattr(item, 'key', h_key)
+                    self.data_table.setHorizontalHeaderItem(index + count * len(header_keys), item)
 
         # 纵向根据交易代码顺序填充数据(2020-10-13修改)
         index_count = 0
