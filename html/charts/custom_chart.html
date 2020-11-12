@@ -9,7 +9,7 @@
 </head>
 <style>
 html,body{margin: 0;padding: 0}
-#chartBox{width: 100%;height: 100vh;background-color: azure}
+#chartBox{width: 100%;height: 100vh;background-color: rgb(240,240,240)}
 </style>
 <body>
     <div id="chartBox"></div>
@@ -26,6 +26,7 @@ function getSeriesLegend(seriesData, sourceData, sheetHeaders) {
             type: optData.chart_type,
             name: sheetHeaders[optData.column_index],
             yAxisIndex: optData.axis_index,
+            connectNulls: true,
             data: sourceData.map(item=>{return parseFloat(item[optData.column_index])})
         };
         seriesArray.push(seriesOption);
@@ -34,6 +35,42 @@ function getSeriesLegend(seriesData, sourceData, sheetHeaders) {
     return {
         seriesData: seriesArray,
         legendData: legend
+    }
+}
+
+// 生成水印
+function generateGraphic(watermark){
+    if(watermark === '' || watermark === undefined){return null}
+    else{
+        return {
+            type: 'group',
+            rotation: Math.PI / 4,
+            bounding: 'raw',
+            right: 80,
+            bottom: 80,
+            z: -100,
+            children: [
+                {
+                    type: 'rect',
+                    left: 'center',
+                    top: 'center',
+                    z:-100,
+                    shape:{width: 400, height: 35},
+                    style:{fill: 'rgba(0,0,0,0.4)'}
+                },
+                {
+                    type: 'text',
+                    left: 'center',
+                    top: 'center',
+                    z: -100,
+                    style: {
+                        fill: 'rgba(255,255,255,0.9)',
+                        text: watermark,
+                        font: 'bold 22px Microsoft YaHei'
+                    }
+                }
+            ]
+        }
     }
 }
 
@@ -81,7 +118,8 @@ function generateOption(baseOption, sourceData, sheetHeaders){
             }
         ],
         series: seriesLegend.seriesData,
-        legend: seriesLegend.legendData
+        legend: seriesLegend.legendData,
+        graphic: generateGraphic(baseOption.watermark)
     };
 }
 
@@ -97,6 +135,7 @@ function getSeasonSeriesLegend(seriesData, sourceData){
             type: "line",
             name: yearKey,
             yAxisIndex: 0,
+            connectNulls: true,
             data: yearData.map(item=>{return [item["column_0"], item[optData.column_index]]})
         };
         seriesArray.push(seriesOption);
@@ -153,7 +192,8 @@ function generateSeasonOption(baseOption, sourceData, sheetHeaders){
             }
         ],
         series: seriesLegend.seriesData,
-        legend: seriesLegend.legendData
+        legend: seriesLegend.legendData,
+        graphic: generateGraphic(baseOption.watermark)
     };
 }
 

@@ -158,7 +158,7 @@ $(function () {
                 storehouseData.push({
                     name: house.name,
                     value: [house.longitude, house.latitude],
-                    hid:house.id,
+                    hid:house.fixed_code
                 })
             });
             // 重新设置数据，重新加载地图
@@ -301,7 +301,6 @@ $(function () {
         {
             // 仓库详情
             var storeId = event['data']['hid'];
-            // alert(storeId);
             window.pageChannel.get_warehouse_detail(storeId);
         }
         //

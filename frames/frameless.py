@@ -8,6 +8,8 @@ import os
 import re
 import json
 import pickle
+import sys
+from subprocess import Popen
 from PyQt5.QtWidgets import qApp, QLabel
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtCore import Qt, QUrl, QSettings, QTimer
@@ -101,16 +103,35 @@ class ClientMainApp(FrameLessWindowUI):
         data = reply.readAll().data()
         u_data = json.loads(data.decode("utf-8"))
         if u_data["update_needed"]:
-            p = NewVersionPopup(self)
+            message = u_data["update_detail"]
+            p = NewVersionPopup(message, self)
             p.to_update.connect(self.to_update_page)
-            p.show()
+            if u_data.get("update_force"):  # 强制更新
+                p.set_force()
+            p.exec_()
         else:
             pass
         reply.deleteLater()
 
     def to_update_page(self):
-        """ 前往版本更新页面 """
-        self.set_system_page("0_0_1")
+        # """ 前往版本更新页面 """
+        # self.set_system_page("0_0_1")
+        """ 退出当前程序，启动更新更新 """
+        # script_file = os.path.join(BASE_DIR, "AutoUpdate.exe")
+        script_file = os.path.join(BASE_DIR, "Update.exe")
+        is_close = True
+        if os.path.exists(script_file):
+            try:
+                Popen(script_file, shell=False)
+            except OSError as e:
+                self.run_message.setText(str(e))
+                is_close = False
+        else:
+            p = InformationPopup("更新程序丢失...", self)
+            p.exec_()
+            is_close = False
+        if is_close:
+            sys.exit()
 
     def application_state_changed(self, state):
         """ 应用程序状态发生变化 """
@@ -226,7 +247,6 @@ class ClientMainApp(FrameLessWindowUI):
 
     def refresh_authorization(self):
         """ 刷新当前用户的权限 """
-        print("刷新权限")
         is_logged = self.navigation_bar.get_user_login_status()
         # 用户未登录,权限为[],直接写入
         if not is_logged:

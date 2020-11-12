@@ -11,17 +11,21 @@ from PyQt5.QtCore import Qt, pyqtSignal
 class NewVersionPopup(QDialog):
     to_update = pyqtSignal()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, message, *args, **kwargs):
         super(NewVersionPopup, self).__init__(*args, *kwargs)
+        self.setWindowFlags(self.windowFlags() | Qt.CustomizeWindowHint | Qt.WindowCloseButtonHint)
+        self.setMinimumWidth(320)
+        self.force = False
         self.setAttribute(Qt.WA_DeleteOnClose)
         main_layout = QVBoxLayout()
         self.setWindowTitle("新版本")
-        label = QLabel("系统检测到新版本可更新!\n使用新功能和避免原功能不可用,建议更新。", self)
+        label = QLabel(message, self)
         main_layout.addWidget(label)
         self.ignore_button = QPushButton("本次忽略", self)
         self.ignore_button.clicked.connect(self.close)
-        self.update_button = QPushButton("前往更新", self)
+        self.update_button = QPushButton("立即更新", self)
         self.update_button.clicked.connect(self.to_update_page)
+        self.update_button.setFocus()
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         button_layout.addWidget(self.ignore_button)
@@ -33,4 +37,15 @@ class NewVersionPopup(QDialog):
         self.hide()
         self.to_update.emit()
         self.close()
+        
+    def closeEvent(self, event):
+        if self.force:
+            event.ignore()
+        else:
+            super(NewVersionPopup, self).closeEvent(event)
+
+    def set_force(self):
+        """ 设置强制更新 """
+        self.force = True
+        self.ignore_button.hide()
 

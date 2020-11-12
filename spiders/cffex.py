@@ -14,7 +14,24 @@ from PyQt5.QtNetwork import QNetworkRequest
 from utils.characters import split_number_en
 from settings import logger, USER_AGENTS, LOCAL_SPIDER_SRC, SERVER_API
 
-VARIETY_LIST = ["IF", "IC", "IH", "TS", "TF", "T"]
+
+def get_variety_list(current_date):
+    # VARIETY_LIST = ["IF"]  # 20100416-20130905
+    # VARIETY_LIST = ["IF", "TF"]  # 20130906-20150319
+    # VARIETY_LIST = ["IF", "TF", "T"]  # 20150320-20150415
+    # VARIETY_LIST = ["IF", "TF", "T", "IC", "IH"]  # 20150416-20180816
+    # VARIETY_LIST = ["IF", "TF", "T", "IC", "IH", "TS"]  # 20180817- 至今
+    if "20100416" <= current_date < "20130906":
+        variety_list = ["IF"]
+    elif "20130906" <= current_date < "20150320":
+        variety_list = ["IF", "TF"]
+    elif "20150320" <= current_date < "20150416":
+        variety_list = ["IF", "TF", "T"]
+    elif "20150416" <= current_date < "20180816":
+        variety_list = ["IF", "TF", "T", "IC", "IH"]
+    else:
+        variety_list = ["IF", "TF", "T", "IC", "IH", "TS"]
+    return variety_list
 
 
 class DateValueError(Exception):
@@ -51,7 +68,7 @@ class CFFEXSpider(QObject):
             reply.deleteLater()
             self.spider_finished.emit("失败:" + str(reply.error()), True)
             return
-        save_path = os.path.join(LOCAL_SPIDER_SRC, 'cffex/daily/{}.csv'.format(self.date.strftime("%Y-%m-%d")))
+        save_path = os.path.join(LOCAL_SPIDER_SRC, 'cffex/daily/{}.csv'.format(self.date.strftime("%Y%m%d")))
         file_data = reply.readAll()
         file_obj = QFile(save_path)
         is_open = file_obj.open(QFile.WriteOnly)
@@ -65,8 +82,9 @@ class CFFEXSpider(QObject):
         """ 获取日排名数据源文件 """
         base_url = "http://www.cffex.com.cn/sj/ccpm/{}/{}/{}_1.csv"
         network_manager = getattr(qApp, "_network")
-
-        for variety in VARIETY_LIST:
+        spider_date = self.date.strftime("%Y%m%d")
+        variety_list = get_variety_list(spider_date)
+        for variety in variety_list:
             url = base_url.format(self.date.strftime("%Y%m"), self.date.strftime("%d"), variety)
             self.spider_finished.emit("准备获取{}的日排名数据文件...".format(variety), False)
             request = QNetworkRequest(QUrl(url))
@@ -88,7 +106,7 @@ class CFFEXSpider(QObject):
             self.spider_finished.emit("获取{}排名数据文件。\n失败:{}".format(request_variety[:2], str(reply.error())), True)
             logger.error("获取{}排名数据文件失败了!".format(request_url[:2]))
             return
-        save_path = os.path.join(LOCAL_SPIDER_SRC, 'cffex/rank/{}_{}.csv'.format(request_variety, self.date.strftime("%Y-%m-%d")))
+        save_path = os.path.join(LOCAL_SPIDER_SRC, 'cffex/rank/{}_{}.csv'.format(self.date.strftime("%Y%m%d"), request_variety))
         file_data = reply.readAll()
         file_obj = QFile(save_path)
         is_open = file_obj.open(QFile.WriteOnly)
@@ -96,10 +114,12 @@ class CFFEXSpider(QObject):
             file_obj.write(file_data)
             file_obj.close()
         reply.deleteLater()
-        tip = "获取中金所{}_{}日持仓排名数据保存到文件成功!".format(request_variety, self.date.strftime("%Y-%m-%d"))
-        if request_variety == "T":
+        if request_variety == "TS":
             tip = "获取中金所{}日所有品种持仓排名数据保存到文件成功!".format(self.date.strftime("%Y-%m-%d"))
-        self.spider_finished.emit(tip, True)
+            self.spider_finished.emit(tip, True)
+        else:
+            tip = "获取中金所{}_{}日持仓排名数据保存到文件成功!".format(request_variety, self.date.strftime("%Y-%m-%d"))
+            self.spider_finished.emit(tip, False)
         self.event_loop.quit()
 
 
@@ -117,16 +137,15 @@ class CFFEXParser(QObject):
         """ 解析日统计源文件数据到DataFrame """
         if self.date is None:
             raise DateValueError("请先使用`set_date`设置`CZCEParser`日期.")
-        file_path = os.path.join(LOCAL_SPIDER_SRC, 'cffex/daily/{}.csv'.format(self.date.strftime("%Y-%m-%d")))
+        file_path = os.path.join(LOCAL_SPIDER_SRC, 'cffex/daily/{}.csv'.format(self.date.strftime("%Y%m%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现中金所{}的日交易统计文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
             return DataFrame()
         csv_df = read_csv(file_path, encoding='gbk', error_bad_lines=False)
-        # print(csv_df.columns.values.tolist())
-        # if csv_df.columns.values.tolist() != ['合约代码', '今开盘', '最高价', '最低价', '成交量',
-        # '成交金额', '持仓量', '今收盘', '今结算', '涨跌1', '涨跌2', 'Delta']:
-        #     self.parser_finished.emit("中金所{}的日交易统计文件数据格式有误".format(self.date.strftime("%Y-%m-%d")), True)
-        #     return DataFrame()
+        if csv_df.columns.values.tolist() != ['合约代码', '今开盘', '最高价', '最低价', '成交量',
+                                              '成交金额', '持仓量', '持仓变化', '今收盘', '今结算', '前结算', '涨跌1', '涨跌2', 'Delta']:
+            self.parser_finished.emit("{}中金所日行情文件格式有误!".format(self.date.strftime("%Y-%m-%d")))
+            return DataFrame()
         csv_df = csv_df[~csv_df['合约代码'].str.contains('-C-|-P-|小计|合计')]  # 去除合约代码-C- -P-的期权数据 小计 合计总计数据
         csv_df["合约代码"] = csv_df["合约代码"].str.strip()  # 去除前后空格
         csv_df["成交金额"] = csv_df["成交金额"].round(decimals=6)  # 成交金额保留6位小数
@@ -134,15 +153,17 @@ class CFFEXParser(QObject):
         str_date = self.date.strftime("%Y%m%d")
         csv_df["日期"] = [str_date for _ in range(csv_df.shape[0])]  # 增加日期列
         # 重置索引
-        csv_df = csv_df.reindex(columns=["日期", "品种", "合约代码", "今开盘", "最高价", "最低价", "今收盘",
-                                "今结算", "涨跌1", "涨跌2", "成交量", "成交金额", "持仓量"])
-        csv_df.columns = ["date", "variety_en", "contract", "open_price", "highest", "lowest", "close_price",
-                          "settlement", "zd_1", "zd_2", "trade_volume", "trade_price", "empty_volume"]
+        csv_df = csv_df.reindex(columns=["日期", "品种", "合约代码", "前结算", "今开盘", "最高价", "最低价", "今收盘",
+                                "今结算", "涨跌1", "涨跌2", "成交量", "成交金额", "持仓量", "持仓变化"])
+        csv_df.columns = ["date", "variety_en", "contract", "pre_settlement", "open_price", "highest", "lowest", "close_price",
+                          "settlement", "zd_1", "zd_2", "trade_volume", "trade_price", "empty_volume", "increase_volume"]
         # 填充空值
         csv_df[
-            ["open_price", "highest", "lowest", "close_price", "settlement", "zd_1", "zd_2", "trade_volume", "trade_price", "empty_volume"]
+            ["pre_settlement", "open_price", "highest", "lowest", "close_price", "settlement", "zd_1", "zd_2",
+             "trade_volume", "trade_price", "empty_volume", "increase_volume"]
         ] = csv_df[
-            ["open_price", "highest", "lowest", "close_price", "settlement", "zd_1", "zd_2", "trade_volume", "trade_price", "empty_volume"]
+            ["pre_settlement", "open_price", "highest", "lowest", "close_price", "settlement", "zd_1", "zd_2",
+             "trade_volume", "trade_price", "empty_volume", "increase_volume"]
         ].fillna(0)
         return csv_df
 
@@ -173,45 +194,78 @@ class CFFEXParser(QObject):
         """ 解析源文件数据为pandas的DataFrame """
         if self.date is None:
             raise DateValueError("请先使用`set_date`设置`CZCEParser`日期.")
-
+        # 获取当前日期的品种列表
+        parser_date = self.date.strftime("%Y%m%d")
+        variety_list = get_variety_list(parser_date)
         result_df = DataFrame(columns=[])
-        for variety in VARIETY_LIST:
-            file_path = os.path.join(LOCAL_SPIDER_SRC, 'cffex/rank/{}_{}.csv'.format(variety, self.date.strftime("%Y-%m-%d")))
+        for variety in variety_list:
+            file_path = os.path.join(LOCAL_SPIDER_SRC, 'cffex/rank/{}_{}.csv'.format(parser_date, variety))
             if not os.path.exists(file_path):
                 self.parser_finished.emit("没有发现中金所{}_{}的日排名文件,请先抓取数据!".format(variety, self.date.strftime("%Y-%m-%d")), True)
                 logger.error("没有发现中金所{}_{}的日排名源文件".format(variety, self.date.strftime("%Y-%m-%d")))
                 return DataFrame()
             variety_df = self.parser_variety_rank_file(file_path, variety)
             result_df = concat([result_df, variety_df])
+        if not result_df.empty:
+            # 转换数据类型
+            result_df["rank"] = result_df["rank"].astype("int")
+            result_df["trade"] = result_df["trade"].astype("int")
+            result_df["trade_increase"] = result_df["trade_increase"].astype("int")
+            result_df["long_position"] = result_df["long_position"].astype("int")
+            result_df["long_position_increase"] = result_df["long_position_increase"].astype("int")
+            result_df["short_position"] = result_df["short_position"].astype("int")
+            result_df["short_position_increase"] = result_df["short_position_increase"].astype("int")
         return result_df
 
-    def parser_variety_rank_file(self, file_path, variety_name):
+    @staticmethod
+    def parser_variety_rank_file(file_path, variety_name):
         """ 使用pandas解析中金所品种的日排名数据 """
-        if variety_name in ["TF", "T"]:  # 5年期和10年期国债从2020-09-14日起多公布了非期货公司的量,占用第1,2行
-            variety_df = read_csv(file_path, encoding="gbk", skiprows=[0, 1, 3])
-        else:
-            variety_df = read_csv(file_path, encoding="gbk", skiprows=[1])
+        # 读取数据
+        variety_df = read_csv(file_path, encoding="gbk", header=None, sep="\t", thousands=',')
+        # 得到数据开始的行
+        # 搜集数据的容器
+        variety_ranks = []
+        equal_list = ['交易日', '合约', '排名', '成交量排名', '', '', '持买单量排名', '', '', '持卖单量排名', '', '']
+        start_get, first_enter = False, False
+        for row in variety_df.itertuples():
+            row_list = row[1].split(',')
+            if row_list == equal_list:
+                start_get = True
+                first_enter = True
+                continue
+            if start_get and first_enter:
+                # 修改row_list的值
+                row_list[0:3] = equal_list[0:3]  # '交易日', '合约', '排名'
+                row_list[3] = row_list[3] + "1"
+                row_list[6] = row_list[6] + "2"
+                row_list[9] = row_list[9] + "3"
+                first_enter = False
+                variety_ranks.append(row_list)
+                continue
+            if start_get and not first_enter:
+                variety_ranks.append(row_list)
 
-        if variety_df.columns.values.tolist() != ['交易日', '合约', '排名', '成交量排名', 'Unnamed: 4', 'Unnamed: 5', '持买单量排名',
-                                                  'Unnamed: 7', 'Unnamed: 8', '持卖单量排名', 'Unnamed: 10', 'Unnamed: 11']:
-            logger.error("中金所{}_{}的日排名源文件格式有误".format(variety_name, self.date.strftime("%Y-%m-%d")))
-            return DataFrame()
-        # 重置头名
+        variety_df = DataFrame(variety_ranks[1:], columns=variety_ranks[0])
+        df_columns = ['交易日', '合约', '排名', '会员简称1', '成交量', '比上一交易日增减', '会员简称2', '持买单量', '比上一交易日增减', '会员简称3', '持卖单量',
+                      '比上一交易日增减']
+        if variety_df.columns.tolist() != df_columns:
+            logger.error("解析中金所{}的日排名数据文件时格式有误!".format(variety_name))
+            raise DateValueError("Data Columns Error!")
+        # 处理数据
+        # 1 修改表头
         variety_df.columns = ["date", "contract", "rank", "trade_company", "trade", "trade_increase",
                               "long_position_company", "long_position", "long_position_increase",
                               "short_position_company", "short_position", "short_position_increase"]
-        # 处理字符串前后空格
-        variety_df["contract"] = variety_df["contract"].str.strip()
-        variety_df["trade_company"] = variety_df["trade_company"].str.strip()
-        variety_df["long_position_company"] = variety_df["long_position_company"].str.strip()
-        variety_df["short_position_company"] = variety_df["short_position_company"].str.strip()
-        # 插入品种列
+        # 2 去除数据空格
+        variety_df = variety_df.replace('\s+', '', regex=True)
+        # 3 插入品种列
         variety_df["variety_en"] = [variety_name for _ in range(variety_df.shape[0])]
-        # 重置列索引
+        # 4 重置索引列
         variety_df = variety_df.reindex(columns=["date", "variety_en", "contract", "rank",
                                                  "trade_company", "trade", "trade_increase",
                                                  "long_position_company", "long_position", "long_position_increase",
                                                  "short_position_company", "short_position", "short_position_increase"])
+
         return variety_df
 
     def save_rank_server(self, source_df):
@@ -236,3 +290,6 @@ class CFFEXParser(QObject):
         else:
             data = json.loads(data.decode("utf-8"))
             self.parser_finished.emit(data["message"], True)
+
+    def save_receipt_server(self, source_df):
+        self.parser_finished.emit("中金所无需进行仓单日报的保存!", True)

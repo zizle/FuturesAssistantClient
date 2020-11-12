@@ -697,6 +697,16 @@ class DisposeChartPopup(QDialog):
 
         return base_option
 
+    @staticmethod
+    def replace_zero_to_line(data_str):
+        """ 替换0为-"""
+        try:
+            value = float(data_str)
+        except Exception:
+            return '-'
+        else:
+            return '-' if value == 0 else data_str
+
     def get_chart_source_json(self, chart_type, base_option, source_dataframe):
         """ 处理出绘图的最终数据 """
         # 取得数据的头
@@ -718,7 +728,11 @@ class DisposeChartPopup(QDialog):
             column_index = series_item["column_index"]
             contain_zero = series_item["contain_zero"]
             if not contain_zero:  # 数据不含0,去0处理
-                values_df = values_df[values_df[column_index] != "0"]
+                # 数据去0的话替换为'-' 使其在echarts中不会被作出图形点(在echarts配置中直接连接空数据)
+                values_df[column_index] = values_df[column_index].apply(self.replace_zero_to_line)
+                # 以下的去0方式较单一,0.00就无法去除,且数据会被裁剪
+                # values_df = values_df[values_df[column_index] != "0"]
+                # values_df = values_df[values_df[column_index] != "0.0"]  # 去除计算出来是0.0的数据
         values_df = values_df.sort_values(by="column_0")  # 最后进行数据从小到大的时间排序
         # table_show_df.reset_index(inplace=True)  # 重置索引,让排序生效(赋予row正确的值。可不操作,转为json后,索引无用处了)
         #

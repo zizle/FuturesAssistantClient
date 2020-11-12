@@ -13,7 +13,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 from channels.delivery import WarehouseMapChannel
 from widgets import CAvatar, Paginator, PDFContentPopup
 from utils.client import get_user_token
-from settings import SERVER_API, SERVER_ADDR, STATIC_PREFIX, USER_AGENT, STATIC_URL
+from settings import SERVER_API, USER_AGENT, STATIC_URL
 
 
 class MenuPushButton(QPushButton):
@@ -284,7 +284,7 @@ class ReplyItem(QWidget):
         self.setAttribute(Qt.WA_DeleteOnClose)
         reply_layout = QVBoxLayout(self)
         user_layout = QHBoxLayout(self)
-        avatar_url = STATIC_PREFIX + reply_item['avatar'] if reply_item['avatar'] else "media/default_avatar.png"
+        avatar_url = STATIC_URL + reply_item['avatar'] if reply_item['avatar'] else "media/default_avatar.png"
         avatar = CAvatar(url=avatar_url,size=QSize(20, 20), parent=self)
         user_layout.addWidget(avatar)
         user_layout.addWidget(QLabel(reply_item['username'], self))
@@ -313,7 +313,7 @@ class DiscussItem(QWidget):
         discuss_title.setFixedHeight(22)
         username_layout = QHBoxLayout(self)
         username_layout.setContentsMargins(QMargins(2,1,1,1))
-        avatar_url = STATIC_PREFIX + discuss['avatar'] if discuss['avatar'] else "media/default_avatar.png"
+        avatar_url = STATIC_URL + discuss['avatar'] if discuss['avatar'] else "media/default_avatar.png"
         self.avatar = CAvatar(url=avatar_url,size=QSize(20,20), parent=self)
         username_layout.addWidget(self.avatar)
         self.username = QLabel(discuss['username'])
@@ -1524,9 +1524,11 @@ class DeliveryPage(QScrollArea):
 
     # 界面点击仓库点
     def get_warehouse_receipts(self, wh_id):
-        request_url = SERVER_ADDR + 'warehouse/' + str(wh_id) + '/receipt/'
-        warehouses_receipts = self.request_warehouse_receipts(request_url)
-        if not warehouses_receipts:
-            QMessageBox.information(self, '消息', '该仓库没有相关的仓单信息.')
-            return
-        self.show_warehouse_detail(warehouses_receipts)
+        wh_id = "%04d" % wh_id
+        self.get_detail_receipts_and_show(wh_id, None)
+        # request_url = 'http://210.13.218.130:9002/warehouse/' + str(wh_id) + '/receipt/'
+        # warehouses_receipts = self.request_warehouse_receipts(request_url)
+        # if not warehouses_receipts:
+        #     QMessageBox.information(self, '消息', '该仓库没有相关的仓单信息.')
+        #     return
+        # self.show_warehouse_detail(warehouses_receipts)
