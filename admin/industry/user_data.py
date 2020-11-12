@@ -852,22 +852,28 @@ class UserDataMaintain(UserDataMaintainUI):
         # 断开信号(防止两列的变化都发送一次请求)
         self.sheet_chart_widget.chart_table.cellChanged.disconnect()  # 图形表单元格变化
         if col in [7, 8, 10]:
-            chart_id = self.sheet_chart_widget.chart_table.item(row, 0).text()
-            is_principal = self.sheet_chart_widget.chart_table.item(row, 7).checkState()
-            is_petit = 1 if self.sheet_chart_widget.chart_table.item(row, 8).checkState() else 0
-            is_private = 1 if self.sheet_chart_widget.chart_table.item(row, 10).checkState() else 0
-            self.change_chart_display_position(chart_id, is_principal, is_petit, is_private)
-            if is_principal == 1:
-                text = "审核"
-            elif is_principal == 2:
-                text = "开启"
-            else:
-                text = "隐藏"
-            self.sheet_chart_widget.chart_table.item(row, 7).setText(text)
-            text = "开启" if is_petit else "隐藏"
-            self.sheet_chart_widget.chart_table.item(row, 8).setText(text)
-            text = "自己" if is_private else "公开"
-            self.sheet_chart_widget.chart_table.item(row, 10).setText(text)
+            try:
+                chart_id = self.sheet_chart_widget.chart_table.item(row, 0).text()
+                is_principal = self.sheet_chart_widget.chart_table.item(row, 7).checkState()
+                is_petit = 1 if self.sheet_chart_widget.chart_table.item(row, 8).checkState() else 0
+
+                is_private = 1 if self.sheet_chart_widget.chart_table.item(row, 10).checkState() else 0
+                self.change_chart_display_position(chart_id, is_principal, is_petit, is_private)
+                if is_principal == 1:
+                    text = "审核"
+                elif is_principal == 2:
+                    text = "开启"
+                else:
+                    text = "隐藏"
+                self.sheet_chart_widget.chart_table.item(row, 7).setText(text)
+                text = "开启" if is_petit else "隐藏"
+                self.sheet_chart_widget.chart_table.item(row, 8).setText(text)
+                text = "自己" if is_private else "公开"
+                self.sheet_chart_widget.chart_table.item(row, 10).setText(text)
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print(e)
         # 再次链接信号
         self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)  # 图形表单元格变化
 

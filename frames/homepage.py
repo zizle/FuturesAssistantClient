@@ -12,7 +12,7 @@ from widgets.pdf_shower import PDFContentPopup
 from popup.advertisement import TextPopup
 from popup.spot_price import SpotPricePopup
 from .homepage_ui import HomepageUI, ControlButton, PixMapLabel, LeftChildrenMenuWidget
-from settings import SERVER_API, STATIC_URL, HOMEPAGE_MENUS
+from settings import SERVER_API, STATIC_URL, HOMEPAGE_MENUS, SHIELD_VARIETY, RENAME_VARIETY
 
 
 class Homepage(HomepageUI):
@@ -101,6 +101,10 @@ class Homepage(HomepageUI):
             for exchange, exchange_varieties in data["varieties"].items():
                 variety_menus = {"id": exchange, "name": self.EXCHANGE_LIB.get(exchange, ''), "children": []}
                 for variety_item in exchange_varieties:
+                    if variety_item["variety_en"] in SHIELD_VARIETY:
+                        continue
+                    if variety_item["variety_en"] in RENAME_VARIETY.keys():
+                        variety_item["variety_name"] = RENAME_VARIETY.get(variety_item["variety_en"])
                     variety_menus["children"].append(
                         {"id": variety_item["variety_en"], "name": variety_item["variety_name"]})
                 varieties["children"].append(variety_menus)

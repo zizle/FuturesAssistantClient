@@ -196,8 +196,8 @@ class SHFEParser(QObject):
         with open(file_path, "r", encoding="utf-8") as reader:
             source_content = json.load(reader)
         json_df = DataFrame(source_content["o_cursor"])
-        # 取排名在(-1,0,1~20的数据[-1:期货公司总计,0:非期货公司总计,999品种合约总计]
-        json_df = json_df[json_df['RANK'] <= 20]
+        # 取排名在(1~20的数据[-1:期货公司总计,0:非期货公司总计,999品种合约总计]
+        json_df = json_df[(json_df["RANK"] >= 1) & (json_df['RANK'] <= 20)]
         # 去除字符串空格
         json_df["INSTRUMENTID"] = json_df["INSTRUMENTID"].str.strip().str.upper().str.replace("ALL", '')
         json_df["PARTICIPANTABBR1"] = json_df["PARTICIPANTABBR1"].str.strip()
@@ -220,6 +220,19 @@ class SHFEParser(QObject):
         # for i in json_df.itertuples():
         #     print(i)
         # print(json_df.shape)
+        # 处理数据类型
+        if not json_df.empty:
+            # 转换数据类型
+            json_df["rank"] = json_df["rank"].astype("int")
+            json_df["trade_company"] = json_df["trade_company"].apply(lambda x: '-' if x == 0 else x)
+            json_df["trade"] = json_df["trade"].astype("int")
+            json_df["trade_increase"] = json_df["trade_increase"].astype("int")
+            json_df["long_position_company"] = json_df["long_position_company"].apply(lambda x: '-' if x == 0 else x)
+            json_df["long_position"] = json_df["long_position"].astype("int")
+            json_df["long_position_increase"] = json_df["long_position_increase"].astype("int")
+            json_df["short_position_company"] = json_df["short_position_company"].apply(lambda x: '-' if x == 0 else x)
+            json_df["short_position"] = json_df["short_position"].astype("int")
+            json_df["short_position_increase"] = json_df["short_position_increase"].astype("int")
         return json_df
 
     def save_rank_server(self, source_df):

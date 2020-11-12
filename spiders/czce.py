@@ -53,7 +53,7 @@ class CZCESpider(QObject):
             reply.deleteLater()
             self.spider_finished.emit("失败:" + str(reply.error()), True)
             return
-        save_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/daily/{}.xls'.format(self.date.strftime("%Y-%m-%d")))
+        save_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/daily/{}.xls'.format(self.date.strftime("%Y%m%d")))
         file_data = reply.readAll()
         file_obj = QFile(save_path)
         is_open = file_obj.open(QFile.WriteOnly)
@@ -82,7 +82,7 @@ class CZCESpider(QObject):
             reply.deleteLater()
             self.spider_finished.emit("失败:" + str(reply.error()), True)
             return
-        save_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/rank/{}.xls'.format(self.date.strftime("%Y-%m-%d")))
+        save_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/rank/{}.xls'.format(self.date.strftime("%Y%m%d")))
         file_data = reply.readAll()
         file_obj = QFile(save_path)
         is_open = file_obj.open(QFile.WriteOnly)
@@ -137,7 +137,7 @@ class CZCEParser(QObject):
         """ 解析源文件数据为pandas的DataFrame """
         if self.date is None:
             raise DateValueError("请先使用`set_date`设置`CZCEParser`日期.")
-        file_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/daily/{}.xls'.format(self.date.strftime("%Y-%m-%d")))
+        file_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/daily/{}.xls'.format(self.date.strftime("%Y%m%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现郑商所{}的日交易行情文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
             return DataFrame()
@@ -192,7 +192,7 @@ class CZCEParser(QObject):
         """ 解析日持仓排名数据源文件 """
         if self.date is None:
             raise DateValueError("请先使用`set_date`设置`CZCEParser`日期.")
-        file_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/rank/{}.xls'.format(self.date.strftime("%Y-%m-%d")))
+        file_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/rank/{}.xls'.format(self.date.strftime("%Y%m%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现郑商所{}的日持仓排名源文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
             return DataFrame()

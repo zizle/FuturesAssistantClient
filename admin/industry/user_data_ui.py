@@ -254,12 +254,12 @@ class SheetChartUI(QWidget):
 
         self.swap_tab.setTabBar(HorizontalTabBar())
 
-        self.swap_tab.addTab(self.chart_table, "图\n形\n管\n理")
+        self.swap_tab.addTab(self.chart_table, "管\n理")
         self.swap_tab.setDocumentMode(True)
         self.swap_tab.setTabPosition(QTabWidget.East)
         self.chart_container = QWebEngineView(self)
 
-        self.swap_tab.addTab(self.chart_container, "图\n形\n全\n览")
+        self.swap_tab.addTab(self.chart_container, "全\n览")
 
         main_layout.addWidget(self.swap_tab)
 

@@ -8,10 +8,10 @@ from PyQt5.QtCore import QSettings
 WINDOW_TITLE = '分析决策系统管理端'  # 1.4.5
 SYS_BIT = "32" if sys.maxsize < 2 ** 32 else "64"
 PLATE_FORM = "WIN10"
-# SERVER_ADDR = "http://210.13.218.130:9002/"
-SERVER_ADDR = "http://127.0.0.1:5000/"
-# 与后端对应的静态文件路径
-STATIC_PREFIX = SERVER_ADDR + 'ads/'
+# # SERVER_ADDR = "http://210.13.218.130:9002/"
+# SERVER_ADDR = "http://127.0.0.1:5000/"
+# # 与后端对应的静态文件路径
+# STATIC_PREFIX = SERVER_ADDR + 'ads/'
 
 # SERVER_API = "http://127.0.0.1:8000/api/"
 SERVER_API = "http://210.13.218.130:9004/api/"
@@ -133,3 +133,7 @@ def config_logger_handler():
 
 logger = logging.getLogger('errorlog')
 logger.addHandler(config_logger_handler())
+
+# 屏蔽或重命名的品种
+SHIELD_VARIETY = ['CY', 'WR']
+RENAME_VARIETY = {"CF": '棉花(纱)'}

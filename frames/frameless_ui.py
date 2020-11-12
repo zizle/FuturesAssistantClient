@@ -77,11 +77,11 @@ class TitleBarUI(QWidget):
         self.setObjectName('titleBar')
         self.title_text.setObjectName('titleText')
         self.setStyleSheet(
-            "#titleBar{background-color:rgb(34,102,175);border-top-left-radius:5px;border-top-right-radius:5px;}"
+            "#titleBar{background-color:rgb(80,83,85);border-top-left-radius:5px;border-top-right-radius:5px;}"
             "#titleText{color:rgb(245,245,245)}"
-            "#minimumButton,#maximumButton{border:none;background-color:rgb(34,102,175);font-size:12px}"
-            "#closeButton{border:none;background-color:rgb(34,102,175);border-top-right-radius:5px;font-size:12px}"
-            "#minimumButton:hover,#maximumButton:hover{background-color:rgb(33,165,229)}"
+            "#minimumButton,#maximumButton{color:rgb(177,177,177);border:none;background-color:rgb(80,83,85);font-size:12px}"
+            "#closeButton{color:rgb(177,177,177);border:none;background-color:rgb(80,83,85);border-top-right-radius:5px;font-size:12px}"
+            "#minimumButton:hover,#maximumButton:hover{background-color:rgb(110,113,115)}"
             "#closeButton:hover{background-color:rgb(200,49,61);border-top-right-radius:5px;}"
             "#minimumButton:pressed,#maximumButton:pressed{background-color:rgb(37,39,41)}"
             "#closeButton:pressed{color:white;background-color:rgb(161,73,92);border-top-right-radius:5px;}"
@@ -177,13 +177,13 @@ class NavigationBar(QWidget):
         self.logout_button.setObjectName("logoutButton")
         self.menu_bar.setObjectName("menuBar")
         self.setStyleSheet(
-            "#navigationBar{background-color:rgb(34,102,175)}"
-            "#usernameButton{border:none;}"
-            "#usernameButton:hover{border:none;color:rgb(255,255,255)}"
+            "#navigationBar{background-color:rgb(80,83,85)}"
+            "#usernameButton{border:none;color:rgb(230,230,230)}"
+            "#usernameButton:hover{border:none;color:rgb(250,250,250)}"
             "#logoutButton{border-image:url(media/icons/logout.png);}"
             "#logoutButton:hover{border-image:url(media/icons/logout_hover.png);}"
-            "#menuBar{background-color:rgb(34,102,175);color:rgb(255,255,255);font-size:12px}"
-            "#menuBar::item{background-color:rgb(34,102,175);border:1px solid rgb(34,142,155);"
+            "#menuBar{background-color:rgb(80,83,85);color:rgb(255,255,255);font-size:12px}"
+            "#menuBar::item{background-color:rgb(80,83,85);border:1px solid rgb(34,142,155);"
             "padding:2px 5px;margin:0 1px;}"
             "#menuBar::item:selected{background-color:rgb(34,132,200);color:rgb(255,255,255)}"
             "#menuBar::item:pressed{background:rgb(34,142,175)}"
@@ -251,7 +251,7 @@ class FrameLessWindowUI(QWidget):
         main_layout.addWidget(self.navigation_bar, alignment=Qt.AlignTop)
 
         self.center_widget = QMainWindow()                              # 模块窗体显示窗口
-        self.center_widget.setContentsMargins(QMargins(2, 0, 2, 2))
+        self.center_widget.setContentsMargins(QMargins(1, 0, 1, 1))
         main_layout.addWidget(self.center_widget)
 
         self.setLayout(main_layout)
@@ -271,9 +271,9 @@ class FrameLessWindowUI(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground, True)                # 窗口透明
         self.center_widget.setAutoFillBackground(True)                      # 被窗口透明影响,自动填充
         self.center_widget.setObjectName("centerWidget")
+        # "border-bottom-right-radius:5px;border-bottom-left-radius:5px
         self.setStyleSheet(
-            "#centerWidget{background-color:rgb(255,255,255);border:2px solid rgb(34,102,175);border-top:none;"
-            "border-bottom-right-radius:5px;border-bottom-left-radius:5px}"
+            "#centerWidget{background-color:rgb(255,255,255);border:1px solid rgb(80,83,85);border-top:none}"
         )
 
         # 初始最大化
