@@ -712,7 +712,7 @@ class UserDataMaintain(UserDataMaintainUI):
             # 主页
             item7 = QTableWidgetItem()
             if row_item["is_principal"] == "0":
-                text = "隐藏"
+                text = "提审"
                 checked = Qt.Unchecked
             elif row_item["is_principal"] == "1":
                 text = "审核"
@@ -725,8 +725,8 @@ class UserDataMaintain(UserDataMaintainUI):
             self.sheet_chart_widget.chart_table.setItem(row, 7, item7)
             # 品种页
             item8 = QTableWidgetItem()
-            checked, text = (Qt.Checked, "开启") if row_item["is_petit"] else (Qt.Unchecked, "隐藏")
-            item8.setText(text)
+            checked = Qt.Checked if row_item["is_petit"] else Qt.Unchecked
+            item8.setText("开启")
             item8.setCheckState(checked)
             self.sheet_chart_widget.chart_table.setItem(row, 8, item8)
             # 删除
@@ -851,37 +851,35 @@ class UserDataMaintain(UserDataMaintainUI):
         """ 数据图形单元格变化 """
         # 断开信号(防止两列的变化都发送一次请求)
         self.sheet_chart_widget.chart_table.cellChanged.disconnect()  # 图形表单元格变化
-        if col in [7, 8, 10]:
-            try:
-                chart_id = self.sheet_chart_widget.chart_table.item(row, 0).text()
-                is_principal = self.sheet_chart_widget.chart_table.item(row, 7).checkState()
-                is_petit = 1 if self.sheet_chart_widget.chart_table.item(row, 8).checkState() else 0
-
-                is_private = 1 if self.sheet_chart_widget.chart_table.item(row, 10).checkState() else 0
-                self.change_chart_display_position(chart_id, is_principal, is_petit, is_private)
-                if is_principal == 1:
-                    text = "审核"
-                elif is_principal == 2:
-                    text = "开启"
-                else:
-                    text = "隐藏"
-                self.sheet_chart_widget.chart_table.item(row, 7).setText(text)
-                text = "开启" if is_petit else "隐藏"
-                self.sheet_chart_widget.chart_table.item(row, 8).setText(text)
-                text = "自己" if is_private else "公开"
-                self.sheet_chart_widget.chart_table.item(row, 10).setText(text)
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                print(e)
+        chart_id = self.sheet_chart_widget.chart_table.item(row, 0).text()
+        is_principal = None
+        is_petit = None
+        is_private = None
+        if col == 7:  # 主页显示与否
+            is_principal = self.sheet_chart_widget.chart_table.item(row, 7).checkState()
+        elif col == 8:  # 品种页显示与否
+            is_petit = 1 if self.sheet_chart_widget.chart_table.item(row, 8).checkState() else 0
+        elif col == 10:  # 公开与否
+            is_private = 1 if self.sheet_chart_widget.chart_table.item(row, 10).checkState() else 0
+        else:
+            pass
+        if col in [7, 8, 10]:  # 发起数据请求
+            self.change_chart_display_position(chart_id, is_principal, is_petit, is_private)
         # 再次链接信号
         self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)  # 图形表单元格变化
 
     def change_chart_display_position(self, chart_id, is_principal, is_petit, is_private):
         """ 修改图形的显示位置 """
+        if is_principal is not None and is_petit is None and is_private is None:
+            url = SERVER_API + 'chart/{}/display/?is_principal={}'.format(chart_id, is_principal)
+        elif is_petit is not None and is_principal is None and is_private is None:
+            url = SERVER_API + 'chart/{}/display/?is_petit={}'.format(chart_id, is_petit)
+        elif is_private is not None and is_principal is None and is_petit is None:
+            url = SERVER_API + 'chart/{}/display/?is_private={}'.format(chart_id, is_private)
+        else:
+            return
         user_token = get_user_token()
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + 'chart/{}/display/?is_principal={}&is_petit={}&is_private={}'.format(chart_id, is_principal, is_petit, is_private)
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader("Authorization".encode("utf-8"), user_token.encode("utf-8"))
         reply = network_manager.put(request, None)
