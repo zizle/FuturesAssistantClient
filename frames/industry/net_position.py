@@ -56,7 +56,9 @@ class NetPosition(NetPositionUI):
         """ 获取净持仓数据 """
         self.tips_animation_timer.start(400)
         net_work = getattr(qApp, '_network')
-        url = SERVER_API + "position/all-variety/?interval_days=" + str(self.interval_days.value())
+        # 旧接口,生成处理,速度极慢
+        # url = SERVER_API + "position/all-variety/?interval_days=" + str(self.interval_days.value())
+        url = SERVER_API + "rank-position/all-variety/?interval_days=" + str(self.interval_days.value())
         reply = net_work.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.all_variety_position_reply)
 

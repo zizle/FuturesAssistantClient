@@ -93,7 +93,10 @@ class ExchangeSpiderUI(QWidget):
         self.save_result_button.setEnabled(False)
         parser_option.addWidget(self.save_result_button)
         parser_option.addStretch()
-        parser_layout.addLayout(parser_option)
+        # 生成净持仓
+        self.generate_position_button = QPushButton("生成净持仓", self)
+        self.generate_position_button.setToolTip("一键生成全品种净持仓数据")
+        parser_option.addWidget(self.generate_position_button)
         parser_layout.addLayout(parser_option)
         self.parser_status = QLabel("等待开始解析...", self)
         parser_layout.addWidget(self.parser_status)
