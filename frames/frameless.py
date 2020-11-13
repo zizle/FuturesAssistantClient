@@ -103,6 +103,15 @@ class ClientMainApp(FrameLessWindowUI):
         data = reply.readAll().data()
         u_data = json.loads(data.decode("utf-8"))
         if u_data["update_needed"]:
+            # 写入待更新信息
+            for_update_file = os.path.join(BASE_DIR, "classini/for_update_{}.json".format(SYS_BIT))
+            f_data = {
+                "VERSION": u_data["last_version"],
+                "SERVER": u_data["file_server"],
+                "FILES": u_data["update_files"]
+            }
+            with open(for_update_file, "w", encoding="utf-8") as f:
+                json.dump(f_data, f, indent=4, ensure_ascii=False)
             message = u_data["update_detail"]
             p = NewVersionPopup(message, self)
             p.to_update.connect(self.to_update_page)
@@ -114,8 +123,6 @@ class ClientMainApp(FrameLessWindowUI):
         reply.deleteLater()
 
     def to_update_page(self):
-        # """ 前往版本更新页面 """
-        # self.set_system_page("0_0_1")
         """ 退出当前程序，启动更新更新 """
         # script_file = os.path.join(BASE_DIR, "AutoUpdate.exe")
         script_file = os.path.join(BASE_DIR, "Update.exe")
