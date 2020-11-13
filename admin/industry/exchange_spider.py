@@ -2,13 +2,18 @@
 # @File  : exchange_spider.py
 # @Time  : 2020-07-22 21:00
 # @Author: zizle
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QTableWidgetItem
+import json
+from PyQt5.QtWidgets import QTableWidgetItem, qApp
+from PyQt5.QtNetwork import QNetworkRequest
+from PyQt5.QtCore import QUrl
 from .exchange_spider_ui import ExchangeSpiderUI
 from spiders.czce import CZCESpider, CZCEParser
 from spiders.shfe import SHFESpider, SHFEParser
 from spiders.cffex import CFFEXSpider, CFFEXParser
 from spiders.dce import DCESpider, DCEParser
+from utils.client import get_user_token
+from popup.message import InformationPopup
+from settings import SERVER_API
 
 
 class ExchangeSpider(ExchangeSpiderUI):
@@ -47,6 +52,8 @@ class ExchangeSpider(ExchangeSpiderUI):
         self.parser_start_button.clicked.connect(self.parser_point_file)
         # 点击保存的信号
         self.save_result_button.clicked.connect(self.save_parser_result)
+        # 点击生成净持仓
+        self.generate_position_button.clicked.connect(self.generate_net_position)
 
         # 关联爬取选择数据的信号
         self.spider_exchange_combobox.currentTextChanged.connect(self.change_current_spider)
@@ -334,3 +341,29 @@ class ExchangeSpider(ExchangeSpiderUI):
         self.preview_values.clear()
         self.preview_values.setColumnCount(0)
         self.preview_values.setRowCount(0)
+
+    def generate_net_position(self):
+        """ 请求服务器生成全品种净持仓数据 """
+        self.generate_position_button.setEnabled(False)
+        self.parser_status.setText("系统正在生成净持仓数据,请稍后...")
+        option_day = self.parser_date_edit.text().replace("-", "")
+        network_manager = getattr(qApp, "_network")
+        url = SERVER_API + 'rank-position/'
+        request = QNetworkRequest(QUrl(url))
+        request.setRawHeader('Authorization'.encode('utf-8'), get_user_token().encode('utf-8'))
+        reply = network_manager.post(request, json.dumps({"option_day": option_day}).encode("utf8"))
+        reply.finished.connect(self.generate_position_reply)
+
+    def generate_position_reply(self):
+        """ 生成全品种净持仓返回 """
+        reply = self.sender()
+        if reply.error():
+            p = InformationPopup("生成数据失败了:{}".format(reply.error()), self)
+        else:
+            data = reply.readAll().data().decode("utf8")
+            data = json.loads(data)
+            p = InformationPopup(data["message"], self)
+            self.parser_status.setText(data["message"])
+        p.exec_()
+        self.generate_position_button.setEnabled(True)
+        reply.deleteLater()
