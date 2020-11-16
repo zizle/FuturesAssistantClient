@@ -207,12 +207,12 @@ class Homepage(HomepageUI):
         ad_type = ad_data["ad_type"]
         if ad_type == "file":
             file_url = STATIC_URL + ad_data["filepath"]
-            p = PDFContentPopup(file=file_url, title=ad_data["title"])
+            p = PDFContentPopup(file_url, ad_data["title"], self)
             p.exec_()
         elif ad_type == "web":
             webbrowser.open_new_tab(ad_data["web_url"])
         elif ad_type == "content":
-            p = TextPopup(message=ad_data["content"])
+            p = TextPopup(message=ad_data["content"], parent=self)
             p.setWindowTitle(ad_data["title"])
             p.exec_()
         else:
