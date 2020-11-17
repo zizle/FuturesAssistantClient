@@ -12,7 +12,7 @@ from PyQt5.QtNetwork import QNetworkRequest
 from widgets import LoadedPage
 from utils.client import get_user_token
 
-from settings import SERVER_ADDR, USER_AGENT, SERVER_API
+from settings import USER_AGENT, SERVER_API
 
 
 """仓库管理"""

@@ -32,7 +32,7 @@ class VarietyTree(ScrollFoldedBox):
     def _get_all_variety(self):
         """ 获取所有品种 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "variety/all/"
+        url = SERVER_API + "variety/all/?is_real=2"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.all_variety_reply)
 

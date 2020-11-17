@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>K线</title>
+    <script src="js/jquery-1.7.2.min.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/qwebchannel.js"></script>
+</head>
+<style>
+html,body{margin: 0;padding: 0}
+#chartBox{width: 100%;height: 100vh;background-color: rgb(240,240,240)}
+</style>
+<body>
+    <div id="chartBox"></div>
+</body>
+<script>
+// 生成series和图例的函数
+function getSeriesLegend(sourceData) {
+    let seriesArray = [];
+    let legend = {"type": "scroll", "bottom": 16, "height": 20, "data":[]};
+
+    for(let i = 0; i < len; i++) {
+        let optData = seriesData[i];
+        let seriesOption = {
+            type: "line",
+            name: "1",
+            yAxisIndex: 0,
+            connectNulls: true,
+            data: sourceData.map(item=>{return parseFloat(item[optData.column_index])})
+        };
+        seriesArray.push(seriesOption);
+        legend.data.push(sheetHeaders[optData.column_index]);
+    }
+    return {
+        seriesData: seriesArray,
+        legendData: legend
+    }
+}
+
+// 生成水印
+function generateGraphic(watermark){
+    if(watermark === '' || watermark === undefined){return null}
+    else{
+        return {
+            type: 'group',
+            rotation: Math.PI / 4,
+            bounding: 'raw',
+            right: 80,
+            bottom: 80,
+            z: -100,
+            children: [
+                {
+                    type: 'rect',
+                    left: 'center',
+                    top: 'center',
+                    z:-100,
+                    shape:{width: 400, height: 35},
+                    style:{fill: 'rgba(0,0,0,0.4)'}
+                },
+                {
+                    type: 'text',
+                    left: 'center',
+                    top: 'center',
+                    z: -100,
+                    style: {
+                        fill: 'rgba(255,255,255,0.9)',
+                        text: watermark,
+                        font: 'bold 22px Microsoft YaHei'
+                    }
+                }
+            ]
+        }
+    }
+}
+
+// 实例化echarts option的函数
+function generateChartOption(sourceData, baseOption){
+    let chartTitle = baseOption["title"];
+    // let seriesLegend = getSeriesLegend(sourceData);
+    return {
+        grid: {
+            top: 40,
+            left: 5,
+            right: 5,
+            bottom: 46,
+            show: false,
+            containLabel: true
+        },
+        title:{
+            text: chartTitle,
+            textStyle: {fontSize: 22}
+        },
+        xAxis:{
+            type: 'category',
+            data: sourceData.map(item=>item.date),
+            axisLabel: {
+                rotate: 90,
+                fontSize: 11
+            }
+        },
+        yAxis: [
+            {
+                "type": "value",
+                "name": "左",
+            },
+            {
+                "type": "value",
+                "name": "右",
+            },
+            {
+                "type": "value",
+                "name": "差",
+            },
+        ],
+        tooltip:{
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross',
+            }
+        },
+        dataZoom: [
+            {
+                show: true,
+                type: 'slider',
+                height: 20,
+                bottom:0,
+                start: 0,
+                end: 100,
+            }
+        ],
+        series: [
+            {
+            type: "line",
+            name: "1",
+            yAxisIndex: 0,
+            connectNulls: true,
+            data: sourceData.map(item=>{return parseFloat(item.closePrice1)})
+        }, {
+            type: "line",
+            name: "2",
+            yAxisIndex: 1,
+            connectNulls: true,
+            data: sourceData.map(item=>{return parseFloat(item.closePrice2)})
+        },{
+            type: "bar",
+            name: "3",
+            yAxisIndex: 2,
+            data: sourceData.map(item=>{return parseFloat(item.closePrice1 - item.closePrice2)})
+        },
+
+        ],
+        // legend: [],
+        // graphic: generateGraphic(baseOption.watermark)
+    };
+}
+// 主入口函数
+$(function () {
+    let chartObj = echarts.init(document.getElementById('chartBox'));
+    // 与UI界面通讯的实例
+    new QWebChannel(qt.webChannelTransport, function(channel)
+        {
+            let pageContact = channel.objects.pageContactChannel;
+            pageContact.chartSource.connect(function (sourceData, baseOption) {
+                let option = {};
+                option = generateChartOption(JSON.parse(sourceData), JSON.parse(baseOption));
+                chartObj.setOption(option, true)
+            });
+        }
+    );
+})
+</script>
+</html>

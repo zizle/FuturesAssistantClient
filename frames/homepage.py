@@ -85,7 +85,7 @@ class Homepage(HomepageUI):
 
     def get_exchange_lib_variety(self):
         """ 获取以交易所分组的品种 """
-        url = SERVER_API + "exchange/variety-all/"
+        url = SERVER_API + "exchange/variety-all/?is_real=2"
         network_manager = getattr(qApp, "_network")
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.add_left_menus)

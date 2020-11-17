@@ -5,7 +5,7 @@ import sys
 import time
 import logging
 from PyQt5.QtCore import QSettings
-WINDOW_TITLE = '分析决策系统管理端'  # 1.4.5
+WINDOW_TITLE = '分析决策系统(研究员)'  # 1.4.5
 SYS_BIT = "32" if sys.maxsize < 2 ** 32 else "64"
 PLATE_FORM = "WIN10"
 # # SERVER_ADDR = "http://210.13.218.130:9002/"
@@ -50,6 +50,7 @@ SYSTEM_MENUS = [
     {"id": "0", "name": "首页", "logo": "", "children": None},
     {"id": "1", "name": "产品服务", "logo": "", "children": None},
     {"id": "3", "name": "交割服务", "logo": "", "children": None},
+    {"id": "4", "name": "计算平台", "logo": "", "children": None},
     {"id": "2", "name": "行业数据", "logo": "", "children": [
         {"id": "2_0", "name": "品种数据库", "logo": "", "children": None},
         {"id": "2_1", "name": "交易所数据", "logo": "", "children": None},
@@ -134,6 +135,6 @@ def config_logger_handler():
 logger = logging.getLogger('errorlog')
 logger.addHandler(config_logger_handler())
 
-# 屏蔽或重命名的品种
+# 屏蔽或重命名的品种(品种数据库)
 SHIELD_VARIETY = ['CY', 'WR']
 RENAME_VARIETY = {"CF": '棉花(纱)'}
