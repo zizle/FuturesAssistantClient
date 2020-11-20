@@ -16,7 +16,7 @@ from PyQt5.QtGui import QBrush, QColor, QIcon
 from settings import SERVER_API, logger, BASE_DIR
 from utils.client import get_user_token, get_client_uuid
 from popup.industry_popup import UpdateFolderPopup, DisposeChartPopup
-from popup.sheet_charts import SheetChartsPopup, DeciphermentPopup, ChartPopup
+from popup.sheet_charts import SheetChartsPopup, DeciphermentPopup, ChartPopup, EditChartOptionPopup
 from popup.message import InformationPopup, WarningPopup
 from .user_data_ui import UserDataMaintainUI, SheetChartUI, OperateButton
 
@@ -447,7 +447,7 @@ class UserDataMaintain(UserDataMaintainUI):
         self.variety_sheet_widget.sheet_table.setRowCount(len(sheets))
 
         for row, row_item in enumerate(sheets):
-            item0 = QTableWidgetItem(str(row_item["id"]))
+            item0 = QTableWidgetItem("%04d" % row_item["id"])
             item0.setTextAlignment(Qt.AlignCenter)
             self.variety_sheet_widget.sheet_table.setItem(row, 0, item0)
 
@@ -493,8 +493,8 @@ class UserDataMaintain(UserDataMaintainUI):
             item9_button.clicked.connect(self.delete_sheet_table)
             self.variety_sheet_widget.sheet_table.setCellWidget(row, 9, item9_button)
 
-            check, text = (Qt.Checked, "自己") if row_item["is_private"] else (Qt.Unchecked, "公开")
-            item10 = QTableWidgetItem(text)
+            check = Qt.Checked if row_item["is_private"] else Qt.Unchecked
+            item10 = QTableWidgetItem("私有")
             item10.setCheckState(check)
             self.variety_sheet_widget.sheet_table.setItem(row, 10, item10)
         # 还原表格单元格内容发生变化的信号
@@ -546,16 +546,10 @@ class UserDataMaintain(UserDataMaintainUI):
 
     def sheet_table_cell_changed(self, row, col):
         """ 数据表的内容发生了变化 """
-        # 关闭信号防止文字改变也发送一次信号
-        self.variety_sheet_widget.sheet_table.cellChanged.disconnect()
         if col == 10:  # 发起修改私有化数据表的请求
             sheet_id = self.variety_sheet_widget.sheet_table.item(row, 0).text()
             is_private = 1 if self.variety_sheet_widget.sheet_table.item(row, col).checkState() else 0
-            text = "自己" if is_private else "公开"
-            self.variety_sheet_widget.sheet_table.item(row, col).setText(text)
             self.request_sheet_private(sheet_id, is_private)
-        # 再次恢复信号
-        self.variety_sheet_widget.sheet_table.cellChanged.connect(self.sheet_table_cell_changed)
 
     def request_sheet_private(self, sheet_id, is_private):
         """ 发请求sheet表私有化状态的改变 """
@@ -660,24 +654,20 @@ class UserDataMaintain(UserDataMaintainUI):
         """ 显示所有已配置的品种表 """
         self.sheet_chart_widget.chart_table.cellChanged.disconnect()  # 关闭单元格变化的信号
         self.sheet_chart_widget.chart_table.clear()
-
-        if self.sheet_chart_widget.only_me_check.checkState():
-            self.sheet_chart_widget.chart_table.setColumnCount(11)
-            self.sheet_chart_widget.chart_table.setHorizontalHeaderLabels([
-                "编号", "创建者", "创建日期", "标题", "解读", '图形', '上移', '主页', '品种', '删除', '可见'
-            ])
-        else:
-            self.sheet_chart_widget.chart_table.setColumnCount(10)
-            self.sheet_chart_widget.chart_table.setHorizontalHeaderLabels([
-                "编号", "创建者", "创建日期", "标题", "解读", '图形', '上移', '主页', '品种', '删除'
-            ])
-
+        self.sheet_chart_widget.chart_table.setColumnCount(12)
+        self.sheet_chart_widget.chart_table.setHorizontalHeaderLabels([
+            "编号", "创建者", "创建日期", "标题", "解读", '图形', '上移', '主页', '品种', '可见', '配置', '删除'
+        ])
         self.sheet_chart_widget.chart_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.sheet_chart_widget.chart_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        if self.sheet_chart_widget.only_me_check.checkState():
+            self.sheet_chart_widget.chart_table.setColumnHidden(9, False)  # 显示可见列
+        else:
+            self.sheet_chart_widget.chart_table.setColumnHidden(9, True)  # 隐藏可见列
 
         self.sheet_chart_widget.chart_table.setRowCount(len(charts_list))
         for row, row_item in enumerate(charts_list):
-            item0 = QTableWidgetItem(str(row_item["id"]))
+            item0 = QTableWidgetItem("%04d" % row_item["id"])
             item0.setTextAlignment(Qt.AlignCenter)
             self.sheet_chart_widget.chart_table.setItem(row, 0, item0)
 
@@ -708,11 +698,10 @@ class UserDataMaintain(UserDataMaintainUI):
                 setattr(item6_button, "row_index", row)
                 item6_button.clicked.connect(self.swap_chart_suffix)
                 self.sheet_chart_widget.chart_table.setCellWidget(row, 6, item6_button)
-
             # 主页
             item7 = QTableWidgetItem()
             if row_item["is_principal"] == "0":
-                text = "提审"
+                text = "显示"
                 checked = Qt.Unchecked
             elif row_item["is_principal"] == "1":
                 text = "审核"
@@ -723,27 +712,44 @@ class UserDataMaintain(UserDataMaintainUI):
             item7.setText(text)
             item7.setCheckState(checked)
             self.sheet_chart_widget.chart_table.setItem(row, 7, item7)
+
             # 品种页
             item8 = QTableWidgetItem()
             checked = Qt.Checked if row_item["is_petit"] else Qt.Unchecked
             item8.setText("开启")
             item8.setCheckState(checked)
             self.sheet_chart_widget.chart_table.setItem(row, 8, item8)
-            # 删除
-            item9_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
-            setattr(item9_button, "row_index", row)
-            item9_button.clicked.connect(self.user_delete_chart)
-            self.sheet_chart_widget.chart_table.setCellWidget(row, 9, item9_button)
 
-            # 仅自己可见
-            item10 = QTableWidgetItem()
-            checked, text = (Qt.Checked, "自己") if row_item["is_private"] else (Qt.Unchecked, "公开")
-            item10.setCheckState(checked)
-            item10.setText(text)
-            self.sheet_chart_widget.chart_table.setItem(row, 10, item10)
+            # 仅私有可见
+            item9 = QTableWidgetItem("私有")
+            checked = Qt.Checked if row_item["is_private"] else Qt.Unchecked
+            item9.setCheckState(checked)
+            self.sheet_chart_widget.chart_table.setItem(row, 9, item9)
+
+            # 参数
+            item10_button = OperateButton("media/icons/chartOption.png", "media/icons/chartOption_hover.png", self)
+            setattr(item10_button, "row_index", row)
+            item10_button.clicked.connect(self.modify_chart_option)
+            self.sheet_chart_widget.chart_table.setCellWidget(row, 10, item10_button)
+
+            # 删除
+            item11_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
+            setattr(item11_button, "row_index", row)
+            item11_button.clicked.connect(self.user_delete_chart)
+            self.sheet_chart_widget.chart_table.setCellWidget(row, 11, item11_button)
 
         # 重新连接单元格变化的信号
         self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)  # 图形表单元格变化
+
+    def modify_chart_option(self):
+        """ 调整图形配置 """
+        sender_button = self.sender()
+        row = getattr(sender_button, "row_index")
+        title = self.sheet_chart_widget.chart_table.item(row, 3).text()
+        chart_id = self.sheet_chart_widget.chart_table.item(row, 0).text()
+        popup = EditChartOptionPopup(chart_id, self)
+        popup.setWindowTitle("配置调整-{}".format(title))
+        popup.exec_()
 
     def user_delete_chart(self):
         """ 用户删除图形"""
@@ -760,8 +766,7 @@ class UserDataMaintain(UserDataMaintainUI):
         chart_id = data["chart_id"]
         url = SERVER_API + "chart/{}/".format(chart_id)
         request = QNetworkRequest(QUrl(url))
-        user_token = get_user_token()
-        request.setRawHeader("Authorization".encode('utf-8'), user_token.encode("utf-8"))
+        request.setRawHeader("Authorization".encode('utf-8'), get_user_token().encode("utf-8"))
         network_manager = getattr(qApp, "_network")
         reply = network_manager.deleteResource(request)
         reply.finished.connect(self.delete_chart_reply)
@@ -791,7 +796,6 @@ class UserDataMaintain(UserDataMaintainUI):
         chart_name = self.sheet_chart_widget.chart_table.item(current_row, 3).text()
         popup = ChartPopup(chart_id, self)
         popup.setWindowTitle(chart_name)
-        popup.setWindowIcon(QIcon("media/icons/chart.png"))
         popup.show()
 
     def swap_chart_suffix(self):
@@ -856,7 +860,7 @@ class UserDataMaintain(UserDataMaintainUI):
         is_petit = None
         is_private = None
         if col == 7:  # 主页显示与否
-            is_principal = self.sheet_chart_widget.chart_table.item(row, 7).checkState()
+            is_principal = 1 if self.sheet_chart_widget.chart_table.item(row, 7).checkState() else 0
         elif col == 8:  # 品种页显示与否
             is_petit = 1 if self.sheet_chart_widget.chart_table.item(row, 8).checkState() else 0
         elif col == 10:  # 公开与否

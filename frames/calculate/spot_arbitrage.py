@@ -2,7 +2,8 @@
 # @File  : variety_arbitrage.py
 # @Time  : 2020-11-17 11:18
 # @Author: zizle
-""" 跨品种套利 """
+""" 期现套利 """
+
 import json
 from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QComboBox,
                              QGraphicsDropShadowEffect, QPushButton)
@@ -28,9 +29,9 @@ class OptionWidget(QWidget):
         self.setStyleSheet("#optionWidget{background-color:rgb(245,245,245)}")
 
 
-class VarietyArbitrageUi(QWidget):
+class SpotArbitrageUi(QWidget):
     def __init__(self, *args, **kwargs):
-        super(VarietyArbitrageUi, self).__init__(*args, **kwargs)
+        super(SpotArbitrageUi, self).__init__(*args, **kwargs)
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(QMargins(0, 0, 0, 0))
         main_layout.setSpacing(5)
@@ -39,12 +40,12 @@ class VarietyArbitrageUi(QWidget):
         option_layout.setContentsMargins(QMargins(5, 5, 2, 5))
         option_layout.setAlignment(Qt.AlignLeft)
         title_layout = QHBoxLayout()
-        page_title = QLabel("跨品种套利", self)
+        page_title = QLabel("期现套利", self)
         title_layout.addWidget(page_title)
         title_layout.addStretch()
         option_layout.addLayout(title_layout, 0, 0, 1, 6)
 
-        option_layout.addWidget(QLabel("品种:", self), 1, 0)
+        option_layout.addWidget(QLabel("期货:", self), 1, 0)
         self.variety_top = QComboBox(self)
         self.variety_top.setMinimumWidth(100)
         option_layout.addWidget(self.variety_top, 1, 1)
@@ -53,13 +54,14 @@ class VarietyArbitrageUi(QWidget):
         self.contract_top = QComboBox(self)
         option_layout.addWidget(self.contract_top, 1, 3)
 
-        option_layout.addWidget(QLabel("品种:", self), 2, 0)
+        option_layout.addWidget(QLabel("现货:", self), 2, 0)
         self.variety_bottom = QComboBox(self)
         self.variety_bottom.setMinimumWidth(100)
         option_layout.addWidget(self.variety_bottom, 2, 1)
 
-        option_layout.addWidget(QLabel("合约:", self), 2, 2)
+        # option_layout.addWidget(QLabel("合约:", self), 2, 2)
         self.contract_bottom = QComboBox(self)
+        self.contract_bottom.hide()
         option_layout.addWidget(self.contract_bottom, 2, 3)
 
         self.start_calculate_button = QPushButton("开始计算", self)
@@ -87,8 +89,8 @@ class VarietyArbitrageUi(QWidget):
         self.contact_channel = ArbitrageChannel()  # 页面信息交互通道
         self.web_container.page().setWebChannel(channel_qt_obj)
         channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道，只能注册一个
-        event_loop = QEventLoop(self)  # 加载也页面同步
-        self.web_container.loadFinished.connect(event_loop.quit)
+        event_loop = QEventLoop(self)  # 同步设置
+        self.web_container.loadFinished.connect(event_loop.quit) # (加载完页面才显示)
         event_loop.exec_()
         main_layout.addWidget(self.web_container)
         self.setLayout(main_layout)
@@ -111,19 +113,17 @@ class VarietyArbitrageUi(QWidget):
         self.three_month_button.setStyleSheet("background-color:rgb(191,211,249);color:rgb(78,110,242)")
 
 
-class VarietyArbitrage(VarietyArbitrageUi):
+class SpotArbitrage(SpotArbitrageUi):
     def __init__(self, *args, **kwargs):
-        super(VarietyArbitrage, self).__init__(*args, **kwargs)
-        self.has_top_contract = False  # 合约获取完毕标志
-        self.has_bottom_contract = False  # 当两个合约都获取完毕才请求数据
+        super(SpotArbitrage, self).__init__(*args, **kwargs)
+        self.has_contract = False  # 品种获取完毕标志
+        self.has_spot = False      # 现货获取完毕标志(当两个标志共同成立的时候，请求数据)
         self.day_count = 90  # 默认为3个月
         self.network_manager = getattr(qApp, "_network")
         # 品种下拉信号
         self.variety_top.currentTextChanged.connect(self.top_variety_changed)
         # 获取所有品种
         self.get_all_variety()
-        # 品种下拉信号
-        self.variety_bottom.currentTextChanged.connect(self.bottom_variety_changed)
         # 开始计算的信号
         self.start_calculate_button.clicked.connect(self.get_arbitrage_contract_data)
 
@@ -131,6 +131,8 @@ class VarietyArbitrage(VarietyArbitrageUi):
         self.three_month_button.clicked.connect(self.day_count_selected)
         self.six_month_button.clicked.connect(self.day_count_selected)
         self.one_year_button.clicked.connect(self.day_count_selected)
+        # 获取所有现货品种
+        self.get_all_spot_data()
 
     def day_count_selected(self):
         button = self.sender()
@@ -162,16 +164,13 @@ class VarietyArbitrage(VarietyArbitrageUi):
     def all_variety_reply(self):
         reply = self.sender()
         self.variety_top.clear()
-        self.variety_bottom.clear()
         if reply.error():
             pass
         else:
             data = json.loads(reply.readAll().data().decode('utf8'))
-            all_variety = data["varieties"]
-            for group_key in all_variety:
+            for group_key in data["varieties"]:
                 for variety_item in data["varieties"][group_key]:
                     self.variety_top.addItem(variety_item["variety_name"], variety_item["variety_en"])
-                    self.variety_bottom.addItem(variety_item["variety_name"], variety_item["variety_en"])
         reply.deleteLater()
 
     def top_variety_changed(self):
@@ -191,9 +190,9 @@ class VarietyArbitrage(VarietyArbitrageUi):
             data = json.loads(reply.readAll().data().decode("utf8"))
             for contract_item in data["contracts"]:
                 self.contract_top.addItem(contract_item["contract"])
-            self.has_top_contract = True
+            self.has_contract = True
         reply.deleteLater()
-        if self.has_top_contract and self.has_bottom_contract:
+        if self.has_contract and self.has_spot:
             self.get_arbitrage_contract_data()
 
     def bottom_variety_changed(self):
@@ -212,24 +211,38 @@ class VarietyArbitrage(VarietyArbitrageUi):
             data = json.loads(reply.readAll().data().decode("utf8"))
             for contract_item in data["contracts"]:
                 self.contract_bottom.addItem(contract_item["contract"])
-            # 将合约设置为第二个
-            if self.contract_bottom.count() >= 1:
-                self.contract_bottom.setCurrentIndex(1)
-            self.has_bottom_contract = True
         reply.deleteLater()
-        if self.has_top_contract and self.has_bottom_contract:
-            # 初始化数据
+
+    def get_all_spot_data(self):
+        """ 获取所有现货品种 """
+        url = SERVER_API + "spot-variety/"
+        reply = self.network_manager.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.all_spot_reply)
+
+    def all_spot_reply(self):
+        """ 所有现货品种返回 """
+        reply = self.sender()
+        self.variety_bottom.clear()
+        if reply.error():
+            pass
+        else:
+            data = json.loads(reply.readAll().data().decode('utf8'))
+            for variety_item in data["varieties"]:
+                self.variety_bottom.addItem(variety_item[1], variety_item[0])
+            self.has_spot = True
+        reply.deleteLater()
+        if self.has_contract and self.has_spot:
             self.get_arbitrage_contract_data()
 
     def get_arbitrage_contract_data(self):
         """ 获取两个品种的数据 """
         self.start_calculate_button.setEnabled(False)
-        url = SERVER_API + "arbitrage/variety/"
+        url = SERVER_API + "arbitrage/futures-spot/"
         body_data = {
             'variety_1': self.variety_top.currentData(),
             'variety_2': self.variety_bottom.currentData(),
             'contract_1': self.contract_top.currentText(),
-            'contract_2': self.contract_bottom.currentText(),
+            'contract_2': '',
             'day_count': self.day_count
         }
         reply = self.network_manager.post(QNetworkRequest(QUrl(url)), json.dumps(body_data).encode("utf8"))
@@ -245,12 +258,3 @@ class VarietyArbitrage(VarietyArbitrageUi):
             data = json.loads(reply.readAll().data().decode("utf8"))
             # 将数据传入界面出图
             self.contact_channel.chartSource.emit(json.dumps(data["data"]), json.dumps(data["base_option"]))
-
-
-
-
-
-
-
-
-

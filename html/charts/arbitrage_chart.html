@@ -8,8 +8,8 @@
     <script src="js/qwebchannel.js"></script>
 </head>
 <style>
-html,body{margin: 0;padding: 0}
-#chartBox{width: 100%;height: 100vh;background-color: rgb(240,240,240)}
+html,body{margin:10px 0 0 22px;padding:0}
+#chartBox{width:600px;height:378px;background-color:rgb(252,252,252)}
 </style>
 <body>
     <div id="chartBox"></div>
@@ -78,13 +78,13 @@ function generateGraphic(watermark){
 function generateChartOption(sourceData, baseOption){
     let chartTitle = baseOption["title"];
     // let seriesLegend = getSeriesLegend(sourceData);
+    let colors = ["#c23531","#2f4554", "#61a0a8"];
     return {
         grid: {
-            top: 40,
+            top: 60,
             left: 5,
             right: 5,
-            bottom: 46,
-            show: false,
+            bottom: 10,
             containLabel: true
         },
         title:{
@@ -100,17 +100,45 @@ function generateChartOption(sourceData, baseOption){
             }
         },
         yAxis: [
+            // {
+            //     type: "value",
+            //     name: "收盘价",
+            //     position:'left',
+            //     axisLine: {
+            //         lineStyle: {
+            //             color: colors[0]
+            //         },
+            //     },
+            //     // min: baseOption["axis1"][0],
+            //     // max: baseOption["axis1"][1],
+            //     // interval: (baseOption["axis1"][1] - baseOption["axis1"][0]) / baseOption["axis1"][2]
+            // },
+            // {
+            //     type: "value",
+            //     name: baseOption["name2"],
+            //     position:'right',
+            //     axisLine: {
+            //         lineStyle: {
+            //             color: colors[1]
+            //         }
+            //     },
+            //     min: baseOption["axis2"][0],
+            //     max: baseOption["axis2"][1],
+            //     interval: (baseOption["axis2"][1] - baseOption["axis2"][0]) / baseOption["axis2"][2]
+            // },
             {
-                "type": "value",
-                "name": "左",
-            },
-            {
-                "type": "value",
-                "name": "右",
-            },
-            {
-                "type": "value",
-                "name": "差",
+                type: "value",
+                name: "价差",
+                position:'left',
+                // offset: 80,
+                axisLine: {
+                    lineStyle: {
+                        color: colors[0]
+                    }
+                },
+                // min: baseOption["axis3"][0],
+                // max: baseOption["axis3"][1],
+                // interval: (baseOption["axis3"][1] - baseOption["axis3"][0]) / baseOption["axis3"][2]
             },
         ],
         tooltip:{
@@ -119,38 +147,47 @@ function generateChartOption(sourceData, baseOption){
                 type: 'cross',
             }
         },
-        dataZoom: [
-            {
-                show: true,
-                type: 'slider',
-                height: 20,
-                bottom:0,
-                start: 0,
-                end: 100,
-            }
-        ],
         series: [
-            {
+        //     {
+        //     type: "line",
+        //     name: baseOption["name1"],
+        //     yAxisIndex: 0,
+        //     connectNulls: true,
+        //     symbol:'none',
+        //     lineStyle:{
+        //         width: 3
+        //     },
+        //     data: sourceData.map(item=>{return parseFloat(item.closePrice1)})
+        // }, {
+        //     type: "line",
+        //     name: baseOption["name2"],
+        //     yAxisIndex: 0,
+        //     connectNulls: true,
+        //     symbol:'none',
+        //     lineStyle:{
+        //         width: 3
+        //     },
+        //     data: sourceData.map(item=>{return parseFloat(item.closePrice2)})
+        // },
+        {
             type: "line",
-            name: "1",
+            name: "价差",
             yAxisIndex: 0,
             connectNulls: true,
-            data: sourceData.map(item=>{return parseFloat(item.closePrice1)})
-        }, {
-            type: "line",
-            name: "2",
-            yAxisIndex: 1,
-            connectNulls: true,
-            data: sourceData.map(item=>{return parseFloat(item.closePrice2)})
-        },{
-            type: "bar",
-            name: "3",
-            yAxisIndex: 2,
-            data: sourceData.map(item=>{return parseFloat(item.closePrice1 - item.closePrice2)})
+            lineStyle:{
+                width: 3
+            },
+            symbol:'none',
+            data: sourceData.map(item=>{return Math.round(parseFloat(item.closePrice1 - item.closePrice2), 2)})
         },
 
         ],
-        // legend: [],
+        legend:{
+            type:'plain',
+            data:[
+                {name: '价差'},
+            ]
+        },
         // graphic: generateGraphic(baseOption.watermark)
     };
 }

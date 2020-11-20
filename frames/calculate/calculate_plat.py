@@ -6,6 +6,8 @@ from PyQt5.QtWidgets import QTreeWidgetItem, QLabel
 from .calculate_plat_ui import CalculatePlatUi
 from .variety_calculate import VarietyCalculate
 from .variety_arbitrage import VarietyArbitrage
+from .duration_arbitrage import DurationArbitrage
+from .spot_arbitrage import SpotArbitrage
 
 
 class CalculatePlat(CalculatePlatUi):
@@ -17,10 +19,10 @@ class CalculatePlat(CalculatePlatUi):
                 {"id": "1_2", "name": "跨期套利"},
                 {"id": "1_3", "name": "期现套利"},
             ]},
-            {"id": 2, "name": "套保计算", "children": None},
-            {"id": 3, "name": "交割计算", "children": None},
+            # {"id": 2, "name": "套保计算", "children": None},
+            # {"id": 3, "name": "交割计算", "children": None},
             {"id": 4, "name": "品种计算", "children": None},
-            {"id": 5, "name": "相关性计算", "children": None},
+            # {"id": 5, "name": "相关性计算", "children": None},
         ]
 
         for menu_item in menus:
@@ -47,16 +49,13 @@ class CalculatePlat(CalculatePlatUi):
                 return
             menu_id = str(getattr(item, "menu_id"))
             if menu_id == "1_1":  # 跨品种套利
-                try:
-                    page = VarietyArbitrage()
-                except Exception as e:
-                    print(e)
+                page = VarietyArbitrage()
+            elif menu_id == "1_2":  # 跨期套利
+                page = DurationArbitrage()
+            elif menu_id == "1_3":  # 期现套利
+                page = SpotArbitrage()
             elif menu_id == "4":
-                try:
-                    page = VarietyCalculate()
-                except Exception as e:
-                    print(e)
-
+                page = VarietyCalculate()
             else:
                 return
             self.frame_loader.setCentralWidget(page)
