@@ -52,7 +52,7 @@ class SHFESpider(QObject):
             return
         data = reply.readAll().data()
         data = json.loads(data.decode('utf-8'))
-        save_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/daily/{}.json'.format(self.date.strftime("%Y-%m-%d")))
+        save_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/daily/{}.json'.format(self.date.strftime("%Y%m%d")))
         with open(save_path, "w", encoding="utf-8") as json_file:
             json.dump(data, json_file, indent=4, ensure_ascii=False)
         reply.deleteLater()
@@ -80,7 +80,7 @@ class SHFESpider(QObject):
             return
         data = reply.readAll().data()
         data = json.loads(data.decode('utf-8'))
-        save_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/rank/{}.json'.format(self.date.strftime("%Y-%m-%d")))
+        save_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/rank/{}.json'.format(self.date.strftime("%Y%m%d")))
         with open(save_path, "w", encoding="utf-8") as json_file:
             json.dump(data, json_file, indent=4, ensure_ascii=False)
         reply.deleteLater()
@@ -127,7 +127,7 @@ class SHFEParser(QObject):
         """ 解析保存的json文件信息 """
         if self.date is None:
             raise DateValueError("请先使用`set_date`设置`CZCEParser`日期.")
-        file_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/daily/{}.json'.format(self.date.strftime("%Y-%m-%d")))
+        file_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/daily/{}.json'.format(self.date.strftime("%Y%m%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现上期所{}的日交易行情文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
             return DataFrame()
@@ -144,10 +144,6 @@ class SHFEParser(QObject):
         # json_df["PRODUCTGROUPID"] = json_df["PRODUCTGROUPID"].str.strip().str.upper()
         json_df["PRODUCTNAME"] = json_df["PRODUCTNAME"].str.strip()
         json_df["DELIVERYMONTH"] = json_df["DELIVERYMONTH"].str.strip()
-        # 提取有用的列
-        # json_df = json_df[["PRODUCTGROUPID", "DELIVERYMONTH", "PRESETTLEMENTPRICE", "OPENPRICE", "HIGHESTPRICE", "LOWESTPRICE", "CLOSEPRICE",
-        #                    "SETTLEMENTPRICE", "ZD1_CHG", "ZD2_CHG", "VOLUME", "OPENINTEREST", "OPENINTERESTCHG"]]
-
         json_df = json_df.reindex(columns=["DATE", "PRODUCTID", "DELIVERYMONTH", "PRESETTLEMENTPRICE", "OPENPRICE", "HIGHESTPRICE", "LOWESTPRICE", "CLOSEPRICE",
                                            "SETTLEMENTPRICE", "ZD1_CHG", "ZD2_CHG", "VOLUME", "OPENINTEREST", "OPENINTERESTCHG"])
         str_date = self.date.strftime("%Y%m%d")
@@ -189,7 +185,7 @@ class SHFEParser(QObject):
         """ 解析日持仓排名json文件 """
         if self.date is None:
             raise DateValueError("请先使用`set_date`设置`CZCEParser`日期.")
-        file_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/rank/{}.json'.format(self.date.strftime("%Y-%m-%d")))
+        file_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/rank/{}.json'.format(self.date.strftime("%Y%m%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现上期所所{}的日持仓排名文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
             return DataFrame()

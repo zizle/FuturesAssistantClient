@@ -7,8 +7,9 @@
 import json
 import pandas as pd
 from PyQt5.QtWidgets import (qApp, QWidget,QTableWidget, QTableWidgetItem, QSplitter, QDialog, QVBoxLayout, QDesktopWidget, QAbstractItemView,
-                             QHeaderView, QTextEdit, QPushButton, QMessageBox)
+                             QHeaderView, QTextEdit, QPushButton, QMessageBox, QHBoxLayout, QLabel, QLineEdit, QGridLayout)
 from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtGui import QIcon, QIntValidator
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtWebChannel import QWebChannel
@@ -17,6 +18,7 @@ from utils.client import get_user_token
 from settings import SERVER_API, logger
 
 
+# 显示一张表的所有图形和源数据
 class SheetChartsPopup(QDialog):
     def __init__(self, sheet_id: int, is_own: int, *args, **kwargs):
         super(SheetChartsPopup, self).__init__(*args, **kwargs)
@@ -165,6 +167,7 @@ class ChartPopup(QWidget):
         super(ChartPopup, self).__init__(*args, **kwargs)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowFlag(Qt.Dialog)
+        self.setWindowIcon(QIcon("media/icons/win_chart.png"))
         self.resize(680, 380)
         self.chart_id = chart_id
         main_layout = QVBoxLayout()
@@ -204,4 +207,142 @@ class ChartPopup(QWidget):
                 chart_type, json.dumps(base_option), json.dumps(chart_values), json.dumps(sheet_headers)
             )
         reply.deleteLater()
+
+
+# 调整某个已设置的图形配置
+class EditChartOptionPopup(QDialog):
+    def __init__(self, chart_id, *args, **kwargs):
+        super(EditChartOptionPopup, self).__init__(*args, **kwargs)
+        self.chart_id = chart_id
+        self.network_manager = getattr(qApp, '_network')
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        integer_validate = QIntValidator(self)
+
+        main_layout = QGridLayout()
+        title_label = QLabel('左轴调整:', self)
+        title_label.setObjectName('titleLabel')
+        main_layout.addWidget(title_label, 0, 0, 1, 6)
+
+        main_layout.addWidget(QLabel(' 名 称:', self), 1, 0)
+        self.left_name_edit = QLineEdit(self)
+        main_layout.addWidget(self.left_name_edit, 1, 1)
+
+        main_layout.addWidget(QLabel('最小值:', self), 1, 2)
+        self.left_min_edit = QLineEdit(self)
+        self.left_min_edit.setValidator(integer_validate)
+        main_layout.addWidget(self.left_min_edit, 1, 3)
+
+        main_layout.addWidget(QLabel('最大值:', self), 1, 4)
+        self.left_max_edit = QLineEdit(self)
+        self.left_max_edit.setValidator(integer_validate)
+        main_layout.addWidget(self.left_max_edit, 1, 5)
+
+        title_label = QLabel('右轴调整:', self)
+        title_label.setObjectName('titleLabel')
+        main_layout.addWidget(title_label, 2, 0, 1, 6)
+
+        main_layout.addWidget(QLabel(' 名 称:', self), 3, 0)
+        self.right_name_edit = QLineEdit(self)
+        main_layout.addWidget(self.right_name_edit, 3, 1)
+
+        main_layout.addWidget(QLabel('最小值:', self), 3, 2)
+        self.right_min_edit = QLineEdit(self)
+        self.right_min_edit.setValidator(integer_validate)
+        main_layout.addWidget(self.right_min_edit, 3, 3)
+
+        main_layout.addWidget(QLabel('最大值:', self), 3, 4)
+        self.right_max_edit = QLineEdit(self)
+        self.right_max_edit.setValidator(integer_validate)
+        main_layout.addWidget(self.right_max_edit, 3, 5)
+
+        title_label = QLabel('范围调整(仅限输入年份,为0时表示不限制)', self)
+        title_label.setObjectName('titleLabel')
+        main_layout.addWidget(title_label, 4, 0, 1, 6)
+
+        main_layout.addWidget(QLabel('起始年:', self), 5, 0)
+        self.start_year_edit = QLineEdit(self)
+        self.start_year_edit.setValidator(integer_validate)
+        main_layout.addWidget(self.start_year_edit, 5, 1)
+        main_layout.addWidget(QLabel('终止年:', self), 5, 2)
+        self.end_year_edit = QLineEdit(self)
+        self.end_year_edit.setValidator(integer_validate)
+        main_layout.addWidget(self.end_year_edit, 5, 3)
+
+        title_label = QLabel('解说编辑:', self)
+        title_label.setObjectName('titleLabel')
+        main_layout.addWidget(title_label, 6, 0, 1, 6)
+        self.decipherment_edit = QTextEdit(self)
+        self.decipherment_edit.setMaximumHeight(50)
+        main_layout.addWidget(self.decipherment_edit, 7, 0, 1, 0)
+
+        # 确定按钮
+        self.confirm_button = QPushButton("确定")
+        self.confirm_button.clicked.connect(self.confirm_modify_option)
+        main_layout.addWidget(self.confirm_button, 8, 5)
+        self.setLayout(main_layout)
+        self.setMaximumWidth(520)
+        self.setStyleSheet(
+            "#titleLabel{padding:3px;font-size:14px;background:rgb(200,220,230);border-radius:3px}"
+        )
+        self.get_chart_base_option()
+
+    def get_chart_base_option(self):
+        """ 请求图形的基本配置 """
+        url = SERVER_API + 'chart/{}/'.format(self.chart_id)
+        reply = self.network_manager.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.chart_option_reply)
+
+    def chart_option_reply(self):
+        """ 图形配置返回 """
+        reply = self.sender()
+        if reply.error():
+            reply.deleteLater()
+            self.close()
+            return
+        data = json.loads(reply.readAll().data().decode("utf8"))
+        reply.deleteLater()
+        # 填写默认数据
+        default_option = data['data']
+        left_axis = default_option.get('left_axis')
+        right_axis = default_option.get('right_axis')
+        self.left_name_edit.setText(left_axis.get("name", ""))
+        self.left_min_edit.setText(str(left_axis.get('min', '')))
+        self.left_max_edit.setText(str(left_axis.get('max', '')))
+        if right_axis:
+            self.right_name_edit.setText(right_axis.get('name', ''))
+            self.right_min_edit.setText(str(right_axis.get('min', '')))
+            self.right_max_edit.setText(str(right_axis.get('max', '')))
+        self.start_year_edit.setText(default_option['start_year'])
+        self.end_year_edit.setText(default_option['end_year'])
+        self.decipherment_edit.setText(default_option['decipherment'])
+
+    def get_options(self):
+        """ 获取修改后的配置 """
+        return {
+            'left_name': self.left_name_edit.text().strip(),
+            'left_min': self.left_min_edit.text().strip(),
+            'left_max': self.left_max_edit.text().strip(),
+            'right_name': self.right_name_edit.text().strip(),
+            'right_min': self.right_min_edit.text().strip(),
+            'right_max': self.right_max_edit.text().strip(),
+            'start_year': self.start_year_edit.text().strip(),
+            'end_year': self.end_year_edit.text().strip(),
+            'decipherment': self.decipherment_edit.toPlainText().strip()
+        }
+
+    def confirm_modify_option(self):
+        """ 确定修改配置 """
+        url = SERVER_API + "chart/{}/".format(self.chart_id)
+        reply = self.network_manager.put(QNetworkRequest(QUrl(url)), json.dumps(self.get_options()).encode('utf8'))
+        reply.finished.connect(self.modify_reply)
+
+    def modify_reply(self):
+        reply = self.sender()
+        if reply.error():
+            QMessageBox.information(self, '失败', '修改失败了!')
+        else:
+            QMessageBox.information(self, '成功', '修改配置成功!')
+            self.close()
+        reply.deleteLater()
+
 

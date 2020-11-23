@@ -8,7 +8,7 @@
 from PyQt5.QtWidgets import (QWidget, QSplitter, QHBoxLayout, QVBoxLayout, QListWidget, QTabWidget, QLabel, QComboBox,
                              QPushButton, QTableWidget, QAbstractItemView, QFrame, QLineEdit, QCheckBox, QHeaderView,
                              QProgressBar, QTabBar, QStylePainter, QStyleOptionTab, QStyle)
-from PyQt5.QtCore import QMargins, Qt, QUrl
+from PyQt5.QtCore import QMargins, Qt, pyqtSignal, QPoint
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
@@ -138,12 +138,12 @@ class ConfigSourceUI(QWidget):
             "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
             "stop:0 #49aa54, stop: 0.48 #49cc54,stop: 0.52 #49cc54, stop:1 #49aa54);"
             "border:1px solid rgb(201,202,202);border-left:none;"
-            "min-height:25px;min-width:40px;font-weight:bold;font-size:13px};"
+            "min-height:25px;min-width:40px;font-weight:bold;};"
         )
 
         self.setStyleSheet(
             "#tipLabel{font-size:15px;color:rgb(180,100,100)}"
-            "#configsTable{background-color:rgb(240,240,240);font-size:13px;"
+            "#configsTable{background-color:rgb(240,240,240);"
             "selection-background-color:qlineargradient(x1:0,y1:0, x2:0, y2:1,"
             "stop:0 #cccccc,stop:0.5 white,stop:0.6 white,stop: 1 #cccccc);"
             "alternate-background-color:rgb(245,250,248);}"
@@ -209,11 +209,11 @@ class VarietySheetUI(QWidget):
             "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
             "stop:0 #34adf3, stop: 0.5 #ccddff,stop: 0.6 #ccddff, stop:1 #34adf3);"
             "border:1px solid rgb(201,202,202);border-left:none;"
-            "min-height:25px;min-width:40px;font-weight:bold;font-size:13px};"
+            "min-height:25px;min-width:40px;font-weight:bold;};"
         )
         self.setStyleSheet(
             "#tipLabel{font-size:15px;color:rgb(180,100,100)}"
-            "#sheetTable{background-color:rgb(240,240,240);font-size:13px;"
+            "#sheetTable{background-color:rgb(240,240,240);"
             "selection-background-color:qlineargradient(x1:0,y1:0, x2:0, y2:1,"
             "stop:0 #cccccc,stop:0.5 white,stop:0.6 white,stop: 1 #cccccc);"
             "alternate-background-color:rgb(245,250,248);}"
@@ -269,13 +269,13 @@ class SheetChartUI(QWidget):
             "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
             "stop:0 #fea356, stop: 0.5 #eeeeee,stop: 0.6 #eeeeee, stop:1 #fea356);"
             "border:1px solid rgb(201,202,202);border-left:none;"
-            "min-height:25px;min-width:40px;font-weight:bold;font-size:13px};"
+            "min-height:25px;min-width:40px;font-weight:bold;};"
         )
         self.swap_tab.tabBar().setObjectName("tabBar")
         self.setStyleSheet(
             "#tabBar::tab{min-height:75px;}"
             "#tipLabel{font-size:15px;color:rgb(180,100,100)}"
-            "#chartTable{background-color:rgb(240,240,240);font-size:13px;"
+            "#chartTable{background-color:rgb(240,240,240);"
             "selection-background-color:qlineargradient(x1:0,y1:0, x2:0, y2:1,"
             "stop:0 #cccccc,stop:0.5 white,stop:0.6 white,stop: 1 #cccccc);"
             "alternate-background-color:rgb(245,250,248);}"

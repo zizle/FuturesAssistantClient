@@ -53,10 +53,10 @@ class NetPositionUI(QWidget):
         # self.data_table.setEditTriggers(QAbstractItemView.NoEditTriggers)   # 不可编辑
         self.data_table.setFocusPolicy(Qt.NoFocus)                          # 去选中时的虚线框
         self.data_table.setAlternatingRowColors(True)                       # 交替行颜色
-        self.data_table.horizontalHeader().setDefaultSectionSize(80)        # 默认的标题头宽
-        self.data_table.verticalHeader().hide()
+        self.data_table.horizontalHeader().setDefaultSectionSize(88)        # 默认的标题头宽
         self.data_table.verticalHeader().setDefaultSectionSize(18)          # 设置行高(与下行代码同时才生效)
         self.data_table.verticalHeader().setMinimumSectionSize(18)
+        self.data_table.verticalHeader().hide()
         main_layout.addWidget(self.data_table)
 
         self.setLayout(main_layout)

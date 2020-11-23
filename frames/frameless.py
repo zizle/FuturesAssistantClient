@@ -33,6 +33,7 @@ from frames.homepage_extend import DailyReport, WeeklyReport, MonthlyReport, Ann
 from frames.homepage import Homepage
 from frames.product.short_message import ShortMessage
 from frames.product import ProductPage
+from frames.calculate.calculate_plat import CalculatePlat
 from frames.industry.variety_data import VarietyData
 from frames.industry.exchange_query import ExchangeQuery
 from frames.industry.net_position import NetPosition
@@ -418,6 +419,8 @@ class ClientMainApp(FrameLessWindowUI):
             page = NetPosition()
         elif module_id == "3":           # 交割服务
             page = DeliveryPage()
+        elif module_id == "4":           # 计算平台
+            page = CalculatePlat()
         elif module_id == "-9_0_0":      # 后台管理-广告设置
             page = HomepageAdAdmin()
         elif module_id == "-9_0_1":
@@ -439,8 +442,11 @@ class ClientMainApp(FrameLessWindowUI):
         elif module_id == "-9_3_2":
             page = SpotPriceAdmin()     # 后台管理-现货价格数据提取
         elif module_id == "-9_4_0":
-            from admin.delivery_b import DeliveryInfoAdmin
-            page = DeliveryInfoAdmin()  # 后台管理-交割服务-仓库管理
+            try:
+                from admin.delivery_b import DeliveryInfoAdmin
+                page = DeliveryInfoAdmin()  # 后台管理-交割服务-仓库管理
+            except Exception as e:
+                print(e)
         elif module_id == '-9_4_1':
             page = ReceiptParser()      # 后台管理-交割服务-仓单数据提取
         else:

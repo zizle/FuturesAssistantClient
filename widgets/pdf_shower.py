@@ -8,8 +8,8 @@
 import fitz
 import chardet
 import requests
-from PyQt5.QtWidgets import qApp, QWidget, QLabel, QFrame, QScrollArea,QVBoxLayout, QDialog
-from PyQt5.QtGui import QPixmap, QIcon, QImage
+from PyQt5.QtWidgets import qApp, QWidget, QLabel, QFrame, QScrollArea,QVBoxLayout, QDialog, QScrollBar, QDesktopWidget, QGraphicsDropShadowEffect
+from PyQt5.QtGui import QPixmap, QIcon, QImage, QPalette, QColor
 from PyQt5.QtCore import Qt, QMargins, QUrl
 from PyQt5.QtNetwork import QNetworkRequest
 from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE
@@ -77,17 +77,31 @@ class PDFContentShower(QScrollArea):
             self.page_container.layout().addWidget(page_label)
 
 
+# 含阴影的pdf页内容显示label
+class PageLabel(QLabel):
+    def __init__(self, *args, **kwargs):
+        super(PageLabel, self).__init__(*args)
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setOffset(1, 1)
+        shadow.setColor(QColor(150, 150, 150))
+        shadow.setBlurRadius(15)
+        self.setGraphicsEffect(shadow)
+
+
 # PDF文件内容弹窗
 class PDFContentPopup(QDialog):
 
     def __init__(self, title, file, *args, **kwargs):
         super(PDFContentPopup, self).__init__(*args, **kwargs)
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setWindowFlags(Qt.Dialog)
         self.file = file
         self.file_name = title
         # auth doc type
         self.setWindowTitle(title)
-        self.resize(925, 600)
+        available_size = QDesktopWidget().availableGeometry()  # 用户的桌面信息,来改变自身窗体大小
+        available_width, available_height = available_size.width(), available_size.height()
+        self.resize(available_width * 0.7, available_height * 0.72)
         # self.download = QPushButton("下载PDF", self)
         # self.download.setIcon(QIcon('media/download-file.png'))
         self.setWindowIcon(QIcon("media/reader.png"))
@@ -95,7 +109,7 @@ class PDFContentPopup(QDialog):
         self.scroll_area = QScrollArea(self)
         self.scroll_area.setContentsMargins(QMargins(0, 0, 0, 0))
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         # # content
         # self.page_container = QWidget(self)
         # container_layout = QVBoxLayout()  # 页面布局
@@ -104,20 +118,41 @@ class PDFContentPopup(QDialog):
         # self.page_container.setLayout(container_layout)
         layout = QVBoxLayout()  # 主布局
         layout.setContentsMargins(QMargins(0, 0, 0, 0))
-        layout.setParent(self)
 
         # add to show
         # scroll_area.setWidget(self.page_container)
         self.scroll_area.setFrameShape(QFrame.NoFrame)
         self.scroll_area.horizontalScrollBar().setStyleSheet(HORIZONTAL_SCROLL_STYLE)
         self.scroll_area.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
+        # self.scroll_area.verticalScrollBar().hide()
         # add layout
         # layout.addWidget(self.download, alignment=Qt.AlignLeft)
-        self.scroll_area.setMinimumWidth(self.width())
-        layout.addWidget(self.scroll_area)
+        self.scroll_area.setFixedWidth(925)  # 固定宽度保持居中，且显示清晰
+        layout.addWidget(self.scroll_area, alignment=Qt.AlignHCenter)
+        self.scroll_bar = QScrollBar(Qt.Vertical, self)
+        self.scroll_bar.setStyleSheet(VERTICAL_SCROLL_STYLE)
+        self.scroll_bar.setMaximumWidth(10)
         self.setLayout(layout)
         # initial data
         self.add_pages()
+        self.scroll_bar.valueChanged.connect(self.scroll_value_changed)  # 自定义的变化随之原滚动变化
+        self.scroll_area.verticalScrollBar().valueChanged.connect(self.custom_scroller)  # 原滚动变化带动自定义的变化
+        self.setObjectName("pdfPopup")
+        self.scroll_area.setStyleSheet("scrollArea")
+        self.setStyleSheet(
+            "#pdfPopup,#pageContainer{background-color:rgb(230,230,230)}"
+            "#scrollArea{background-color:rgb(150,20,230)}"
+        )
+
+    def resizeEvent(self, event):
+        self.scroll_bar.setMinimumHeight(self.height())
+        self.scroll_bar.move(self.width() - 10, 0)
+
+    def scroll_value_changed(self, value):
+        self.scroll_area.verticalScrollBar().setValue(value)
+
+    def custom_scroller(self, value):
+        self.scroll_bar.setValue(value)
 
     def add_pages(self):
         # 请求文件
@@ -132,7 +167,11 @@ class PDFContentPopup(QDialog):
 
     def add_paf_pages(self):
         page_container = QWidget(self)   # 页面容器
+        page_container.setObjectName("pageContainer")
         container_layout = QVBoxLayout()
+        # container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(15)
+        container_layout.setAlignment(Qt.AlignHCenter)
         reply = self.sender()
         if reply.error():
             message_label = QLabel('获取文件内容失败：{}'.format(reply.error), self)
@@ -143,7 +182,7 @@ class PDFContentPopup(QDialog):
         reply.deleteLater()
         for page_index in range(doc.pageCount):
             page = doc.loadPage(page_index)
-            page_label = QLabel(self)
+            page_label = PageLabel(self)
             # 设置label大小:宽-左侧距离10-右侧距离10-右侧滚东条10
             # show PDF content
             zoom_matrix = fitz.Matrix(1.5, 1.5)  # 图像缩放比例 (893-894)
@@ -156,18 +195,22 @@ class PDFContentPopup(QDialog):
                 page_label.setFixedWidth(890)
             else:
                 page_label.setFixedWidth(pagePixmap.width)  # 只有设置这个宽度才会清晰
-            imageFormat = QImage.Format_RGB888  # get image format
-            pageQImage = QImage(
+            image_format = QImage.Format_RGB888  # get image format
+            page_image = QImage(
                 pagePixmap.samples,
                 pagePixmap.width,
                 pagePixmap.height,
                 pagePixmap.stride,
-                imageFormat)  # init QImage
+                image_format)  # init QImage
             page_map = QPixmap()
-            page_map.convertFromImage(pageQImage)
+            page_map.convertFromImage(page_image)
             page_label.setPixmap(page_map)
             page_label.setScaledContents(True)  # pixmap resize with label
             container_layout.addWidget(page_label)
         doc.close()
         page_container.setLayout(container_layout)
         self.scroll_area.setWidget(page_container)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_bar.setMinimum(self.scroll_area.verticalScrollBar().minimum())
+        self.scroll_bar.setMaximum(self.scroll_area.verticalScrollBar().maximum())
+        self.scroll_bar.setPageStep(self.scroll_area.verticalScrollBar().pageStep())

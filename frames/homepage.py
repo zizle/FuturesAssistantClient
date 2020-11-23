@@ -85,7 +85,7 @@ class Homepage(HomepageUI):
 
     def get_exchange_lib_variety(self):
         """ 获取以交易所分组的品种 """
-        url = SERVER_API + "exchange/variety-all/"
+        url = SERVER_API + "exchange/variety-all/?is_real=2"
         network_manager = getattr(qApp, "_network")
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.add_left_menus)
@@ -207,12 +207,12 @@ class Homepage(HomepageUI):
         ad_type = ad_data["ad_type"]
         if ad_type == "file":
             file_url = STATIC_URL + ad_data["filepath"]
-            p = PDFContentPopup(file=file_url, title=ad_data["title"])
+            p = PDFContentPopup(file_url, ad_data["title"], self)
             p.exec_()
         elif ad_type == "web":
             webbrowser.open_new_tab(ad_data["web_url"])
         elif ad_type == "content":
-            p = TextPopup(message=ad_data["content"])
+            p = TextPopup(message=ad_data["content"], parent=self)
             p.setWindowTitle(ad_data["title"])
             p.exec_()
         else:

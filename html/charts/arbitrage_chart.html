@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>K线</title>
+    <script src="js/jquery-1.7.2.min.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/qwebchannel.js"></script>
+</head>
+<style>
+html,body{margin:10px 0 0 22px;padding:0}
+#chartBox{width:600px;height:378px;background-color:rgb(252,252,252)}
+</style>
+<body>
+    <div id="chartBox"></div>
+</body>
+<script>
+// 生成series和图例的函数
+function getSeriesLegend(sourceData) {
+    let seriesArray = [];
+    let legend = {"type": "scroll", "bottom": 16, "height": 20, "data":[]};
+
+    for(let i = 0; i < len; i++) {
+        let optData = seriesData[i];
+        let seriesOption = {
+            type: "line",
+            name: "1",
+            yAxisIndex: 0,
+            connectNulls: true,
+            data: sourceData.map(item=>{return parseFloat(item[optData.column_index])})
+        };
+        seriesArray.push(seriesOption);
+        legend.data.push(sheetHeaders[optData.column_index]);
+    }
+    return {
+        seriesData: seriesArray,
+        legendData: legend
+    }
+}
+
+// 生成水印
+function generateGraphic(watermark){
+    if(watermark === '' || watermark === undefined){return null}
+    else{
+        return {
+            type: 'group',
+            rotation: Math.PI / 4,
+            bounding: 'raw',
+            right: 80,
+            bottom: 80,
+            z: -100,
+            children: [
+                {
+                    type: 'rect',
+                    left: 'center',
+                    top: 'center',
+                    z:-100,
+                    shape:{width: 400, height: 35},
+                    style:{fill: 'rgba(0,0,0,0.4)'}
+                },
+                {
+                    type: 'text',
+                    left: 'center',
+                    top: 'center',
+                    z: -100,
+                    style: {
+                        fill: 'rgba(255,255,255,0.9)',
+                        text: watermark,
+                        font: 'bold 22px Microsoft YaHei'
+                    }
+                }
+            ]
+        }
+    }
+}
+
+// 实例化echarts option的函数
+function generateChartOption(sourceData, baseOption){
+    let chartTitle = baseOption["title"];
+    // let seriesLegend = getSeriesLegend(sourceData);
+    let colors = ["#c23531","#2f4554", "#61a0a8"];
+    return {
+        grid: {
+            top: 60,
+            left: 5,
+            right: 5,
+            bottom: 10,
+            containLabel: true
+        },
+        title:{
+            text: chartTitle,
+            textStyle: {fontSize: 22}
+        },
+        xAxis:{
+            type: 'category',
+            data: sourceData.map(item=>item.date),
+            axisLabel: {
+                rotate: 90,
+                fontSize: 11
+            }
+        },
+        yAxis: [
+            // {
+            //     type: "value",
+            //     name: "收盘价",
+            //     position:'left',
+            //     axisLine: {
+            //         lineStyle: {
+            //             color: colors[0]
+            //         },
+            //     },
+            //     // min: baseOption["axis1"][0],
+            //     // max: baseOption["axis1"][1],
+            //     // interval: (baseOption["axis1"][1] - baseOption["axis1"][0]) / baseOption["axis1"][2]
+            // },
+            // {
+            //     type: "value",
+            //     name: baseOption["name2"],
+            //     position:'right',
+            //     axisLine: {
+            //         lineStyle: {
+            //             color: colors[1]
+            //         }
+            //     },
+            //     min: baseOption["axis2"][0],
+            //     max: baseOption["axis2"][1],
+            //     interval: (baseOption["axis2"][1] - baseOption["axis2"][0]) / baseOption["axis2"][2]
+            // },
+            {
+                type: "value",
+                name: "价差",
+                position:'left',
+                // offset: 80,
+                axisLine: {
+                    lineStyle: {
+                        color: colors[0]
+                    }
+                },
+                // min: baseOption["axis3"][0],
+                // max: baseOption["axis3"][1],
+                // interval: (baseOption["axis3"][1] - baseOption["axis3"][0]) / baseOption["axis3"][2]
+            },
+        ],
+        tooltip:{
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross',
+            }
+        },
+        series: [
+        //     {
+        //     type: "line",
+        //     name: baseOption["name1"],
+        //     yAxisIndex: 0,
+        //     connectNulls: true,
+        //     symbol:'none',
+        //     lineStyle:{
+        //         width: 3
+        //     },
+        //     data: sourceData.map(item=>{return parseFloat(item.closePrice1)})
+        // }, {
+        //     type: "line",
+        //     name: baseOption["name2"],
+        //     yAxisIndex: 0,
+        //     connectNulls: true,
+        //     symbol:'none',
+        //     lineStyle:{
+        //         width: 3
+        //     },
+        //     data: sourceData.map(item=>{return parseFloat(item.closePrice2)})
+        // },
+        {
+            type: "line",
+            name: "价差",
+            yAxisIndex: 0,
+            connectNulls: true,
+            lineStyle:{
+                width: 3
+            },
+            symbol:'none',
+            data: sourceData.map(item=>{return Math.round(parseFloat(item.closePrice1 - item.closePrice2), 2)})
+        },
+
+        ],
+        legend:{
+            type:'plain',
+            data:[
+                {name: '价差'},
+            ]
+        },
+        // graphic: generateGraphic(baseOption.watermark)
+    };
+}
+// 主入口函数
+$(function () {
+    let chartObj = echarts.init(document.getElementById('chartBox'));
+    // 与UI界面通讯的实例
+    new QWebChannel(qt.webChannelTransport, function(channel)
+        {
+            let pageContact = channel.objects.pageContactChannel;
+            pageContact.chartSource.connect(function (sourceData, baseOption) {
+                let option = {};
+                option = generateChartOption(JSON.parse(sourceData), JSON.parse(baseOption));
+                chartObj.setOption(option, true)
+            });
+        }
+    );
+})
+</script>
+</html>

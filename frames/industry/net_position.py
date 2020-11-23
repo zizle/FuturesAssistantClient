@@ -6,7 +6,7 @@ import math
 import json
 from PyQt5.QtWidgets import qApp, QTableWidgetItem
 from PyQt5.QtNetwork import QNetworkRequest
-from PyQt5.QtCore import QUrl, Qt, QTimer
+from PyQt5.QtCore import QUrl, Qt, QTimer, QSize
 from PyQt5.QtGui import QBrush, QColor
 from settings import SERVER_API
 from .net_position_ui import NetPositionUI
