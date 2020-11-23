@@ -12,8 +12,9 @@ from PyQt5.QtCore import pyqtSignal, QUrl, QSettings, QTimer, Qt
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
 from PyQt5.QtGui import QPixmap
 from popup.password import ResetPasswordPopup
-from settings import SERVER_API, BASE_DIR
+from settings import SERVER_API, BASE_DIR, ADMINISTRATOR
 from utils.multipart import generate_multipart_data
+from utils.client import get_client_uuid
 from .passport_ui import PassportUI
 
 
@@ -176,8 +177,6 @@ class UserPassport(PassportUI):
         if password_0 != password_1:
             self.register_widget.password_error_1.setText("两次输入密码不一致!")
             return
-        config_path = os.path.join(BASE_DIR, "dawn/client.ini")
-        client_configs = QSettings(config_path, QSettings.IniFormat)
 
         # 获取注册信息
         register_dict = {
@@ -185,10 +184,11 @@ class UserPassport(PassportUI):
             "phone": base64.b64encode(phone.encode('utf-8')).decode('utf-8'),
             "email": self.register_widget.email_edit.text().strip(),
             "password": base64.b64encode(password_1.encode('utf-8')).decode('utf-8'),
-            "client_token": client_configs.value('TOKEN/UUID'),
             "input_code": self.register_widget.image_code_edit.text().strip(),
             "code_uuid": self._code_uuid,
-            "client_uuid": client_configs.value("TOKEN/UUID")
+            # "client_uuid": client_configs.value("TOKEN/UUID")
+            "client_uuid": get_client_uuid(),  # 获取客户端识别号
+            "is_manager":  1 if ADMINISTRATOR else 0  # 获取客户端的身份
         }
         self.register_widget.register_button.disconnect()   # 屏蔽再次点击信号
 
@@ -219,15 +219,16 @@ class UserPassport(PassportUI):
         data = reply.readAll().data()
         data = json.loads(data.decode("utf-8"))
         self.register_widget.register_error.setText(data["message"])
+        # 将客户端号写入ini文件
+        config_path = os.path.join(BASE_DIR, "dawn/client.ini")
+        client_configs = QSettings(config_path, QSettings.IniFormat)
+        client_configs.setValue("TOKEN/UUID", data["machine_uuid"])
         reply.deleteLater()
 
     def user_commit_login(self):
         """ 用户登录 """
         self.remember_checked_handler()  # 处理是否记住密码
         self.remember_login_handler()    # 处理是否自动登录
-
-        config_path = os.path.join(BASE_DIR, "dawn/client.ini")
-        client_configs = QSettings(config_path, QSettings.IniFormat)
 
         phone = self.login_widget.phone_edit.text().strip()
         password = self.login_widget.password_edit.text().strip()
@@ -236,7 +237,7 @@ class UserPassport(PassportUI):
             "password": base64.b64encode(password.encode('utf-8')).decode('utf-8'),
             "input_code": self.login_widget.image_code_edit.text().strip(),
             "code_uuid": self._code_uuid,
-            "client_uuid": client_configs.value("TOKEN/UUID")
+            "client_uuid": get_client_uuid()
         }
         self.login_widget.login_button.disconnect()    # 断开信号
         if not self.text_animation_timer.isActive():
@@ -278,7 +279,8 @@ class UserPassport(PassportUI):
         client_config_path = os.path.join(BASE_DIR, "dawn/client.ini")
         app_configs = QSettings(client_config_path, QSettings.IniFormat)
         app_configs.setValue("USER/BEARER", data["access_token"])
-        app_configs.setValue("USER/TTYPE", "bearer")
+        app_configs.setValue("USER/TTYPE", data["token_type"])
+        app_configs.setValue("TOKEN/UUID", data["machine_uuid"])
         # 发出登录成功的信号
         self.username_signal.emit(data["show_username"])
 
