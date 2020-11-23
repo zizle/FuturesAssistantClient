@@ -81,7 +81,7 @@ class ResetPasswordPopup(QDialog):
     def send_email_to_user(self):
         """ 请求发送验证码给用户 """
         user_phone = self.phone_edit.text()
-        if not re.match(r'^[13456789]{3}[0-9]{8}$', user_phone):
+        if not re.match(r'^[1][3-9][0-9]{9}$', user_phone):
             p = InformationPopup("手机号格式有误!", self)
             p.exec_()
             return

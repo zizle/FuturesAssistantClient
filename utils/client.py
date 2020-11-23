@@ -25,7 +25,7 @@ def get_client_uuid():
 def get_client_uuid_with_ini():
     config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
     config = QSettings(config_filepath, QSettings.IniFormat)
-    client_uuid = config.value("TOKEN/UUID") if config.value("TOKEN/UUID") else '未知'
+    client_uuid = config.value("TOKEN/UUID") if config.value("TOKEN/UUID") else 'Unknown'
     return client_uuid
 
 
