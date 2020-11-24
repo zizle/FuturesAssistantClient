@@ -40,6 +40,7 @@ class VarietyArbitrageUi(QWidget):
         option_layout.setAlignment(Qt.AlignLeft)
         title_layout = QHBoxLayout()
         page_title = QLabel("跨品种套利", self)
+        page_title.setFixedHeight(23)
         title_layout.addWidget(page_title)
         title_layout.addStretch()
         option_layout.addLayout(title_layout, 0, 0, 1, 6)
