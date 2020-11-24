@@ -79,6 +79,7 @@ class SpotArbitrageUi(QWidget):
         option_layout.addWidget(self.one_year_button, 2, 8)
 
         option_widget.setLayout(option_layout)
+        option_widget.setFixedHeight(90)
 
         main_layout.addWidget(option_widget)
 

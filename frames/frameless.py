@@ -15,7 +15,7 @@ from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtCore import Qt, QUrl, QSettings, QTimer
 
 from settings import SERVER_API, ADMINISTRATOR, BASE_DIR, ONLINE_COUNT_INTERVAL, PLATE_FORM, SYS_BIT, logger
-from utils.client import get_user_token, is_module_verify, remove_user_logged
+from utils.client import get_user_token, is_module_verify, remove_user_logged, get_client_uuid
 from .frameless_ui import FrameLessWindowUI
 
 from admin.operator.user_manager import UserManager
@@ -206,10 +206,9 @@ class ClientMainApp(FrameLessWindowUI):
         configs_path = os.path.join(BASE_DIR, "dawn/client.ini")
         app_config = QSettings(configs_path, QSettings.IniFormat)
         is_auto_login = app_config.value("USER/AUTOLOGIN")
-        client_uuid = app_config.value("TOKEN/UUID") if app_config.value("TOKEN/UUID") else ''
         if is_auto_login:  # 使用TOKEN自动登录
             user_token = app_config.value("USER/BEARER") if app_config.value("USER/BEARER") else ''
-            url = SERVER_API + "user/token-login/?client=" + client_uuid
+            url = SERVER_API + "user/token-login/?client=" + get_client_uuid()
             request = QNetworkRequest(QUrl(url))
             token = "Bearer " + user_token
             request.setRawHeader("Authorization".encode("utf-8"), token.encode("utf-8"))

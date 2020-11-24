@@ -47,7 +47,7 @@ class VarietyCalculateUI(QWidget):
 
         title_option_widget = TitleOptionWidget(self)
         title_option_widget.setLayout(option_layout)
-
+        title_option_widget.setFixedHeight(42)
         layout.addWidget(title_option_widget)
         self.web_container = QWebEngineView(self)
         layout.addWidget(self.web_container)
