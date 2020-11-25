@@ -347,6 +347,9 @@ class ReportFileAdmin(ReportFileAdminUI):
             item6.setTextAlignment(Qt.AlignCenter)
             self.manager_table.setItem(row, 6, item6)
 
+            self.manager_table.setItem(row, 7, QTableWidgetItem(str(row_item["filepath"])))
+
+
     def clicked_manager_report(self, row, col):
         """ 点击管理报告 """
         report_id = self.manager_table.item(row, 0).data(Qt.UserRole)
@@ -373,9 +376,6 @@ class ReportFileAdmin(ReportFileAdminUI):
             url = STATIC_URL + filepath
             p = PDFContentPopup(title=filename, file=url)
             p.exec_()
-        elif col == 7:  # 修改名称
-            new_filename = self.manager_table.item(row, 3).text()
-            self.modify_report_filename(report_id, new_filename)
         else:
             pass
 

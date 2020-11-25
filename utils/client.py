@@ -29,6 +29,12 @@ def get_client_uuid_with_ini():
     return client_uuid
 
 
+def set_client_uuid_with_ini(client_uuid):
+    config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
+    config = QSettings(config_filepath, QSettings.IniFormat)
+    config.setValue("TOKEN/UUID", client_uuid)
+
+
 def remove_user_logged():
     config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
     config = QSettings(config_filepath, QSettings.IniFormat)

@@ -15,7 +15,7 @@ from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtCore import Qt, QUrl, QSettings, QTimer
 
 from settings import SERVER_API, ADMINISTRATOR, BASE_DIR, ONLINE_COUNT_INTERVAL, PLATE_FORM, SYS_BIT, logger
-from utils.client import get_user_token, is_module_verify, remove_user_logged, get_client_uuid
+from utils.client import get_user_token, is_module_verify, remove_user_logged, get_client_uuid, set_client_uuid_with_ini
 from .frameless_ui import FrameLessWindowUI
 
 from admin.operator.user_manager import UserManager
@@ -229,6 +229,8 @@ class ClientMainApp(FrameLessWindowUI):
             self.center_widget.setCentralWidget(center_widget)
         else:
             data = json.loads(data.decode("utf-8"))
+            # 写入客户端号
+            set_client_uuid_with_ini(data["machine_uuid"])
             self.user_login_successfully(data["show_username"])
         reply.deleteLater()
 
