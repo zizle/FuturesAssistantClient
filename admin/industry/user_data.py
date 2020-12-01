@@ -863,11 +863,11 @@ class UserDataMaintain(UserDataMaintainUI):
             is_principal = 1 if self.sheet_chart_widget.chart_table.item(row, 7).checkState() else 0
         elif col == 8:  # 品种页显示与否
             is_petit = 1 if self.sheet_chart_widget.chart_table.item(row, 8).checkState() else 0
-        elif col == 10:  # 公开与否
-            is_private = 1 if self.sheet_chart_widget.chart_table.item(row, 10).checkState() else 0
+        elif col == 9:  # 公开与否
+            is_private = 1 if self.sheet_chart_widget.chart_table.item(row, 9).checkState() else 0
         else:
             pass
-        if col in [7, 8, 10]:  # 发起数据请求
+        if col in [7, 8, 9]:  # 发起数据请求
             self.change_chart_display_position(chart_id, is_principal, is_petit, is_private)
         # 再次链接信号
         self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)  # 图形表单元格变化
