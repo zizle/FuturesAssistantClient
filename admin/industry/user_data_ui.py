@@ -168,6 +168,16 @@ class ConfigSourceUI(QWidget):
         self.confirm_group_button.hide()
 
 
+class SheetTable(QTableWidget):
+    """ 用户数据表显示控件 """
+    right_mouse_clicked = pyqtSignal()
+
+    def mousePressEvent(self, event):
+        super(SheetTable, self).mousePressEvent(event)
+        if event.buttons() == Qt.RightButton:
+            self.right_mouse_clicked.emit()
+
+
 class VarietySheetUI(QWidget):
     def __init__(self, *args, **kwargs):
         super(VarietySheetUI, self).__init__(*args, **kwargs)
@@ -192,7 +202,7 @@ class VarietySheetUI(QWidget):
 
         opts_layout.addStretch()
         main_layout.addLayout(opts_layout)
-        self.sheet_table = QTableWidget(self)
+        self.sheet_table = SheetTable(self)
         self.sheet_table.setFrameShape(QFrame.NoFrame)
         self.sheet_table.setFocusPolicy(Qt.NoFocus)
         self.sheet_table.verticalHeader().hide()

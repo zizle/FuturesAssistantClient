@@ -226,6 +226,21 @@ class RegisterUI(QWidget):
         verify_layout.addWidget(self.image_code_show)
         layout.addLayout(verify_layout)
 
+        # 免责声明
+        declare_layout = QHBoxLayout()
+        declare_layout.setSpacing(0)
+        self.declare_check = QCheckBox(self)
+        self.declare_check.setCheckState(Qt.Checked)
+        self.declare_check.setText('注册即表示您已知晓')
+        declare_layout.addWidget(self.declare_check)
+        # declare_label = QLabel('注册即表示您已知晓')
+        # declare_layout.addWidget(declare_label)
+        self.declare_button = QPushButton('《免责声明》', self)
+        self.declare_button.setCursor(Qt.PointingHandCursor)
+        declare_layout.addWidget(self.declare_button)
+        declare_layout.addStretch()
+        layout.addLayout(declare_layout)
+
         # 注册错误框
         self.register_error = QLabel(self)
         self.register_error.setObjectName("loginError")
@@ -248,11 +263,14 @@ class RegisterUI(QWidget):
         password_label.setFixedSize(36, 35)
         self.setLayout(layout)
         self.setMaximumWidth(500)
+        self.declare_button.setObjectName('declareButton')
         # 样式
         self.setStyleSheet(
             "#phoneError,#psdError,#loginError,#emailError{color:rgb(200,50,30)}"
             "#loginBtn{background-color:rgb(46,158,224);color: rgb(240,240,240);font-weight:bold;min-height:28px;border:none;}"
             "#loginBtn:pressed{background-color:rgb(28,76,202);}"
+            "#declareButton{border:none;color:rgb(10,30,160)}"
+            "#declareButton:hover{color:rgb(40,120,255)}"
         )
 
     def username_edit_finished(self):

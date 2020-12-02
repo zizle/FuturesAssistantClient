@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import qApp, QWidget, QLabel, QFrame, QScrollArea,QVBoxLayo
 from PyQt5.QtGui import QPixmap, QIcon, QImage, QPalette, QColor
 from PyQt5.QtCore import Qt, QMargins, QUrl
 from PyQt5.QtNetwork import QNetworkRequest
+from popup.message import InformationPopup
 from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE
 
 
@@ -157,8 +158,8 @@ class PDFContentPopup(QDialog):
     def add_pages(self):
         # 请求文件
         if not self.file:
-            message_label = QLabel('请传入文件资源网络路径.', self)
-            self.page_container.layout().addWidget(message_label)
+            p = InformationPopup('请传入文件资源网络路径', self)
+            p.exec_()
             return
         # 异步获取文件内容
         network_manager = getattr(qApp, "_network")
@@ -174,8 +175,9 @@ class PDFContentPopup(QDialog):
         container_layout.setAlignment(Qt.AlignHCenter)
         reply = self.sender()
         if reply.error():
-            message_label = QLabel('获取文件内容失败：{}'.format(reply.error), self)
-            self.page_container.layout().addWidget(message_label)
+            p = InformationPopup('获取文件内容失败：{}'.format(reply.error()), self)
+            p.exec_()
+            return
         else:
             content = reply.readAll().data()
             doc = fitz.Document(filename=self.file_name, stream=content)
