@@ -9,7 +9,8 @@ from PyQt5.QtCore import Qt, QUrl
 from settings import SERVER_API, logger
 from utils.client import get_user_token
 from popup.sheet_charts import SheetChartsPopup
-from .variety_data_ui import VarietyDataUI, OperateButton
+from widgets import OperateButton
+from .variety_data_ui import VarietyDataUI
 
 
 class VarietyData(VarietyDataUI):

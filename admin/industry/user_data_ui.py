@@ -8,8 +8,7 @@
 from PyQt5.QtWidgets import (QWidget, QSplitter, QHBoxLayout, QVBoxLayout, QListWidget, QTabWidget, QLabel, QComboBox,
                              QPushButton, QTableWidget, QAbstractItemView, QFrame, QLineEdit, QCheckBox, QHeaderView,
                              QProgressBar, QTabBar, QStylePainter, QStyleOptionTab, QStyle)
-from PyQt5.QtCore import QMargins, Qt, pyqtSignal, QPoint
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QMargins, Qt, pyqtSignal
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 
@@ -26,24 +25,6 @@ class HorizontalTabBar(QTabBar):
             painter.drawControl(QStyle.CE_TabBarTabShape, option)
             painter.drawText(tabRect, Qt.AlignVCenter | Qt.TextDontClip, self.tabText(index))
         painter.end()
-
-
-class OperateButton(QPushButton):
-    """ 置顶按钮 """
-    def __init__(self, icon_path, hover_icon_path, *args):
-        super(OperateButton, self).__init__(*args)
-        self.icon_path = icon_path
-        self.hover_icon_path = hover_icon_path
-        self.setCursor(Qt.PointingHandCursor)
-        self.setIcon(QIcon(self.icon_path))
-        self.setObjectName("operateButton")
-        self.setStyleSheet("#operateButton{border:none}#operateButton:hover{color:#d81e06}")
-
-    def enterEvent(self, *args, **kwargs):
-        self.setIcon(QIcon(self.hover_icon_path))
-
-    def leaveEvent(self, *args, **kwargs):
-        self.setIcon(QIcon(self.icon_path))
 
 
 class ConfigSourceUI(QWidget):

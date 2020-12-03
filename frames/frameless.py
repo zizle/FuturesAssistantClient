@@ -36,7 +36,7 @@ from frames.product import ProductPage
 from frames.calculate.calculate_plat import CalculatePlat
 from frames.industry.variety_data import VarietyData
 from frames.industry.exchange_query import ExchangeQuery
-from frames.industry.net_position import NetPosition
+from frames.industry.net_position import NetPositionWidget
 from frames.about_us import CheckVersion
 from frames.passport import UserPassport
 from frames.user_center import UserCenter
@@ -407,8 +407,7 @@ class ClientMainApp(FrameLessWindowUI):
     #
     #     self.center_widget.setCentralWidget(center_widget)
 
-    @staticmethod
-    def get_module_page(module_id, module_text):
+    def get_module_page(self, module_id, module_text):
         """ 通过权限验证,进入功能页面 """
         if module_id == "1":             # 产品服务
             page = ProductPage()
@@ -417,7 +416,7 @@ class ClientMainApp(FrameLessWindowUI):
         elif module_id == "2_1":         # 交易所数据
             page = ExchangeQuery()
         elif module_id == "2_2":         # 品种净持仓
-            page = NetPosition()
+            page = NetPositionWidget(self)
         elif module_id == "3":           # 交割服务
             page = DeliveryPage()
         elif module_id == "4":           # 计算平台

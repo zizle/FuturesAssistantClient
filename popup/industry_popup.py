@@ -3,9 +3,7 @@
 # @Time  : 2020-09-03 20:30
 # @Author: zizle
 """ 行业数据的弹窗U组件 """
-import os
 import json
-import sqlite3
 from datetime import datetime, timedelta
 import pandas as pd
 from PyQt5.QtWidgets import (qApp, QDesktopWidget, QDialog, QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QLabel,
@@ -22,6 +20,7 @@ from channels.chart import ChartOptionChannel
 from utils.client import get_client_uuid, get_user_token
 from .message import InformationPopup
 from settings import BASE_DIR, SERVER_API, logger
+from widgets import OperateButton
 
 """ 配置更新文件夹 """
 
@@ -129,7 +128,8 @@ class SheetWidgetPopup(QDialog):
         self.header_keys = None
         self.sheet_id = sheet_id
         layout = QVBoxLayout()
-        self.declare_label = QLabel('双击要修改的数据单元格后,写入新的数据,再点击对应行最后的确认按钮进行修改,一次只能修改一行数据。', self)
+        self.declare_label = QLabel(
+            '双击要修改的数据单元格后,写入新的数据,再点击对应行最后的确认按钮(√)进行修改,一次只能修改一行数据(编号日期不支持修改)。', self)
         layout.addWidget(self.declare_label, alignment=Qt.AlignTop | Qt.AlignLeft)
         self.value_table = QTableWidget(self)
         self.value_table.horizontalHeader().hide()
@@ -183,8 +183,8 @@ class SheetWidgetPopup(QDialog):
             del self.header_keys
             self.header_keys = None
         self.header_keys = value_keys.copy()
-
         self.value_table.setColumnCount(len(value_keys) + 1)
+        self.value_table.horizontalHeader().setSectionResizeMode(len(value_keys), QHeaderView.ResizeToContents)
         self.value_table.setRowCount(len(sheet_values))
         for row, row_item in enumerate(sheet_values):
             for col, col_key in enumerate(value_keys):
@@ -201,7 +201,7 @@ class SheetWidgetPopup(QDialog):
                 self.value_table.setItem(row, col, item)
                 if col == len(value_keys) - 1:
                     # 修改按钮
-                    button = QPushButton('修改', self)
+                    button = OperateButton('media/icons/confirm_btn.png', 'media/icons/confirm_btn.png', self)
                     setattr(button, 'row_index', row)
                     button.clicked.connect(self.modify_sheet_row_value)
                     self.value_table.setCellWidget(row, col + 1, button)

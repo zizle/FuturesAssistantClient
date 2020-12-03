@@ -5,11 +5,10 @@
 
 """ 主窗口无边框的UI """
 
-from PyQt5.QtWidgets import (qApp, QHBoxLayout, QWidget, QMainWindow, QVBoxLayout, QDesktopWidget, QLabel, QPushButton,
+from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QMainWindow, QVBoxLayout, QDesktopWidget, QLabel, QPushButton,
                              QMenuBar)
 from PyQt5.QtGui import QColor, QPen, QPainter, QPixmap, QFont, QIcon, QEnterEvent
 from PyQt5.QtCore import Qt, QMargins, pyqtSignal
-from PyQt5.QtNetwork import QNetworkAccessManager
 from settings import TITLE_BAR_HEIGHT, NAVIGATION_BAR_HEIGHT, WINDOW_TITLE, SYSTEM_MENUS
 
 

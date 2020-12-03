@@ -18,24 +18,35 @@ class WarningPopup(QDialog):
         super(WarningPopup, self).__init__(*args)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("警告")
-        self.setFixedWidth(230)
+        self.setFixedWidth(250)
         main_layout = QVBoxLayout()
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(QMargins(1, 0, 1, 0))
         message_layout = QHBoxLayout()
+        message_layout.setContentsMargins(QMargins(8, 5, 8, 5))
         message_layout.setSpacing(5)
         icon_label = QLabel(self)
         icon_label.setFixedSize(50, 50)
         icon_label.setPixmap(QPixmap("media/icons/warning.png"))
         icon_label.setScaledContents(True)
         message_layout.addWidget(icon_label, alignment=Qt.AlignLeft)
-        message = "<div style=text-indent:24px;font-size:12px;line-height:18px;>" + message + "</div>"
+        message = "<div style=text-indent:24px;line-height:25px;>" + message + "</div>"
         message_label = QLabel(message, self)
-        message_label.setMinimumWidth(155)
-
+        message_label.setMinimumWidth(175)
         message_label.setWordWrap(True)
         message_layout.addWidget(message_label)
         main_layout.addLayout(message_layout)
 
+        h_line = QFrame(self)
+        h_line.setLineWidth(1)
+        h_line.setContentsMargins(QMargins(0, 0, 0, 0))
+        h_line.setFrameStyle(QFrame.HLine | QFrame.Plain)
+        main_layout.addWidget(h_line)
+        h_line.setObjectName("sepLine")
+
+        buttons_widget = QWidget(self)
         button_layout = QHBoxLayout()
+        button_layout.setContentsMargins(QMargins(8, 8, 8, 8))
         button_layout.addStretch()
         cancel_button = QPushButton("取消", self)
         cancel_button.clicked.connect(self.close)
@@ -44,8 +55,15 @@ class WarningPopup(QDialog):
         confirm_button = QPushButton("确定", self)
         confirm_button.clicked.connect(self.make_sure_confirm_operate)
         button_layout.addWidget(confirm_button)
-        main_layout.addLayout(button_layout)
+        buttons_widget.setLayout(button_layout)
+        main_layout.addWidget(buttons_widget)
         self.setLayout(main_layout)
+        buttons_widget.setObjectName('buttonWidget')
+        self.setObjectName('warningPopup')
+        self.setStyleSheet("#warningPopup{background-color:rgb(255,255,255)}"
+                           "#buttonWidget{background-color:rgb(240,240,240)}"
+                           "#sepLine{color:rgb(230,230,230)}")
+
         self.data = dict()
 
     def set_data(self, data):
@@ -66,21 +84,31 @@ class ExitAppPopup(QDialog):
         self.setWindowTitle("提示")
         self.setFixedWidth(230)
         main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(QMargins(0, 0, 0, 0))
+        main_layout.setSpacing(0)
         message_layout = QHBoxLayout()
+        message_layout.setContentsMargins(QMargins(8, 5, 8, 5))
         message_layout.setSpacing(5)
         icon_label = QLabel(self)
         icon_label.setFixedSize(50, 50)
         icon_label.setPixmap(QPixmap("media/icons/exit_app.png"))
         icon_label.setScaledContents(True)
         message_layout.addWidget(icon_label, alignment=Qt.AlignLeft)
-        message = "<div style=text-indent:24px;font-size:12px;line-height:18px;>" + message + "</div>"
+        message = "<div style=text-indent:24px;line-height:25px;>" + message + "</div>"
         message_label = QLabel(message, self)
         message_label.setMinimumWidth(155)
-
         message_label.setWordWrap(True)
         message_layout.addWidget(message_label)
         main_layout.addLayout(message_layout)
 
+        h_line = QFrame(self)
+        h_line.setLineWidth(1)
+        h_line.setContentsMargins(QMargins(0, 0, 0, 0))
+        h_line.setFrameStyle(QFrame.HLine | QFrame.Plain)
+        main_layout.addWidget(h_line)
+        h_line.setObjectName("sepLine")
+
+        buttons_widget = QWidget(self)
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         cancel_button = QPushButton("取消", self)
@@ -90,8 +118,16 @@ class ExitAppPopup(QDialog):
         confirm_button = QPushButton("确定", self)
         confirm_button.clicked.connect(self.make_sure_confirm_operate)
         button_layout.addWidget(confirm_button)
-        main_layout.addLayout(button_layout)
+        buttons_widget.setLayout(button_layout)
+
+        main_layout.addWidget(buttons_widget)
+
         self.setLayout(main_layout)
+        buttons_widget.setObjectName('buttonWidget')
+        self.setObjectName("exitAppPopup")
+        self.setStyleSheet("#exitAppPopup{background-color:rgb(255,255,255)}"
+                           "#buttonWidget{background-color:rgb(240,240,240)}"
+                           "#sepLine{color:rgb(230,230,230)}")
 
     def make_sure_confirm_operate(self):
         self.confirm_operate.emit()
@@ -99,6 +135,7 @@ class ExitAppPopup(QDialog):
 
 
 class InformationPopup(QDialog):
+    """ 信息提示弹窗 """
     def __init__(self, message, *args, **kwargs):
         super(InformationPopup, self).__init__(*args, **kwargs)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -124,7 +161,7 @@ class InformationPopup(QDialog):
 
         h_line = QFrame(self)
         h_line.setLineWidth(1)
-        h_line.setContentsMargins(QMargins(0,0,0,0))
+        h_line.setContentsMargins(QMargins(0, 0, 0, 0))
         h_line.setFrameStyle(QFrame.HLine | QFrame.Plain)
         main_layout.addWidget(h_line)
         h_line.setObjectName("sepLine")

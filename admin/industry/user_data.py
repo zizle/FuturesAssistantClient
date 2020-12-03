@@ -12,13 +12,14 @@ from datetime import datetime
 from PyQt5.QtWidgets import qApp, QListWidgetItem, QTableWidgetItem, QHeaderView, QMenu
 from PyQt5.QtCore import Qt, QUrl, QThread, pyqtSignal
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
-from PyQt5.QtGui import QBrush, QColor, QCursor
-from settings import SERVER_API, logger, BASE_DIR
+from PyQt5.QtGui import QBrush, QColor, QCursor, QIcon
+from settings import SERVER_API, logger
 from utils.client import get_user_token, get_client_uuid
 from popup.industry_popup import UpdateFolderPopup, DisposeChartPopup, SheetWidgetPopup
 from popup.sheet_charts import SheetChartsPopup, DeciphermentPopup, ChartPopup, EditChartOptionPopup
 from popup.message import InformationPopup, WarningPopup
-from .user_data_ui import UserDataMaintainUI, SheetChartUI, OperateButton
+from widgets import OperateButton
+from .user_data_ui import UserDataMaintainUI, SheetChartUI
 
 pd.set_option('mode.chained_assignment', None)  # pandas不提示警告
 
@@ -654,6 +655,7 @@ class UserDataMaintain(UserDataMaintainUI):
     def sheet_table_right_mouse(self):
         r_menu = QMenu(self)
         edit_action = r_menu.addAction('修改数据')
+        edit_action.setIcon(QIcon(QIcon('media/icons/edit.png')))
         edit_action.triggered.connect(self.edit_sheet_values_popup)
         r_menu.exec_(QCursor.pos())
 
@@ -666,6 +668,7 @@ class UserDataMaintain(UserDataMaintainUI):
         sheet_title = self.variety_sheet_widget.sheet_table.item(current_row, 3).text()
         sheet_popup = SheetWidgetPopup(sheet_id, self)
         sheet_popup.setWindowTitle(sheet_title)
+        sheet_popup.setWindowIcon(QIcon('media/icons/edit_hover.png'))
         sheet_popup.exec_()
 
     """ 数据图形显示 """

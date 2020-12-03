@@ -5,24 +5,20 @@ import sys
 import time
 import logging
 from PyQt5.QtCore import QSettings
-WINDOW_TITLE = '分析决策系统(研究员)'  # 1.4.5
+
 SYS_BIT = "32" if sys.maxsize < 2 ** 32 else "64"
 PLATE_FORM = "WIN10"
-# # SERVER_ADDR = "http://210.13.218.130:9002/"
-# SERVER_ADDR = "http://127.0.0.1:5000/"
-# # 与后端对应的静态文件路径
-# STATIC_PREFIX = SERVER_ADDR + 'ads/'
+ADMINISTRATOR = True
+WINDOW_TITLE = '分析决策系统(研究员)' if ADMINISTRATOR else '分析决策系统客户端'
 
-SERVER_API = "http://127.0.0.1:8000/api/"
-# SERVER_API = "http://210.13.218.130:9004/api/"
+# SERVER_API = "http://127.0.0.1:8000/api/"
+SERVER_API = "http://210.13.218.130:9004/api/"
 
 STATIC_URL = SERVER_API[:-4] + 'static/'
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 LOCAL_SPIDER_SRC = os.path.join(BASE_DIR, "sources/")  # 爬取保存文件的本地文件夹
-
-ADMINISTRATOR = True
 
 ONLINE_COUNT_INTERVAL = 120000  # 毫秒
 
