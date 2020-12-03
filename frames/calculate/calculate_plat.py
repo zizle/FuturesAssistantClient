@@ -8,6 +8,7 @@ from .variety_calculate import VarietyCalculate
 from .variety_arbitrage import VarietyArbitrage
 from .duration_arbitrage import DurationArbitrage
 from .spot_arbitrage import SpotArbitrage
+from .correlation import CorrelationWidget
 
 
 class CalculatePlat(CalculatePlatUi):
@@ -21,8 +22,11 @@ class CalculatePlat(CalculatePlatUi):
             ]},
             # {"id": 2, "name": "套保计算", "children": None},
             # {"id": 3, "name": "交割计算", "children": None},
-            {"id": 4, "name": "品种计算", "children": None},
-            # {"id": 5, "name": "相关性计算", "children": None},
+
+            {"id": 4, "name": "其他计算", "children": [
+                {"id": '4_1', "name": "品种计算", "children": None},
+                {"id": '4_2', "name": "相关性计算", "children": None},
+            ]},
         ]
 
         for menu_item in menus:
@@ -47,18 +51,19 @@ class CalculatePlat(CalculatePlatUi):
             if not item.parent() and item.childCount():  # 点击父级展开
                 item.setExpanded(not item.isExpanded())
                 return
-            menu_id = str(getattr(item, "menu_id"))
+            menu_id = getattr(item, "menu_id")
             if menu_id == "1_1":  # 跨品种套利
-                page = VarietyArbitrage()
+                page = VarietyArbitrage(self)
             elif menu_id == "1_2":  # 跨期套利
-                page = DurationArbitrage()
+                page = DurationArbitrage(self)
             elif menu_id == "1_3":  # 期现套利
-                page = SpotArbitrage()
-            elif menu_id == "4":
-                page = VarietyCalculate()
+                page = SpotArbitrage(self)
+            elif menu_id == "4_1":
+                page = VarietyCalculate(self)
+            elif menu_id == '4_2':
+                page = CorrelationWidget(self)
             else:
                 return
             self.frame_loader.setCentralWidget(page)
         except Exception as e:
             print(e)
-

@@ -7,7 +7,7 @@
 import json
 import pandas as pd
 from PyQt5.QtWidgets import (qApp, QWidget,QTableWidget, QTableWidgetItem, QSplitter, QDialog, QVBoxLayout, QDesktopWidget, QAbstractItemView,
-                             QHeaderView, QTextEdit, QPushButton, QMessageBox, QHBoxLayout, QLabel, QLineEdit, QGridLayout)
+                             QHeaderView, QTextEdit, QPushButton, QMessageBox, QComboBox, QLabel, QLineEdit, QGridLayout)
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QIcon, QIntValidator
 from PyQt5.QtWebEngineWidgets import QWebEngineView
@@ -255,18 +255,25 @@ class EditChartOptionPopup(QDialog):
         self.right_max_edit.setValidator(integer_validate)
         main_layout.addWidget(self.right_max_edit, 3, 5)
 
-        title_label = QLabel('范围调整(仅限输入年份,为0时表示不限制)', self)
+        title_label = QLabel('横轴调整(范围仅限输入年份,为0时表示不限制)', self)
         title_label.setObjectName('titleLabel')
         main_layout.addWidget(title_label, 4, 0, 1, 6)
 
-        main_layout.addWidget(QLabel('起始年:', self), 5, 0)
+        main_layout.addWidget(QLabel(' 格 式:', self), 5, 0)
+        self.x_axis_format_combobox = QComboBox(self)
+        self.x_axis_format_combobox.addItem('年-月-日', 10)
+        self.x_axis_format_combobox.addItem('年-月', 7)
+        self.x_axis_format_combobox.addItem('年', 4)
+        main_layout.addWidget(self.x_axis_format_combobox, 5, 1)
+
+        main_layout.addWidget(QLabel('起始年:', self), 5, 2)
         self.start_year_edit = QLineEdit(self)
         self.start_year_edit.setValidator(integer_validate)
-        main_layout.addWidget(self.start_year_edit, 5, 1)
-        main_layout.addWidget(QLabel('终止年:', self), 5, 2)
+        main_layout.addWidget(self.start_year_edit, 5, 3)
+        main_layout.addWidget(QLabel('终止年:', self), 5, 4)
         self.end_year_edit = QLineEdit(self)
         self.end_year_edit.setValidator(integer_validate)
-        main_layout.addWidget(self.end_year_edit, 5, 3)
+        main_layout.addWidget(self.end_year_edit, 5, 5)
 
         title_label = QLabel('解说编辑:', self)
         title_label.setObjectName('titleLabel')
@@ -312,6 +319,14 @@ class EditChartOptionPopup(QDialog):
             self.right_name_edit.setText(right_axis.get('name', ''))
             self.right_min_edit.setText(str(right_axis.get('min', '')))
             self.right_max_edit.setText(str(right_axis.get('max', '')))
+
+        date_format_index = 0
+        if default_option['date_length'] == 7:
+            date_format_index = 1
+        if default_option['date_length'] == 4:
+            date_format_index = 2
+        self.x_axis_format_combobox.setCurrentIndex(date_format_index)
+
         self.start_year_edit.setText(default_option['start_year'])
         self.end_year_edit.setText(default_option['end_year'])
         self.decipherment_edit.setText(default_option['decipherment'])
@@ -325,6 +340,7 @@ class EditChartOptionPopup(QDialog):
             'right_name': self.right_name_edit.text().strip(),
             'right_min': self.right_min_edit.text().strip(),
             'right_max': self.right_max_edit.text().strip(),
+            'date_length': self.x_axis_format_combobox.currentData(),
             'start_year': self.start_year_edit.text().strip(),
             'end_year': self.end_year_edit.text().strip(),
             'decipherment': self.decipherment_edit.toPlainText().strip()

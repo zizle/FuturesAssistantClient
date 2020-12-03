@@ -12,9 +12,10 @@ from PyQt5.QtCore import pyqtSignal, QUrl, QSettings, QTimer, Qt
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
 from PyQt5.QtGui import QPixmap
 from popup.password import ResetPasswordPopup
-from settings import SERVER_API, BASE_DIR, ADMINISTRATOR
+from widgets.pdf_shower import PDFContentPopup
+from settings import SERVER_API, BASE_DIR, ADMINISTRATOR, STATIC_URL
 from utils.multipart import generate_multipart_data
-from utils.client import get_client_uuid
+from utils.client import get_client_uuid, set_client_uuid_with_ini
 from .passport_ui import PassportUI
 
 
@@ -38,11 +39,23 @@ class UserPassport(PassportUI):
         self.login_widget.login_button.clicked.connect(self.user_commit_login)                  # 用户点击登录
         self.register_widget.register_button.clicked.connect(self.user_commit_register)         # 用户点击注册
 
+        self.register_widget.declare_check.stateChanged.connect(self.declare_checked_changed)   # 声明勾选情况
+        self.register_widget.declare_button.clicked.connect(self.show_declare_content)
         self.login_widget.forget_password.clicked.connect(self.forget_password_popup)           # 忘记秘密弹窗重置密码
 
         self.get_image_code()  # 初始获取验证码
 
         self.initialize_account()  # 初始填写用户名和密码
+
+    def declare_checked_changed(self, state):
+        """ 声明勾选变化 """
+        if state:
+            self.register_widget.register_error.setText('')
+
+    def show_declare_content(self):
+        """ 显示免责声明内容 """
+        declare_popup = PDFContentPopup(file=STATIC_URL + 'declare.pdf', title='免责声明')
+        declare_popup.exec_()
 
     def initialize_account(self):
         """ 初始化填充用户名和密码 """
@@ -177,6 +190,10 @@ class UserPassport(PassportUI):
         if password_0 != password_1:
             self.register_widget.password_error_1.setText("两次输入密码不一致!")
             return
+        # 声明
+        if not self.register_widget.declare_check.checkState():
+            self.register_widget.register_error.setText('您未勾选知晓免责')
+            return
 
         # 获取注册信息
         register_dict = {
@@ -220,9 +237,7 @@ class UserPassport(PassportUI):
         data = json.loads(data.decode("utf-8"))
         self.register_widget.register_error.setText(data["message"])
         # 将客户端号写入ini文件
-        config_path = os.path.join(BASE_DIR, "dawn/client.ini")
-        client_configs = QSettings(config_path, QSettings.IniFormat)
-        client_configs.setValue("TOKEN/UUID", data["machine_uuid"])
+        set_client_uuid_with_ini(data["machine_uuid"])
         reply.deleteLater()
 
     def user_commit_login(self):

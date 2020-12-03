@@ -5,28 +5,14 @@
 """ 期现套利 """
 
 import json
-from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QComboBox,
-                             QGraphicsDropShadowEffect, QPushButton)
+from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QComboBox, QPushButton)
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtCore import Qt, QMargins, QUrl, QEventLoop
-from PyQt5.QtGui import QColor
 from PyQt5.QtNetwork import QNetworkRequest
 from channels.chart import ArbitrageChannel
+from widgets import OptionWidget
 from settings import SERVER_API
-
-
-class OptionWidget(QWidget):
-    def __init__(self, *args, **kwargs):
-        super(OptionWidget, self).__init__(*args, **kwargs)
-        self.setAttribute(Qt.WA_StyledBackground, True)  # 必须设置,如果不设置将导致子控件产生阴影
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setOffset(0, 1)
-        shadow.setColor(QColor(100, 100, 100))
-        shadow.setBlurRadius(5)
-        self.setGraphicsEffect(shadow)
-        self.setObjectName("optionWidget")
-        self.setStyleSheet("#optionWidget{background-color:rgb(245,245,245)}")
 
 
 class SpotArbitrageUi(QWidget):

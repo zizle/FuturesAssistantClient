@@ -4,84 +4,137 @@
 # @Author: zizle
 import math
 import json
-from PyQt5.QtWidgets import qApp, QTableWidgetItem
+from PyQt5.QtWidgets import (qApp, QTableWidgetItem, QWidget, QVBoxLayout, QSplitter, QMainWindow, QListWidget,
+                             QListWidgetItem, QLabel, QHBoxLayout, QSpinBox, QPushButton, QTableWidget, QFrame)
 from PyQt5.QtNetwork import QNetworkRequest
-from PyQt5.QtCore import QUrl, Qt, QTimer, QSize
-from PyQt5.QtGui import QBrush, QColor
+from PyQt5.QtCore import QUrl, Qt, QTimer, QMargins
+from PyQt5.QtGui import QBrush, QColor, QFont
+from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE
 from settings import SERVER_API
-from .net_position_ui import NetPositionUI
+from widgets import OptionWidget, LoadingCover
+
+""" 品种全览窗口 """
 
 
-class NetPosition(NetPositionUI):
+class BriefPositionWidget(QWidget):
     def __init__(self, *args, **kwargs):
-        super(NetPosition, self).__init__(*args, **kwargs)
-        self.timeout_count = 0                    # 计算显示的次数,虚假显示‘正在计算’字样
-        self.tips_animation_timer = QTimer(self)  # 显示文字提示的timer
-        self.tips_animation_timer.timeout.connect(self.animation_tip_text)
+        super(BriefPositionWidget, self).__init__(*args, **kwargs)
+        """ UI部分 """
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(QMargins(0, 0, 0, 0))
+        # 头部操作
+        title_widget = OptionWidget(self)
+        title_layout = QHBoxLayout()
+        self.interval_days = QSpinBox(self)
+        self.interval_days.setMinimum(1)
+        self.interval_days.setMaximum(30)
+        self.interval_days.setValue(5)
+        self.interval_days.setPrefix("日期间隔 ")
+        self.interval_days.setSuffix(" 天")
+        title_layout.addWidget(self.interval_days)
 
-        self.query_button.clicked.connect(self.get_net_position)
+        self.query_button = QPushButton('确定', self)
+        title_layout.addWidget(self.query_button)
 
-    def keyPressEvent(self, event):
-        """ Ctrl + C复制表格内容 """
-        if event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_C:
-            # 获取表格的选中行
-            selected_ranges = self.data_table.selectedRanges()[0]
-            text_str = ""
-            # 行
-            for row in range(selected_ranges.topRow(), selected_ranges.bottomRow() + 1):
-                row_str = ""
-                # 列
-                for col in range(selected_ranges.leftColumn(), selected_ranges.rightColumn() + 1):
-                    item = self.data_table.item(row, col)
-                    row_str += item.text() + '\t'
-                text_str += row_str + '\n'
-            clipboard = qApp.clipboard()
-            clipboard.setText(text_str)
+        title_layout.addWidget(QLabel("字体大小:", self))
+        font_size_smaller = QPushButton("-", self)
+        font_size_smaller.setFixedWidth(20)
+        font_size_larger = QPushButton("+", self)
+        font_size_larger.setFixedWidth(20)
+        title_layout.addWidget(font_size_smaller)
+        title_layout.addWidget(font_size_larger)
+        title_layout.addStretch()
+        title_widget.setLayout(title_layout)
+        title_widget.setFixedHeight(45)
+        main_layout.addWidget(title_widget)
 
-    def animation_tip_text(self):
-        """ 动态展示查询文字提示 """
-        tips = self.tip_label.text()
-        tip_points = tips.split(' ')[1]
-        if self.timeout_count >= 10:
-            text = "正在计算结果 "
-        else:
-            text = "正在查询数据 "
-        if len(tip_points) > 2:
-            self.tip_label.setText(text)
-        else:
-            self.tip_label.setText(text + "·" * (len(tip_points) + 1))
-        self.timeout_count += 1   # 计数
+        # 显示数据的表
+        content_layout = QVBoxLayout()
+        content_layout.setContentsMargins(QMargins(8, 0, 8, 0))
+        self.data_table = QTableWidget(self)
+        self.data_table.setContentsMargins(QMargins(5, 8, 5, 5))
+        self.data_table.setFrameShape(QFrame.NoFrame)
+        # self.data_table.setEditTriggers(QAbstractItemView.NoEditTriggers)   # 不可编辑
+        self.data_table.setFocusPolicy(Qt.NoFocus)  # 去选中时的虚线框
+        self.data_table.setAlternatingRowColors(True)  # 交替行颜色
+        self.data_table.horizontalHeader().setDefaultSectionSize(88)  # 默认的标题头宽
+        self.data_table.verticalHeader().setDefaultSectionSize(18)  # 设置行高(与下行代码同时才生效)
+        self.data_table.verticalHeader().setMinimumSectionSize(18)
+        self.data_table.verticalHeader().hide()
+        self.data_table.hide()
+        content_layout.addWidget(self.data_table)
+
+        self.tip_label = QLabel('上方设置查询的间隔天数,确定进行查询数据!', self)
+        self.tip_label.setAlignment(Qt.AlignCenter)
+
+        content_layout.addWidget(self.tip_label)
+
+        main_layout.addLayout(content_layout)
+
+        self.setLayout(main_layout)
+        font = QFont()
+        font.setPointSize(10)
+        self.data_table.setFont(font)
+        self.data_table.setObjectName("dataTable")
+        self.tip_label.setObjectName("tipLabel")
+        self.data_table.horizontalScrollBar().setStyleSheet(HORIZONTAL_SCROLL_STYLE)
+        self.data_table.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
+        self.data_table.horizontalHeader().setStyleSheet(
+            "QHeaderView::section,QTableCornerButton::section{height:25px;background-color:rgb(243,245,248);"
+            "font-weight:bold;font-size:13px}"
+        )
+        self.setStyleSheet(
+            "#tipLabel{color:rgb(233,66,66);font-weight:bold}"
+            "#dataTable{selection-color:rgb(80,100,200);selection-background-color:rgb(220,220,220);"
+            "alternate-background-color:rgb(245,250,248)}"
+        )
+
+        # 遮罩层
+        self.loading_cover = LoadingCover(self)
+        self.loading_cover.resize(self.parent().width(), self.parent().height())
+        self.loading_cover.hide()
+
+        """ 逻辑部分 """
+        self.network_manager = getattr(qApp, '_network')
+        self.query_button.clicked.connect(self.get_net_position)  # 查询数据
+        font_size_smaller.clicked.connect(self.content_font_size_smaller)
+        font_size_larger.clicked.connect(self.content_font_size_larger)
+
+    def resizeEvent(self, event):
+        super(BriefPositionWidget, self).resizeEvent(event)
+        self.loading_cover.resize(self.parent().width(), self.parent().height())
 
     def get_net_position(self):
         """ 获取净持仓数据 """
-        self.tips_animation_timer.start(400)
-        net_work = getattr(qApp, '_network')
+        self.loading_cover.show("正在获取数据")
         # 旧接口,生成处理,速度极慢
         # url = SERVER_API + "position/all-variety/?interval_days=" + str(self.interval_days.value())
         url = SERVER_API + "rank-position/all-variety/?interval_days=" + str(self.interval_days.value())
-        reply = net_work.get(QNetworkRequest(QUrl(url)))
+        reply = self.network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.all_variety_position_reply)
 
     def all_variety_position_reply(self):
         """ 全品种净持仓数据返回 """
         reply = self.sender()
         if reply.error():
-            self.tip_label.setText("获取数据失败:{} ".format(reply.error()))
             reply.deleteLater()
+            self.tip_label.show()
+            self.data_table.hide()
+            self.tip_label.setText("获取数据失败了{}!".format(reply.error()))
             return
         data = reply.readAll().data()
         data = json.loads(data.decode('utf-8'))
         reply.deleteLater()
+        self.data_table.show()
+        self.tip_label.hide()
         self.show_data_in_table(data['data'], data['header_keys'])
+        self.loading_cover.hide()
 
     def show_data_in_table(self, show_data, header_keys):
         """ 将数据在表格中展示出来 """
         self.data_table.clear()
         self.data_table.setRowCount(0)
         self.data_table.setColumnCount(0)
-        self.tips_animation_timer.stop()  # 停止计时
-        self.timeout_count = 0            # 计数归0
-        self.tip_label.setText("获取结果成功! ")
         # 生成表格的列头
         header_length = len(header_keys)  # 有日期和中英文的标头故-1
         self.data_table.setColumnCount(header_length * 2)
@@ -162,3 +215,69 @@ class NetPosition(NetPositionUI):
         #         self.data_table.setItem(row, col, item)
         #     is_pre_half = not is_pre_half
 
+    def content_font_size_larger(self):
+        """ 字体变小 """
+        font = self.data_table.font()
+        font.setPointSize(font.pointSize() + 1)
+        self.data_table.setFont(font)
+
+    def content_font_size_smaller(self):
+        """ 字体变小 """
+        font = self.data_table.font()
+        font.setPointSize(font.pointSize() - 1)
+        self.data_table.setFont(font)
+
+
+""" 品种净持仓主窗口 """
+
+
+class NetPositionWidget(QWidget):
+    def __init__(self, *args, **kwargs):
+        super(NetPositionWidget, self).__init__(*args, **kwargs)
+        """ UI部分 """
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(QMargins(0, 2, 2, 2))
+        main_splitter = QSplitter(self)
+        self.left_menu_list = QListWidget(self)
+        # self.left_menu_list.setFrameShape(QFrame.NoFrame)
+        main_splitter.addWidget(self.left_menu_list)
+        self.right_frame = QMainWindow(self, flags=Qt.Widget)
+        main_splitter.addWidget(self.right_frame)
+        main_splitter.setSizes([self.parent().width() * 0.18, self.parent().width() * 0.82])
+        main_splitter.setHandleWidth(1)
+        main_layout.addWidget(main_splitter)
+        self.setLayout(main_layout)
+        self.left_menu_list.setObjectName('leftMenuList')
+        self.setStyleSheet(
+            "#leftMenuList{border:none;border-right:1px solid rgba(50,50,50,100)}"
+            "#leftMenuList::item{height:28px;}"
+        )
+
+        """ 业务逻辑部分 """
+        # 添加菜单
+        for menu_item in [
+            {"id": 1, "name": "品种全览", "icon": None},
+            {"id": 2, "name": "图表分析", "icon": None},
+        ]:
+            item = QListWidgetItem(menu_item['name'])
+            item.setData(Qt.UserRole, menu_item["id"])
+            self.left_menu_list.addItem(item)
+        # 点击菜单事件
+        self.left_menu_list.itemClicked.connect(self.selected_menu)
+        # 默认点击了第一个
+        self.selected_menu(self.left_menu_list.item(0))
+        self.left_menu_list.setCurrentIndex(0)  # 设置当前索引
+
+    def selected_menu(self, item):
+        """ 选择菜单 """
+        menu_id = item.data(Qt.UserRole)
+        widget = self.get_right_widget(menu_id)
+        self.right_frame.setCentralWidget(widget)
+
+    def get_right_widget(self, menu_id: int):
+        """ 获取右侧显示窗口 """
+        if menu_id == 1:
+            widget = BriefPositionWidget(self)
+        else:
+            widget = QLabel("暂未开放", self, alignment=Qt.AlignCenter)
+        return widget

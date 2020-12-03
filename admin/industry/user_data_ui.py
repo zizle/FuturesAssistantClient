@@ -8,8 +8,7 @@
 from PyQt5.QtWidgets import (QWidget, QSplitter, QHBoxLayout, QVBoxLayout, QListWidget, QTabWidget, QLabel, QComboBox,
                              QPushButton, QTableWidget, QAbstractItemView, QFrame, QLineEdit, QCheckBox, QHeaderView,
                              QProgressBar, QTabBar, QStylePainter, QStyleOptionTab, QStyle)
-from PyQt5.QtCore import QMargins, Qt, pyqtSignal, QPoint
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QMargins, Qt, pyqtSignal
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 
@@ -26,24 +25,6 @@ class HorizontalTabBar(QTabBar):
             painter.drawControl(QStyle.CE_TabBarTabShape, option)
             painter.drawText(tabRect, Qt.AlignVCenter | Qt.TextDontClip, self.tabText(index))
         painter.end()
-
-
-class OperateButton(QPushButton):
-    """ 置顶按钮 """
-    def __init__(self, icon_path, hover_icon_path, *args):
-        super(OperateButton, self).__init__(*args)
-        self.icon_path = icon_path
-        self.hover_icon_path = hover_icon_path
-        self.setCursor(Qt.PointingHandCursor)
-        self.setIcon(QIcon(self.icon_path))
-        self.setObjectName("operateButton")
-        self.setStyleSheet("#operateButton{border:none}#operateButton:hover{color:#d81e06}")
-
-    def enterEvent(self, *args, **kwargs):
-        self.setIcon(QIcon(self.hover_icon_path))
-
-    def leaveEvent(self, *args, **kwargs):
-        self.setIcon(QIcon(self.icon_path))
 
 
 class ConfigSourceUI(QWidget):
@@ -168,6 +149,16 @@ class ConfigSourceUI(QWidget):
         self.confirm_group_button.hide()
 
 
+class SheetTable(QTableWidget):
+    """ 用户数据表显示控件 """
+    right_mouse_clicked = pyqtSignal()
+
+    def mousePressEvent(self, event):
+        super(SheetTable, self).mousePressEvent(event)
+        if event.buttons() == Qt.RightButton:
+            self.right_mouse_clicked.emit()
+
+
 class VarietySheetUI(QWidget):
     def __init__(self, *args, **kwargs):
         super(VarietySheetUI, self).__init__(*args, **kwargs)
@@ -192,7 +183,7 @@ class VarietySheetUI(QWidget):
 
         opts_layout.addStretch()
         main_layout.addLayout(opts_layout)
-        self.sheet_table = QTableWidget(self)
+        self.sheet_table = SheetTable(self)
         self.sheet_table.setFrameShape(QFrame.NoFrame)
         self.sheet_table.setFocusPolicy(Qt.NoFocus)
         self.sheet_table.verticalHeader().hide()
