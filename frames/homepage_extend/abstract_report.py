@@ -11,8 +11,7 @@ from PyQt5.QtCore import QDate, Qt, QTime, QRect, QUrl, QMargins
 from PyQt5.QtGui import QPixmap, QPainter, QPalette, QBrush, QColor
 from PyQt5.QtNetwork import QNetworkRequest
 from utils.constant import VERTICAL_SCROLL_STYLE, HORIZONTAL_SCROLL_STYLE, HORIZONTAL_HEADER_STYLE
-from widgets.paginator import Paginator
-from widgets.pdf_shower import PDFContentPopup
+from widgets import Paginator, PDFContentPopup
 from settings import STATIC_URL, SERVER_API
 
 

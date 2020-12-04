@@ -266,7 +266,7 @@ class NetPositionWidget(QWidget):
         self.left_menu_list.itemClicked.connect(self.selected_menu)
         # 默认点击了第一个
         self.selected_menu(self.left_menu_list.item(0))
-        self.left_menu_list.setCurrentIndex(0)  # 设置当前索引
+        self.left_menu_list.setCurrentRow(0)  # 设置当前索引
 
     def selected_menu(self, item):
         """ 选择菜单 """

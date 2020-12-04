@@ -161,7 +161,7 @@ HORIZONTAL_SCROLL_STYLE = "QScrollBar:horizontal{background:transparent;height:1
 
 VERTICAL_SCROLL_STYLE = "QScrollBar:vertical{background: transparent; width:10px;margin: 0px;}" \
             "QScrollBar:vertical:hover{background:rgba(0,0,0,30);border-radius:5px}" \
-            "QScrollBar::handle:vertical{background: rgba(0,0,0,50);width:10px;border-radius:5px;border:none}" \
+            "QScrollBar::handle:vertical{background: rgba(0,0,0,50);width:10px;min-height:50px;border-radius:5px;border:none}" \
             "QScrollBar::handle:vertical:hover{background:rgba(0,0,0,100)}" \
             "QScrollBar::add-page:vertical{width:10px;background:transparent;}" \
             "QScrollBar::sub-page:vertical{width:10px;background:transparent;}" \
