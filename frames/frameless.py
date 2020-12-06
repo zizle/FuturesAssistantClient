@@ -414,7 +414,10 @@ class ClientMainApp(FrameLessWindowUI):
         elif module_id == "2_0":         # 产业数据库
             page = VarietyData()
         elif module_id == "2_1":         # 交易所数据
-            page = ExchangeQuery()
+            try:
+                page = ExchangeQuery(self)
+            except Exception as e:
+                print(e)
         elif module_id == "2_2":         # 品种净持仓
             page = NetPositionWidget(self)
         elif module_id == "3":           # 交割服务
