@@ -38,8 +38,8 @@ class SpotPricePopup(QDialog):
         self.spot_price_table = QTableWidget(self)
         self.spot_price_table.setFrameShape(QFrame.NoFrame)
         self.spot_price_table.verticalHeader().hide()
-        self.spot_price_table.setColumnCount(5)
-        self.spot_price_table.setHorizontalHeaderLabels(["序号", "品种", "日期", "报价", "增减"])
+        self.spot_price_table.setColumnCount(4)
+        self.spot_price_table.setHorizontalHeaderLabels(["日期", "品种", "报价", "增减"])
         self.spot_price_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.spot_price_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         main_layout.addWidget(self.spot_price_table)
@@ -89,7 +89,7 @@ class SpotPricePopup(QDialog):
             pass
         else:
             data = json.loads(reply.readAll().data().decode("utf-8"))
-            self.show_current_sport_prices(data["data"], value_keys=["id", "variety_zh", "date", "spot_price", "price_increase"])
+            self.show_current_sport_prices(data["data"], value_keys=["date", "variety_zh", "price", "increase"])
         reply.deleteLater()
 
     def show_current_sport_prices(self, content_values, value_keys):
@@ -98,14 +98,14 @@ class SpotPricePopup(QDialog):
         self.spot_price_table.setRowCount(len(content_values))
         for row, row_item in enumerate(content_values):
             for col, key in enumerate(value_keys):
-                if col == 0:
-                    item = QTableWidgetItem(str(row + 1))
+                if col > 1:
+                    item = QTableWidgetItem(format(row_item[key], ','))
                 else:
-                    item = QTableWidgetItem(str(row_item[key]))
-                if col == 4:  # 设置颜色
-                    if int(row_item[key]) > 0:
+                    item = QTableWidgetItem(row_item[key])
+                if col == 3:  # 设置颜色
+                    if float(row_item[key]) > 0:
                         color = QColor(203, 0, 0)
-                    elif int(row_item[key]) < 0:
+                    elif float(row_item[key]) < 0:
                         color = QColor(0, 124, 0)
                     else:
                         color = QColor(0, 0, 0)

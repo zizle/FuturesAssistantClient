@@ -5,11 +5,14 @@
 import math
 import json
 from PyQt5.QtWidgets import (qApp, QTableWidgetItem, QWidget, QVBoxLayout, QSplitter, QMainWindow, QListWidget,
-                             QListWidgetItem, QLabel, QHBoxLayout, QSpinBox, QPushButton, QTableWidget, QFrame)
+                             QListWidgetItem, QLabel, QHBoxLayout, QSpinBox, QPushButton, QTableWidget, QFrame, QComboBox,
+                             QHeaderView)
 from PyQt5.QtNetwork import QNetworkRequest
-from PyQt5.QtCore import QUrl, Qt, QTimer, QMargins
+from PyQt5.QtCore import QObject, QUrl, Qt, QTimer, QMargins, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor, QFont
-from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtWebChannel import QWebChannel
+from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE, BLUE_STYLE_HORIZONTAL_STYLE
 from settings import SERVER_API
 from widgets import OptionWidget, LoadingCover
 
@@ -99,6 +102,8 @@ class BriefPositionWidget(QWidget):
         self.query_button.clicked.connect(self.get_net_position)  # 查询数据
         font_size_smaller.clicked.connect(self.content_font_size_smaller)
         font_size_larger.clicked.connect(self.content_font_size_larger)
+
+        self.get_net_position()  # 初始显示
 
     def resizeEvent(self, event):
         super(BriefPositionWidget, self).resizeEvent(event)
@@ -228,6 +233,219 @@ class BriefPositionWidget(QWidget):
         self.data_table.setFont(font)
 
 
+""" 图表分析窗口 """
+
+
+class ChartChannel(QObject):
+    # 参数1:绘图的数据;参数2:图形的基本配置
+    chartSource = pyqtSignal(str, str)
+    # 参数1:图形宽度;参数2:图形的高度
+    chartResize = pyqtSignal(int, int)
+
+
+class NetPositionChart(QWebEngineView):
+    def __init__(self, web_channel, *args, **kwargs):
+        super(NetPositionChart, self).__init__(*args, **kwargs)
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
+        # 加载图形容器
+        self.page().load(QUrl('file:/html/charts/net_position.html'))  # 加载页面
+        # 设置与页面信息交互的通道
+        channel_qt_obj = QWebChannel(self.page())  # 实例化qt信道对象,必须传入页面参数
+        self.contact_channel = ChartChannel(self)  # 页面信息交互通道
+        self.page().setWebChannel(channel_qt_obj)
+        channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道,只能注册一个
+
+    def resizeEvent(self, event):
+        super(NetPositionChart, self).resizeEvent(event)
+        self.resize_chart()
+
+    def set_chart_option(self, source_data, base_option):
+        """ 传入数据设置图形 """
+        self.contact_channel.chartSource.emit(source_data, base_option)
+        self.resize_chart()
+
+    def resize_chart(self):
+        self.contact_channel.chartResize.emit(self.width() * 0.8, self.height())
+
+
+class ChartTablePositionWidget(QWidget):
+    def __init__(self, *args, **kwargs):
+        super(ChartTablePositionWidget, self).__init__(*args, **kwargs)
+        """ UI部分 """
+        title_widget_width = 45
+        layout = QVBoxLayout()
+        layout.setContentsMargins(QMargins(0, 0, 0, 0))
+        title_widget = OptionWidget(self)
+        title_layout = QHBoxLayout()
+        title_layout.addWidget(QLabel('品种:', self))
+        self.variety_combobox = QComboBox(self)
+        self.variety_combobox.setMinimumWidth(100)
+        title_layout.addWidget(self.variety_combobox)
+        self.three_month = QPushButton('近3月', self)
+        setattr(self.three_month, 'day_count', 90)
+        self.six_month = QPushButton('近6月', self)
+        setattr(self.six_month, 'day_count', 180)
+        self.twelve_month = QPushButton('近一年', self)
+        setattr(self.twelve_month, 'day_count', 360)
+        title_layout.addWidget(self.three_month)
+        title_layout.addWidget(self.six_month)
+        title_layout.addWidget(self.twelve_month)
+        title_layout.addStretch()
+        title_widget.setLayout(title_layout)
+        title_widget.setFixedHeight(title_widget_width)
+        layout.addWidget(title_widget)
+
+        chart_table_splitter = QSplitter(self)
+        chart_table_splitter.setOrientation(Qt.Vertical)
+        # 图形展示
+        self.chart_container = NetPositionChart(self)
+        chart_table_splitter.addWidget(self.chart_container)
+        # 表格展示
+        self.position_table = QTableWidget(self)
+        self.position_table.setColumnCount(6)
+        self.position_table.setHorizontalHeaderLabels(['日期', '品种', '多单量', '空单量', '净多量', '净多变化量'])
+        self.position_table.verticalHeader().hide()
+        self.position_table.horizontalHeader().setMinimumSectionSize(100)
+        self.position_table.setMaximumWidth(self.parent().width() * 0.8)
+        self.position_table.verticalHeader().setDefaultSectionSize(20)
+        self.position_table.horizontalHeader().setDefaultAlignment(Qt.AlignVCenter | Qt.AlignRight)
+        self.position_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.position_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+
+        chart_table_splitter.addWidget(self.position_table)
+        chart_table_splitter.setSizes([(self.parent().height() - title_widget_width) * 0.6,
+                                       (self.parent().height() - title_widget_width) * 0.4])
+        chart_table_splitter.setContentsMargins(QMargins(10, 5, 10, 5))
+        layout.addWidget(chart_table_splitter)
+
+        # 加载提示
+        self.loading_cover = LoadingCover(self.parent())
+        self.loading_cover.resize(self.parent().width(), self.parent().height())
+        self.loading_cover.show('正在加载资源')
+
+        self.setLayout(layout)
+        self.position_table.setFocusPolicy(Qt.NoFocus)
+        self.position_table.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
+        self.position_table.horizontalHeader().setStyleSheet(BLUE_STYLE_HORIZONTAL_STYLE)
+        self.position_table.setAlternatingRowColors(True)
+        self.position_table.setObjectName('positionTable')
+        self.three_month.setObjectName('monthButton')
+        self.six_month.setObjectName('monthButton')
+        self.twelve_month.setObjectName('monthButton')
+        self.setStyleSheet(
+            "#positionTable{selection-color:rgb(80,100,200);selection-background-color:rgb(220,220,220);"
+            "alternate-background-color:rgb(242,242,242);gridline-color:rgb(60,60,60)}"
+            "#monthButton{background-color:rgb(250,250,250);border-radius: 7px;font-size:12px;color:rgb(120,120,120);"
+            "padding:4px 6px}"
+        )
+
+        """ 逻辑部分 """
+        self.network_manager = getattr(qApp, '_network')
+
+        # 关联品种变化的信号
+        self.variety_combobox.currentTextChanged.connect(self.get_position_data)
+
+        self.chart_container.page().loadFinished.connect(self.loading_page_finished)
+        # 关联时间范围点击
+        self.three_month.clicked.connect(self.get_custom_day_count_position)
+        self.six_month.clicked.connect(self.get_custom_day_count_position)
+        self.twelve_month.clicked.connect(self.get_custom_day_count_position)
+
+    def loading_page_finished(self):
+        """ 加载网页结束 """
+        self.loading_cover.hide()
+        # 获取所有品种
+        self.get_all_variety()
+
+    def get_all_variety(self):
+        """ 获取所有品种 """
+        self.variety_combobox.clear()
+        url = SERVER_API + 'variety/all/?is_real=1'
+        reply = self.network_manager.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.variety_reply)
+
+    def variety_reply(self):
+        """ 品种返回 """
+        reply = self.sender()
+        if reply.error():
+            pass
+        else:
+            data = json.loads(reply.readAll().data().decode('utf8'))
+            for group_name, group_item in data['varieties'].items():
+                for variety_item in group_item:
+                    self.variety_combobox.addItem(variety_item['variety_name'], variety_item['variety_en'])
+        reply.deleteLater()
+
+    def change_month_button_style(self, day_count: int):
+        if 90 <= day_count < 180:
+            self.three_month.setStyleSheet("background-color:rgb(191,211,249);color:rgb(78,110,242)")
+            self.six_month.setStyleSheet("background-color:rgb(250,250,250);color:rgb(120,120,120)")
+            self.twelve_month.setStyleSheet("background-color:rgb(250,250,250);color:rgb(120,120,120)")
+        elif 180 <= day_count < 360:
+            self.six_month.setStyleSheet("background-color:rgb(191,211,249);color:rgb(78,110,242)")
+            self.three_month.setStyleSheet("background-color:rgb(250,250,250);color:rgb(120,120,120)")
+            self.twelve_month.setStyleSheet("background-color:rgb(250,250,250);color:rgb(120,120,120)")
+        elif 360 <= day_count <= 365:
+            self.twelve_month.setStyleSheet("background-color:rgb(191,211,249);color:rgb(78,110,242)")
+            self.three_month.setStyleSheet("background-color:rgb(250,250,250);color:rgb(120,120,120)")
+            self.six_month.setStyleSheet("background-color:rgb(250,250,250);color:rgb(120,120,120)")
+        else:
+            self.three_month.setStyleSheet("background-color:rgb(250,250,250);color:rgb(120,120,120)")
+            self.six_month.setStyleSheet("background-color:rgb(250,250,250);color:rgb(120,120,120)")
+            self.twelve_month.setStyleSheet("background-color:rgb(250,250,250);color:rgb(120,120,120)")
+
+    def get_custom_day_count_position(self):
+        """ 指定日期范围的数 """
+        button = self.sender()
+        day_count = getattr(button, 'day_count')
+        self.get_position_data(day_count=day_count)
+
+    def get_position_data(self, day_count=30):
+        """ 获取净持仓数据 """
+        current_variety = self.variety_combobox.currentData()
+        if not current_variety:
+            return
+        if not isinstance(day_count, int):
+            day_count = 30
+        self.change_month_button_style(day_count)
+        url = SERVER_API + 'rank-position/?variety={}&day_count={}'.format(current_variety, day_count)
+        reply = self.network_manager.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.net_position_reply)
+
+    def net_position_reply(self):
+        """ 净持仓数据返回 """
+        reply = self.sender()
+        if reply.error():
+            pass
+        else:
+            data = json.loads(reply.readAll().data().decode('utf8'))
+            position_data = data['data']
+            self.show_chart_to_page(position_data)
+            self.show_data_to_table(position_data.copy())
+        reply.deleteLater()
+
+    def show_data_to_table(self, table_data: list):
+        """ 显示数据到表格中 """
+        self.position_table.clearContents()
+        self.position_table.setRowCount(0)
+        self.position_table.setRowCount(len(table_data))
+        col_keys = ['date', 'variety_zh', 'long_position', 'short_position', 'net_position', 'net_position_increase']
+        table_data.reverse()
+        for row, row_item in enumerate(table_data):
+            for col, col_key in enumerate(col_keys):
+                value = format(row_item[col_key], ',') if col >= 2 else row_item[col_key]
+                item = QTableWidgetItem(value)
+                item.setTextAlignment(Qt.AlignVCenter | Qt.AlignRight)
+                self.position_table.setItem(row, col, item)
+
+    def show_chart_to_page(self, chart_data: list):
+        """ 图形显示到界面中 """
+        base_option = {
+            'title': '{}前20名持仓变化'.format(self.variety_combobox.currentText())
+        }
+        self.chart_container.set_chart_option(json.dumps(chart_data), json.dumps(base_option))
+
+
 """ 品种净持仓主窗口 """
 
 
@@ -257,7 +475,7 @@ class NetPositionWidget(QWidget):
         # 添加菜单
         for menu_item in [
             {"id": 1, "name": "品种全览", "icon": None},
-            {"id": 2, "name": "图表分析", "icon": None},
+            {"id": 2, "name": "图表分析(前20持仓)", "icon": None},
         ]:
             item = QListWidgetItem(menu_item['name'])
             item.setData(Qt.UserRole, menu_item["id"])
@@ -278,6 +496,8 @@ class NetPositionWidget(QWidget):
         """ 获取右侧显示窗口 """
         if menu_id == 1:
             widget = BriefPositionWidget(self)
+        elif menu_id == 2:
+            widget = ChartTablePositionWidget(self)
         else:
             widget = QLabel("暂未开放", self, alignment=Qt.AlignCenter)
         return widget

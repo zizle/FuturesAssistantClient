@@ -410,14 +410,11 @@ class ClientMainApp(FrameLessWindowUI):
     def get_module_page(self, module_id, module_text):
         """ 通过权限验证,进入功能页面 """
         if module_id == "1":             # 产品服务
-            page = ProductPage()
+            page = ProductPage(self)
         elif module_id == "2_0":         # 产业数据库
             page = VarietyData()
         elif module_id == "2_1":         # 交易所数据
-            try:
-                page = ExchangeQuery(self)
-            except Exception as e:
-                print(e)
+            page = ExchangeQuery(self)
         elif module_id == "2_2":         # 品种净持仓
             page = NetPositionWidget(self)
         elif module_id == "3":           # 交割服务

@@ -11,8 +11,8 @@ PLATE_FORM = "WIN10"
 ADMINISTRATOR = True
 WINDOW_TITLE = '分析决策系统(研究员)' if ADMINISTRATOR else '分析决策系统客户端'
 
-SERVER_API = "http://127.0.0.1:8000/api/"
-# SERVER_API = "http://210.13.218.130:9004/api/"
+# SERVER_API = "http://127.0.0.1:8000/api/"
+SERVER_API = "http://210.13.218.130:9004/api/"
 
 STATIC_URL = SERVER_API[:-4] + 'static/'
 
@@ -39,7 +39,7 @@ TITLE_BAR_HEIGHT = 27
 # 菜单栏高度
 NAVIGATION_BAR_HEIGHT = 25
 # 首页表格行高
-HOMEPAGE_TABLE_ROW_HEIGHT = 32  # 由于字体需要必须大于24
+HOMEPAGE_TABLE_ROW_HEIGHT = 28  # 由于字体需要必须大于24
 
 # 支持多级(但模块权限仅遍历3级)
 SYSTEM_MENUS = [

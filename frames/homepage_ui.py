@@ -184,6 +184,7 @@ class ModuleWidgetTable(QTableWidget):
         self.setSelectionMode(QAbstractItemView.NoSelection)
         self.setShowGrid(False)
         self.setWordWrap(False)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setCursor(Qt.PointingHandCursor)
         self.setObjectName("contentTable")
         # self.setStyleSheet(
@@ -221,9 +222,9 @@ class ModuleWidgetTable(QTableWidget):
                     self.item(self.mouse_last_row, col).setForeground(QBrush(self.column_text_color.get(col)))
                 if col in self.zero_text_color:
                     num = self.item(self.mouse_last_row, col).text()
-                    if int(num) > 0:
+                    if float(num) > 0:
                         self.item(self.mouse_last_row, col).setForeground(QBrush(QColor(203, 0, 0)))
-                    elif int(num) < 0:
+                    elif float(num) < 0:
                         self.item(self.mouse_last_row, col).setForeground(QBrush(QColor(0, 124, 0)))
                     else:  # 已经设置为黑色了
                         pass
@@ -266,9 +267,9 @@ class ModuleWidgetTable(QTableWidget):
                 if col in self.column_text_color.keys():
                     item.setForeground(QBrush(self.column_text_color.get(col)))
                 if col in self.zero_text_color:
-                    if int(row_item[col_key]) > 0:  # 将内容转数字与0比较大小设置颜色
+                    if float(row_item[col_key]) > 0:  # 将内容转数字与0比较大小设置颜色
                         color = QColor(203, 0, 0)
-                    elif int(row_item[col_key]) < 0:
+                    elif float(row_item[col_key]) < 0:
                         color = QColor(0, 124, 0)
                     else:
                         color = QColor(0, 0, 0)

@@ -2,8 +2,10 @@
 # @File  : basis_price.py
 # @Time  : 2020-08-25 15:01
 # @Author: zizle
+import os
 import re
 import json
+import pandas as pd
 from datetime import datetime
 from PyQt5.QtWidgets import qApp, QTableWidgetItem, QPushButton, QAbstractItemView
 from PyQt5.QtGui import QBrush, QColor
@@ -11,13 +13,21 @@ from PyQt5.QtCore import QUrl, Qt
 from PyQt5.QtNetwork import QNetworkRequest
 from .spot_price_ui import SpotPriceAdminUI
 from utils.constant import VARIETY_EN
-from settings import SERVER_API
+from settings import SERVER_API, BASE_DIR
+
+
+def date_converter(column_content):
+    """ 时间类型转换器 """
+    if isinstance(column_content, datetime):
+        return column_content.strftime("%Y%m%d")
+    else:
+        raise ValueError('TIMEERROR')
 
 
 class SpotPriceAdmin(SpotPriceAdminUI):
     def __init__(self, *args, **kwargs):
         super(SpotPriceAdmin, self).__init__(*args, **kwargs)
-        self.final_data = list()   # 最终现货数据
+        self.final_data = None   # 最终现货数据
         self.today_str = ""
         self.analysis_button.clicked.connect(self.extract_spot_source_price)  # 提取数据
         self.commit_button.clicked.connect(self.commit_spot_data)             # 上传提交数据
@@ -26,50 +36,83 @@ class SpotPriceAdmin(SpotPriceAdminUI):
 
     def extract_spot_source_price(self):
         """ 提取现货数据 """
-        self.final_data.clear()
+        # 保存到当前属性
+        if self.final_data is not None:
+            del self.final_data
+            self.final_data = None
         current_date = self.current_date.text()
         self.today_str = datetime.strptime(current_date, "%Y-%m-%d").strftime("%Y%m%d")
-        source_str = self.source_edit.text().strip()
-        if not source_str:
-            self.tip_label.setText("请输入源数据再进行提取! ")
+        # 读取文件
+        filepath = os.path.join(BASE_DIR, 'sources/spot_price/{}.xlsx'.format(self.today_str))
+        if not os.path.exists(filepath):
+            self.tip_label.setText("请放入数据源再进行提取! ")
             return
-        self.tip_label.setText("正在提取数据... ")
-        variety_item_list = re.split(r'[;；。]+', source_str)  # 根据分号切割
-        self.preview_table.clearContents()
-        self.preview_table.setRowCount(0)
-        for row, variety_item in enumerate(variety_item_list):
-            print(variety_item)
-            data_list = re.split(r'[:,：，]+', variety_item)
-            variety_dict = {
-                "date": self.today_str,
-                "variety_en": VARIETY_EN.get(data_list[0].strip(), "未知"),
-                "spot_price": float(data_list[1]),
-                "price_increase": float(data_list[2])
-            }
+        # 读取文件
+        data_df = pd.read_excel(filepath, thousands=',', converters={0: date_converter})
+        # 处理数据
+        # date转为时间戳
+        data_df['date'] = data_df['date'].apply(lambda x: int(datetime.strptime(x, '%Y%m%d').timestamp()))
+        # 获取品种的英文
+        data_df['variety_en'] = data_df['variety'].apply(lambda x: VARIETY_EN.get(x, 'VARIETYERROR'))
+        # 在表中显示
+        value_keys = ['date', 'variety', 'variety_en', 'price', 'increase']
+        spots_price = data_df.to_dict(orient='records')
+        self.preview_table.setRowCount(len(spots_price))
+        for row, row_item in enumerate(spots_price):
+            row_brush = QBrush(QColor(0, 0, 0))
+            for col, v_key in enumerate(value_keys):
+                value_str = str(row_item[v_key])
+                if value_str in ['TIMEERROR', 'VARIETYERROR']:
+                    row_brush = QBrush(QColor(233, 0, 0))
+                item = QTableWidgetItem(value_str)
+                item.setForeground(row_brush)
+                self.preview_table.setItem(row, col, item)
+        self.final_data = spots_price
 
-            self.preview_table.insertRow(row)
-            item0 = QTableWidgetItem(variety_dict["date"])
-            self.preview_table.setItem(row, 0, item0)
-            item1 = QTableWidgetItem(data_list[0].strip())
-            self.preview_table.setItem(row, 1, item1)
-            item2 = QTableWidgetItem(variety_dict["variety_en"])
-            self.preview_table.setItem(row, 2, item2)
-            item3 = QTableWidgetItem(str(variety_dict["spot_price"]))
-            self.preview_table.setItem(row, 3, item3)
-            item4 = QTableWidgetItem(str(variety_dict["price_increase"]))
-            self.preview_table.setItem(row, 4, item4)
-            if variety_dict["variety_en"] == "未知":
-                item0.setForeground(QBrush(QColor(250, 100, 100)))
-                item1.setForeground(QBrush(QColor(250, 100, 100)))
-                item2.setForeground(QBrush(QColor(250, 100, 100)))
-                item3.setForeground(QBrush(QColor(250, 100, 100)))
-                item4.setForeground(QBrush(QColor(250, 100, 100)))
 
-            self.final_data.append(variety_dict)
+
+
+
+        # self.tip_label.setText("正在提取数据... ")
+        # variety_item_list = re.split(r'[;；。]+', source_str)  # 根据分号切割
+        # self.preview_table.clearContents()
+        # self.preview_table.setRowCount(0)
+        # for row, variety_item in enumerate(variety_item_list):
+        #     print(variety_item)
+        #     data_list = re.split(r'[:,：，]+', variety_item)
+        #     variety_dict = {
+        #         "date": self.today_str,
+        #         "variety_en": VARIETY_EN.get(data_list[0].strip(), "未知"),
+        #         "spot_price": float(data_list[1]),
+        #         "price_increase": float(data_list[2])
+        #     }
+        #
+        #     self.preview_table.insertRow(row)
+        #     item0 = QTableWidgetItem(variety_dict["date"])
+        #     self.preview_table.setItem(row, 0, item0)
+        #     item1 = QTableWidgetItem(data_list[0].strip())
+        #     self.preview_table.setItem(row, 1, item1)
+        #     item2 = QTableWidgetItem(variety_dict["variety_en"])
+        #     self.preview_table.setItem(row, 2, item2)
+        #     item3 = QTableWidgetItem(str(variety_dict["spot_price"]))
+        #     self.preview_table.setItem(row, 3, item3)
+        #     item4 = QTableWidgetItem(str(variety_dict["price_increase"]))
+        #     self.preview_table.setItem(row, 4, item4)
+        #     if variety_dict["variety_en"] == "未知":
+        #         item0.setForeground(QBrush(QColor(250, 100, 100)))
+        #         item1.setForeground(QBrush(QColor(250, 100, 100)))
+        #         item2.setForeground(QBrush(QColor(250, 100, 100)))
+        #         item3.setForeground(QBrush(QColor(250, 100, 100)))
+        #         item4.setForeground(QBrush(QColor(250, 100, 100)))
+        #
+        #     self.final_data.append(variety_dict)
         self.tip_label.setText("数据提取完成! ")
 
     def commit_spot_data(self):
         """ 提交数据 """
+        if self.final_data is None:
+            self.tip_label.setText("请先提取数据...")
+            return
         self.tip_label.setText("正在上传数据到服务器...")
         network_manager = getattr(qApp, "_network")
         url = SERVER_API + "spot-price/?date=" + self.today_str
@@ -120,8 +163,8 @@ class SpotPriceAdmin(SpotPriceAdminUI):
             item0 = QTableWidgetItem(str(row_item["id"]))
             item1 = QTableWidgetItem(row_item["date"])
             item2 = QTableWidgetItem(row_item["variety_en"])
-            item3 = QTableWidgetItem(str(row_item["spot_price"]))
-            item4 = QTableWidgetItem(str(row_item["price_increase"]))
+            item3 = QTableWidgetItem(str(row_item["price"]))
+            item4 = QTableWidgetItem(str(row_item["increase"]))
             item0.setTextAlignment(Qt.AlignCenter)
             item1.setTextAlignment(Qt.AlignCenter)
             item2.setTextAlignment(Qt.AlignCenter)
@@ -155,8 +198,8 @@ class SpotPriceAdmin(SpotPriceAdminUI):
             "id": int(self.modify_table.item(row, 0).text()),
             "date": self.modify_table.item(row, 1).text(),
             "variety_en": self.modify_table.item(row, 2).text(),
-            "spot_price": float(self.modify_table.item(row, 3).text()),
-            "price_increase": float(self.modify_table.item(row, 4).text())
+            "price": float(self.modify_table.item(row, 3).text()),
+            "increase": float(self.modify_table.item(row, 4).text())
         }
         network_manager = getattr(qApp, "_network")
         url = SERVER_API + "spot-price/{}/".format(item["id"])

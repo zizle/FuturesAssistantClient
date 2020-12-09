@@ -278,7 +278,7 @@ class Homepage(HomepageUI):
             # 将数据进行展示
             self.spot_price_widget.set_contents(
                 content_values=data["sport_prices"],
-                content_keys=["variety_zh", "spot_price", "price_increase", "date"],
+                content_keys=["variety_zh", "price", "increase", "date"],
                 data_keys=[], resize_cols=[3], column_text_color={3: QColor(100, 100, 100)},
                 zero_text_color=[2], center_alignment_columns=[1, 2]
             )

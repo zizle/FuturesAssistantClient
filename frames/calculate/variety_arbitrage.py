@@ -4,13 +4,15 @@
 # @Author: zizle
 """ 跨品种套利 """
 import json
-from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QComboBox, QPushButton)
+from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QComboBox, QPushButton,
+                             QSpinBox)
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtCore import Qt, QMargins, QUrl, QEventLoop
 from PyQt5.QtNetwork import QNetworkRequest
 from channels.chart import ArbitrageChannel
 from widgets import OptionWidget
+from utils.date_handler import generate_date_with_limit
 from settings import SERVER_API
 
 
@@ -50,7 +52,7 @@ class VarietyArbitrageUi(QWidget):
         option_layout.addWidget(self.contract_bottom, 2, 3)
 
         self.start_calculate_button = QPushButton("开始计算", self)
-        option_layout.addWidget(self.start_calculate_button, 2, 5)
+        option_layout.addWidget(self.start_calculate_button, 2, 4)
 
         self.three_month_button = QPushButton("近3月", self)
         setattr(self.three_month_button, "day_count", 90)
@@ -58,12 +60,22 @@ class VarietyArbitrageUi(QWidget):
         setattr(self.six_month_button, "day_count", 180)
         self.one_year_button = QPushButton("近1年", self)
         setattr(self.one_year_button, "day_count", 360)
-        option_layout.addWidget(self.three_month_button, 2, 6)
-        option_layout.addWidget(self.six_month_button, 2, 7)
-        option_layout.addWidget(self.one_year_button, 2, 8)
+        option_layout.addWidget(self.three_month_button, 2, 5)
+        option_layout.addWidget(self.six_month_button, 2, 6)
+        option_layout.addWidget(self.one_year_button, 2, 7)
+
+        self.last_year_count = QSpinBox(self)
+        self.last_year_count.setPrefix("近 ")
+        self.last_year_count.setSuffix(" 年")
+        self.last_year_count.setMinimum(2)
+        self.last_year_count.setMaximum(5)
+        self.last_year_count.setValue(3)
+        option_layout.addWidget(self.last_year_count, 3, 3)
+        self.year_arbitrage_button = QPushButton('季节价差', self)
+        option_layout.addWidget(self.year_arbitrage_button, 3, 4)
 
         option_widget.setLayout(option_layout)
-        option_widget.setFixedHeight(90)
+        option_widget.setFixedHeight(120)
 
         main_layout.addWidget(option_widget)
 
@@ -119,6 +131,9 @@ class VarietyArbitrage(VarietyArbitrageUi):
         self.three_month_button.clicked.connect(self.day_count_selected)
         self.six_month_button.clicked.connect(self.day_count_selected)
         self.one_year_button.clicked.connect(self.day_count_selected)
+
+        # 季节价差
+        self.year_arbitrage_button.clicked.connect(self.get_season_arbitrage_data)
 
     def day_count_selected(self):
         button = self.sender()
@@ -231,8 +246,57 @@ class VarietyArbitrage(VarietyArbitrageUi):
             pass
         else:
             data = json.loads(reply.readAll().data().decode("utf8"))
-            # 将数据传入界面出图
-            self.contact_channel.chartSource.emit(json.dumps(data["data"]), json.dumps(data["base_option"]))
+            # 将数据传入界面出图(参数1:数据源,参数2:基本信息;参数3:图形类型)
+            self.contact_channel.chartSource.emit(json.dumps(data["data"]), json.dumps(data["base_option"]), 'line')
+
+    def get_season_arbitrage_data(self):
+        """ 获取季节价差的数据 """
+        self.year_arbitrage_button.setEnabled(False)
+        v1 = self.variety_top.currentData()
+        v2 = self.variety_bottom.currentData()
+        c1 = self.contract_top.currentText()
+        c2 = self.contract_bottom.currentText()
+        year_count = self.last_year_count.value()
+        if not all([v1, v2, c1, c2]):
+            return
+        url = SERVER_API + 'arbitrage/contract-season/?v1={}&v2={}&c1={}&c2={}&year_count={}'.format(v1, v2, c1, c2, year_count)
+        reply = self.network_manager.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.season_arbitrage_data_reply)
+
+    def season_arbitrage_data_reply(self):
+        """ 季节价差图表的数据返回了 """
+        reply = self.sender()
+        if reply.error():
+            pass
+        else:
+            data = json.loads(reply.readAll().data().decode('utf8'))
+            print(data)
+            self.show_arbitrage_charts(data['data'], data['date_limit'])
+        self.year_arbitrage_button.setEnabled(True)
+        reply.deleteLater()
+
+    def show_arbitrage_charts(self, source_data, date_limit):
+        """ 显示季节性图形 """
+        try:
+            variety1 = self.variety_top.currentText()
+            variety2 = self.variety_bottom.currentText()
+            if variety1 == variety2:
+                title = '{}历史价差走势'.format(variety1)
+            else:
+                title = '{}与{}历史价差走势'.format(variety1, variety2)
+            base_option = {
+                'title': title,
+                'x_axis': generate_date_with_limit(date_limit[0], date_limit[1])
+            }
+
+            # 将数据传入界面出图(参数1:数据源,参数2:基本信息;参数3:图形类型)
+            self.contact_channel.chartSource.emit(json.dumps(source_data), json.dumps(base_option), 'season')
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+
+
+
 
 
 
