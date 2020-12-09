@@ -10,6 +10,18 @@ from PyQt5.QtCore import Qt
 
 
 class MenuTreeWidget(QTreeWidget):
+    def __init__(self, *args, **kwargs):
+        super(MenuTreeWidget, self).__init__(*args, **kwargs)
+        self.header().hide()
+        self.setFocusPolicy(Qt.NoFocus)
+        self.setColumnCount(1)
+        self.setIndentation(0)
+        self.setObjectName('menuTree')
+        self.setStyleSheet("#menuTree{border:none;border-right: 1px solid rgba(50,50,50,100)}"
+                           "#menuTree::item:hover{color:rgb(0,164,172);}"
+                           "#menuTree::item{height:28px;}"
+                           )
+
     def mouseDoubleClickEvent(self, event, *args, **kwargs):
         event.accept()
 
@@ -21,7 +33,6 @@ class CalculatePlatUi(QWidget):
         layout.setContentsMargins(2,2,2,2)
         main_splitter = QSplitter(self)
         self.menu_tree = MenuTreeWidget(self)
-        self.menu_tree.header().hide()
         main_splitter.addWidget(self.menu_tree)
         main_splitter.setHandleWidth(1)
         self.frame_loader = QMainWindow(self)

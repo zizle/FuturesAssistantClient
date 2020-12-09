@@ -75,6 +75,9 @@ VARIETY_ZH = {
 
 # 中文对应品种交易代码(使用场景:提取现货数据;提取每日仓单)
 VARIETY_EN = {
+    'IF': 'IF',
+    'IC': 'IC',
+    'IH': 'IH',
     '铜': 'CU',
     '短纤': 'PF',
     '铝': 'AL',
@@ -85,6 +88,7 @@ VARIETY_EN = {
     '铁矿石': 'I',
     '热轧卷板': 'HC',
     '螺纹钢': 'RB',
+    '螺纹': 'RB',
     '螺纹钢仓库': 'RB',
     '螺纹钢厂库': 'RB',
     '线材': 'WR',
@@ -92,9 +96,11 @@ VARIETY_EN = {
     '不锈钢仓库': 'SS',
     '硅铁': 'SF',
     '硅锰': 'SM',
+    '锰硅': 'SM',
     '焦煤': 'JM',
     '焦炭': 'J',
     '动力煤': 'ZC',
+    '郑煤': 'ZC',
     '黄金': 'AU',
     '白银': 'AG',
     '大豆': 'A',
@@ -115,7 +121,9 @@ VARIETY_EN = {
     '聚乙烯': 'L',
     '鸡蛋': 'JD',
     '菜粕': 'RM',
+    '菜籽粕': 'RM',
     '菜油': 'OI',
+    '菜籽油': 'OI',
     '玉米': 'C',
     '淀粉': 'CS',
     'LLDPE': 'L',
@@ -143,6 +151,7 @@ VARIETY_EN = {
     '石油沥青厂库': 'BU',
     '纤维板': 'FB',
     '液化气': 'PG',
+    'LPG': 'PG',
     '燃料油': 'FU',
     '液化石油气': 'PG',
     '原油': 'SC',
@@ -171,4 +180,9 @@ VERTICAL_SCROLL_STYLE = "QScrollBar:vertical{background: transparent; width:10px
 HORIZONTAL_HEADER_STYLE = "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1," \
             "stop:0 #49aa54, stop: 0.48 #49cc54,stop: 0.52 #49cc54, stop:1 #49aa54);" \
             "border:1px solid rgb(201,202,202);border-left:none;" \
+            "min-height:25px;min-width:40px;font-weight:bold;font-size:13px};"
+
+BLUE_STYLE_HORIZONTAL_STYLE = "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1," \
+            "stop:0 #66bbd5, stop: 0.48 #66bbd5,stop: 0.52 #66bbd5, stop:1 #66bbd5);" \
+            "border:1px solid rgb(60,60,60);border-left:none;" \
             "min-height:25px;min-width:40px;font-weight:bold;font-size:13px};"

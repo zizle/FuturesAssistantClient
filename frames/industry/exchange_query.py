@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt, QTimer, QUrl, QMargins, QDate, QTime
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 from PyQt5.QtNetwork import QNetworkRequest
 from .exchange_query_ui import ExchangeQueryUI
-from widgets import TreeWidget, OptionWidget, GridWidget
+from widgets import TreeWidget, OptionWidget, GridWidget, LoadingCover
 from utils.constant import VARIETY_ZH, HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE, HORIZONTAL_HEADER_STYLE
 from settings import SERVER_API
 
@@ -174,6 +174,7 @@ class ExchangeQuery1(ExchangeQueryUI):
 
 
 class VarietyButton(QPushButton):
+    """ 选择品种的按钮 """
     def __init__(self, *args, **kwargs):
         super(VarietyButton, self).__init__(*args, **kwargs)
         self.setObjectName('varietyBtn')
@@ -241,6 +242,9 @@ class ExchangeDataShow(QWidget):
             "#dataTable{selection-color:rgb(80,100,200);selection-background-color:rgb(220,220,220);"
             "alternate-background-color:rgb(242,242,242);gridline-color:rgb(60,60,60)}"
         )
+        self.loading_cover = LoadingCover(self)
+        self.loading_cover.resize(self.parent().width(), self.parent().height())
+        self.loading_cover.hide()
 
         """ 逻辑部分 """
         self.current_exchange = exchange
@@ -250,10 +254,11 @@ class ExchangeDataShow(QWidget):
         # 获取品种
         self.get_variety_with_current_exchange()
         # 查询
-        self.query_button.clicked.connect(self.get_current_data)
-
-    def set_current_exchange(self, exchange):
-        self.current_exchange = exchange
+        self.query_button.clicked.connect(self.get_current_variety_data)
+        
+    def resizeEvent(self, event):
+        super(ExchangeDataShow, self).resizeEvent(event)
+        self.loading_cover.resize(self.parent().width(), self.parent().height())
 
     def get_variety_with_current_exchange(self):
         """ 查询当前交易所的所有品种 """
@@ -283,16 +288,19 @@ class ExchangeDataShow(QWidget):
         """ 选择当前交易所某个品种 """
         button = self.sender()
         variety_en = getattr(button, 'variety_en')
-        print(variety_en)
+        self.get_current_variety_data(variety=variety_en)
 
-    def get_current_data(self):
+    def get_current_variety_data(self, variety):
         """ 获取当前的数据 """
+        self.loading_cover.show('正在获取数据')
         self.data_table.clear()
         self.data_table.setRowCount(0)
         self.data_table.setColumnCount(0)
-
         url = SERVER_API + 'exchange/{}/{}/?date={}'.format(self.current_exchange, self.data_type,
                                                             self.query_date_edit.text())
+        if variety:
+            url += '&variety={}'.format(variety)
+
         reply = self.network_manger.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.current_data_reply)
 
@@ -308,6 +316,7 @@ class ExchangeDataShow(QWidget):
             if self.data_type == 'rank':
                 self.table_show_rank_content(data['content_keys'], data['result'])
         reply.deleteLater()
+        self.loading_cover.hide()
 
     def table_show_daily_content(self, content_key: dict, content_values: list):
         """ 显示数据 """

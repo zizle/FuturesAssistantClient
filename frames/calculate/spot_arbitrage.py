@@ -245,4 +245,4 @@ class SpotArbitrage(SpotArbitrageUi):
         else:
             data = json.loads(reply.readAll().data().decode("utf8"))
             # 将数据传入界面出图
-            self.contact_channel.chartSource.emit(json.dumps(data["data"]), json.dumps(data["base_option"]))
+            self.contact_channel.chartSource.emit(json.dumps(data["data"]), json.dumps(data["base_option"]), 'line')

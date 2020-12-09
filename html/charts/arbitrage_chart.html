@@ -9,7 +9,7 @@
 </head>
 <style>
 html,body{margin:10px 0 0 22px;padding:0}
-#chartBox{width:600px;height:378px;background-color:rgb(252,252,252)}
+#chartBox{width:720px;height:378px;background-color:rgb(252,252,252)}
 </style>
 <body>
     <div id="chartBox"></div>
@@ -82,9 +82,9 @@ function generateChartOption(sourceData, baseOption){
     return {
         grid: {
             top: 60,
-            left: 5,
-            right: 5,
             bottom: 10,
+            left:'5%',
+            right: '5%',
             containLabel: true
         },
         title:{
@@ -191,6 +191,82 @@ function generateChartOption(sourceData, baseOption){
         // graphic: generateGraphic(baseOption.watermark)
     };
 }
+
+// 季节图形series
+function getSeasonSeries(sourceData) {
+    let series = [];
+    let legendData = []
+    $.each(sourceData, function (lineName, lineData) {
+        legendData.push({name: lineName});
+        series.push({
+            type: 'line',
+            name: lineName,
+            yAxisIndex: 0,
+            connectNulls: true,
+            lineStyle:{width:3},
+            symbol: 'none',
+            data: sourceData[lineName].map(item=>{return [item.date.substring(4), Math.round(parseFloat(item.closePrice1 - item.closePrice2), 2)]})
+        })
+    })
+    return [series, legendData]
+
+}
+
+// 季节图形的Option
+function getSeasonChartOption(sourceData, baseOption){
+    let chartTitle = baseOption["title"];
+    let xAxis = baseOption['x_axis'];
+    let seriesLegend = getSeasonSeries(sourceData)
+    let gridBottom = Math.ceil(seriesLegend[1].length / 4) * 25
+    // 根据图例的个数计算出grid的bottom距离
+    return {
+        color:['#5d9db5','#ed7d31','#a5a5a5','#ffc000',
+            '#4472c4','#70ad47','#255e91','#9e480e',
+            '#636363', '#997300'],
+        grid: {
+            containLabel: true,
+            left:'5%',
+            right: '5%',
+            bottom:gridBottom,
+        },
+        title:{
+            text: chartTitle,
+            textStyle: {fontSize: 22}
+        },
+        xAxis:{
+            type: 'category',
+            data: xAxis,
+            axisLabel: {
+                rotate: 90,
+                fontSize: 11
+            }
+        },
+        yAxis: {
+            type: 'value',
+            name: '价差',
+            scale:true,
+        },
+        tooltip:{
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross',
+            },
+            confine:true,
+        },
+        series: seriesLegend[0],
+        legend:{
+            type:'plain',
+            data:seriesLegend[1],
+            icon:'rect',
+            top:'bottom',
+            left:'10%',
+            right:'10%',
+            itemHeight: 3,
+            itemWidth: 30,
+        }
+    }
+}
+
 // 主入口函数
 $(function () {
     let chartObj = echarts.init(document.getElementById('chartBox'));
@@ -198,9 +274,13 @@ $(function () {
     new QWebChannel(qt.webChannelTransport, function(channel)
         {
             let pageContact = channel.objects.pageContactChannel;
-            pageContact.chartSource.connect(function (sourceData, baseOption) {
+            pageContact.chartSource.connect(function (sourceData, baseOption, chartType) {
                 let option = {};
-                option = generateChartOption(JSON.parse(sourceData), JSON.parse(baseOption));
+                if (chartType === 'line'){
+                    option = generateChartOption(JSON.parse(sourceData), JSON.parse(baseOption));
+                }else if (chartType === 'season'){
+                    option = getSeasonChartOption(JSON.parse(sourceData), JSON.parse(baseOption))
+                }
                 chartObj.setOption(option, true)
             });
         }
