@@ -63,6 +63,7 @@ class BriefPositionWidget(QWidget):
         self.data_table.horizontalHeader().setDefaultSectionSize(88)  # 默认的标题头宽
         self.data_table.verticalHeader().setDefaultSectionSize(18)  # 设置行高(与下行代码同时才生效)
         self.data_table.verticalHeader().setMinimumSectionSize(18)
+        self.data_table.verticalHeader().setMaximumSectionSize(22)
         self.data_table.verticalHeader().hide()
         self.data_table.hide()
         content_layout.addWidget(self.data_table)
@@ -192,6 +193,7 @@ class BriefPositionWidget(QWidget):
                     item = QTableWidgetItem(str(int(variety_values.get(data_key, 0))))
                 item.setTextAlignment(Qt.AlignCenter)
                 self.data_table.setItem(row, col, item)
+            self.data_table.setRowHeight(row, 18)  # 在此设置才有效
             index_count += 1  # 记录个数切换到后半段
             row += 1
 
@@ -283,10 +285,13 @@ class ChartTablePositionWidget(QWidget):
         title_layout.addWidget(self.variety_combobox)
         self.three_month = QPushButton('近3月', self)
         setattr(self.three_month, 'day_count', 90)
+        self.three_month.setFocusPolicy(Qt.NoFocus)
         self.six_month = QPushButton('近6月', self)
         setattr(self.six_month, 'day_count', 180)
+        self.six_month.setFocusPolicy(Qt.NoFocus)
         self.twelve_month = QPushButton('近一年', self)
         setattr(self.twelve_month, 'day_count', 360)
+        self.twelve_month.setFocusPolicy(Qt.NoFocus)
         title_layout.addWidget(self.three_month)
         title_layout.addWidget(self.six_month)
         title_layout.addWidget(self.twelve_month)

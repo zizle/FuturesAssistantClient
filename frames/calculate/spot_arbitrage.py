@@ -56,9 +56,12 @@ class SpotArbitrageUi(QWidget):
 
         self.three_month_button = QPushButton("近3月", self)
         setattr(self.three_month_button, "day_count", 90)
+        self.three_month_button.setFocusPolicy(Qt.NoFocus)
         self.six_month_button = QPushButton("近6月", self)
+        self.six_month_button.setFocusPolicy(Qt.NoFocus)
         setattr(self.six_month_button, "day_count", 180)
         self.one_year_button = QPushButton("近1年", self)
+        self.one_year_button.setFocusPolicy(Qt.NoFocus)
         setattr(self.one_year_button, "day_count", 360)
         option_layout.addWidget(self.three_month_button, 2, 6)
         option_layout.addWidget(self.six_month_button, 2, 7)
@@ -82,18 +85,16 @@ class SpotArbitrageUi(QWidget):
         event_loop.exec_()
         main_layout.addWidget(self.web_container)
         self.setLayout(main_layout)
-
-        page_title.setObjectName("pageTitle")
-        self.initial_styles()
-
-    def initial_styles(self):
-        self.three_month_button.setObjectName("monthButton")
-        self.six_month_button.setObjectName("monthButton")
-        self.one_year_button.setObjectName("monthButton")
         self.three_month_button.setCursor(Qt.PointingHandCursor)
         self.six_month_button.setCursor(Qt.PointingHandCursor)
         self.one_year_button.setCursor(Qt.PointingHandCursor)
-        self.setStyleSheet(
+        page_title.setObjectName("pageTitle")
+        self.three_month_button.setObjectName("monthButton")
+        self.six_month_button.setObjectName("monthButton")
+        self.one_year_button.setObjectName("monthButton")
+
+        option_widget.setStyleSheet(
+            "#optionWidget{background-color:rgb(245,245,245)}"
             "#pageTitle{background-color:rgb(91,155,210);color:rgb(250,250,250);padding:3px 5px}"
             "#monthButton{background-color:rgb(250,250,250);border-radius: 7px;"
             "font-size:12px;color:rgb(120,120,120);padding:4px 6px}"
