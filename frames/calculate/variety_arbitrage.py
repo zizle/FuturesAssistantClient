@@ -13,6 +13,7 @@ from PyQt5.QtNetwork import QNetworkRequest
 from channels.chart import ArbitrageChannel
 from widgets import OptionWidget
 from utils.date_handler import generate_date_with_limit
+from utils.client import get_previous_variety, set_previous_variety
 from settings import SERVER_API
 
 
@@ -25,7 +26,7 @@ class VarietyArbitrageUi(QWidget):
         option_widget = OptionWidget(self)
         option_layout = QGridLayout()
         option_layout.setContentsMargins(QMargins(5, 5, 2, 5))
-        option_layout.setAlignment(Qt.AlignLeft)
+        option_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         title_layout = QHBoxLayout()
         page_title = QLabel("跨品种套利", self)
         page_title.setFixedHeight(23)
@@ -41,6 +42,18 @@ class VarietyArbitrageUi(QWidget):
         option_layout.addWidget(QLabel("合约:", self), 1, 2)
         self.contract_top = QComboBox(self)
         option_layout.addWidget(self.contract_top, 1, 3)
+
+        # 记录最近使用的2个品种1
+        self.previous_label1 = QLabel('最近使用:', self)
+        option_layout.addWidget(self.previous_label1, 1, 8)
+        self.previous_variety1 = QPushButton(self)
+        setattr(self.previous_variety1, 'top', True)
+        self.previous_variety1.setCursor(Qt.PointingHandCursor)
+        self.previous_variety2 = QPushButton(self)
+        setattr(self.previous_variety2, 'top', True)
+        self.previous_variety2.setCursor(Qt.PointingHandCursor)
+        option_layout.addWidget(self.previous_variety1, 1, 9)
+        option_layout.addWidget(self.previous_variety2, 1, 10)
 
         option_layout.addWidget(QLabel("品种:", self), 2, 0)
         self.variety_bottom = QComboBox(self)
@@ -63,6 +76,18 @@ class VarietyArbitrageUi(QWidget):
         option_layout.addWidget(self.three_month_button, 2, 5)
         option_layout.addWidget(self.six_month_button, 2, 6)
         option_layout.addWidget(self.one_year_button, 2, 7)
+
+        # 记录最近使用的2个品种2
+        self.previous_label2 = QLabel('最近使用:', self)
+        option_layout.addWidget(self.previous_label2, 2, 8)
+        self.previous_variety3 = QPushButton(self)
+        setattr(self.previous_variety3, 'top', False)
+        self.previous_variety3.setCursor(Qt.PointingHandCursor)
+        self.previous_variety4 = QPushButton(self)
+        setattr(self.previous_variety4, 'top', False)
+        self.previous_variety4.setCursor(Qt.PointingHandCursor)
+        option_layout.addWidget(self.previous_variety3, 2, 9)
+        option_layout.addWidget(self.previous_variety4, 2, 10)
 
         self.last_year_count = QSpinBox(self)
         self.last_year_count.setPrefix("近 ")
@@ -94,6 +119,18 @@ class VarietyArbitrageUi(QWidget):
         self.setLayout(main_layout)
 
         page_title.setObjectName("pageTitle")
+        self.previous_label1.hide()
+        self.previous_label2.hide()
+        self.previous_variety1.hide()
+        self.previous_variety2.hide()
+        self.previous_variety3.hide()
+        self.previous_variety4.hide()
+        self.previous_label1.setObjectName('previousLabel')
+        self.previous_label2.setObjectName('previousLabel')
+        self.previous_variety1.setObjectName('previousVariety')
+        self.previous_variety2.setObjectName('previousVariety')
+        self.previous_variety3.setObjectName('previousVariety')
+        self.previous_variety4.setObjectName('previousVariety')
         self.initial_styles()
 
     def initial_styles(self):
@@ -107,6 +144,9 @@ class VarietyArbitrageUi(QWidget):
             "#pageTitle{background-color:rgb(91,155,210);color:rgb(250,250,250);padding:3px 5px}"
             "#monthButton{background-color:rgb(250,250,250);border-radius: 7px;"
             "font-size:12px;color:rgb(120,120,120);padding:4px 6px}"
+            "#previousLabel{font-size:12px;color:rgb(20,50,210)}"
+            "#previousVariety{font-size:12px;border-radius:5px;color:rgb(250,250,250);padding:2px 6px;"
+            "background-color:rgb(191,211,249)}"
         )
         self.three_month_button.setStyleSheet("background-color:rgb(191,211,249);color:rgb(78,110,242)")
 
@@ -116,6 +156,10 @@ class VarietyArbitrage(VarietyArbitrageUi):
         super(VarietyArbitrage, self).__init__(*args, **kwargs)
         self.has_top_contract = False  # 合约获取完毕标志
         self.has_bottom_contract = False  # 当两个合约都获取完毕才请求数据
+        self.previous_variety_filename = 'VARIETYARBITRAGE'
+        # 读取用户最近使用的品种
+        self.read_previous_variety()
+
         self.day_count = 90  # 默认为3个月
         self.network_manager = getattr(qApp, "_network")
         # 品种下拉信号
@@ -134,6 +178,56 @@ class VarietyArbitrage(VarietyArbitrageUi):
 
         # 季节价差
         self.year_arbitrage_button.clicked.connect(self.get_season_arbitrage_data)
+
+        # 点击最近使用的品种
+        self.previous_variety1.clicked.connect(self.previous_variety_clicked)
+        self.previous_variety2.clicked.connect(self.previous_variety_clicked)
+        self.previous_variety3.clicked.connect(self.previous_variety_clicked)
+        self.previous_variety4.clicked.connect(self.previous_variety_clicked)
+
+    def previous_variety_clicked(self):
+        """ 点击最近使用的品种 """
+        button = self.sender()
+        # variety_en = getattr(button, 'variety_en')
+        variety_name = button.text()  # 也是源于下拉框,正常不会出错
+        is_top = getattr(button, 'top')
+        if is_top:
+            self.variety_top.setCurrentText(variety_name)
+        else:
+            self.variety_bottom.setCurrentText(variety_name)
+
+    def read_previous_variety(self):
+        """ 读取用户最近使用的品种 """
+        values = get_previous_variety('VARIETYARBITRAGE')
+        previous_en1, previous_name1 = values['top'][0].get('variety_en'), values['top'][0].get('variety_name')
+        previous_en2, previous_name2 = values['top'][1].get('variety_en'), values['top'][1].get('variety_name')
+        previous_en3, previous_name3 = values['bottom'][0].get('variety_en'), values['bottom'][0].get('variety_name')
+        previous_en4, previous_name4 = values['bottom'][1].get('variety_en'), values['bottom'][1].get('variety_name')
+        if previous_en1 and previous_name1:
+            self.previous_variety1.setText(previous_name1)
+            setattr(self.previous_variety1, 'variety_en', previous_en1)
+            self.previous_label1.show()
+            self.previous_variety1.show()
+            if previous_en2 and previous_name2:
+                self.previous_variety2.setText(previous_name2)
+                setattr(self.previous_variety2, 'variety_en', previous_en2)
+                self.previous_variety2.show()
+        if previous_en3 and previous_name3:
+            self.previous_variety3.setText(previous_name3)
+            setattr(self.previous_variety3, 'variety_en', previous_en3)
+            self.previous_label2.show()
+            self.previous_variety3.show()
+            if previous_en4 and previous_name4:
+                self.previous_variety4.setText(previous_name4)
+                setattr(self.previous_variety4, 'variety_en', previous_en4)
+                self.previous_variety4.show()
+
+    def save_previous_variety(self):
+        """ 保存最近使用品种 """
+        v1_en, v1_name = self.variety_top.currentData(), self.variety_top.currentText()
+        v2_en, v2_name = self.variety_bottom.currentData(), self.variety_bottom.currentText()
+        set_previous_variety(self.previous_variety_filename, v1_name, v1_en, 'top')
+        set_previous_variety(self.previous_variety_filename, v2_name, v2_en, 'bottom')
 
     def day_count_selected(self):
         button = self.sender()
@@ -196,8 +290,8 @@ class VarietyArbitrage(VarietyArbitrageUi):
                 self.contract_top.addItem(contract_item["contract"])
             self.has_top_contract = True
         reply.deleteLater()
-        if self.has_top_contract and self.has_bottom_contract:
-            self.get_arbitrage_contract_data()
+        # if self.has_top_contract and self.has_bottom_contract:
+        #     self.get_arbitrage_contract_data()
 
     def bottom_variety_changed(self):
         """ 请求品种合约 """
@@ -220,9 +314,9 @@ class VarietyArbitrage(VarietyArbitrageUi):
                 self.contract_bottom.setCurrentIndex(1)
             self.has_bottom_contract = True
         reply.deleteLater()
-        if self.has_top_contract and self.has_bottom_contract:
-            # 初始化数据
-            self.get_arbitrage_contract_data()
+        # if self.has_top_contract and self.has_bottom_contract:
+        #     # 初始化数据
+        #     self.get_arbitrage_contract_data()
 
     def get_arbitrage_contract_data(self):
         """ 获取两个品种的数据 """
@@ -235,6 +329,8 @@ class VarietyArbitrage(VarietyArbitrageUi):
             'contract_2': self.contract_bottom.currentText(),
             'day_count': self.day_count
         }
+        # 保存最近使用的品种
+        self.save_previous_variety()
         reply = self.network_manager.post(QNetworkRequest(QUrl(url)), json.dumps(body_data).encode("utf8"))
         reply.finished.connect(self.arbitrage_contract_reply)
 
@@ -248,6 +344,7 @@ class VarietyArbitrage(VarietyArbitrageUi):
             data = json.loads(reply.readAll().data().decode("utf8"))
             # 将数据传入界面出图(参数1:数据源,参数2:基本信息;参数3:图形类型)
             self.contact_channel.chartSource.emit(json.dumps(data["data"]), json.dumps(data["base_option"]), 'line')
+        self.read_previous_variety()
 
     def get_season_arbitrage_data(self):
         """ 获取季节价差的数据 """
@@ -259,6 +356,8 @@ class VarietyArbitrage(VarietyArbitrageUi):
         year_count = self.last_year_count.value()
         if not all([v1, v2, c1, c2]):
             return
+        # 保存最近使用
+        self.save_previous_variety()
         url = SERVER_API + 'arbitrage/contract-season/?v1={}&v2={}&c1={}&c2={}&year_count={}'.format(v1, v2, c1, c2, year_count)
         reply = self.network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.season_arbitrage_data_reply)
@@ -270,10 +369,10 @@ class VarietyArbitrage(VarietyArbitrageUi):
             pass
         else:
             data = json.loads(reply.readAll().data().decode('utf8'))
-            print(data)
             self.show_arbitrage_charts(data['data'], data['date_limit'])
         self.year_arbitrage_button.setEnabled(True)
         reply.deleteLater()
+        self.read_previous_variety()
 
     def show_arbitrage_charts(self, source_data, date_limit):
         """ 显示季节性图形 """

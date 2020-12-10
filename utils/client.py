@@ -85,3 +85,38 @@ def is_module_verify(module_id, module_name):
             return False, "您还未登录,请登录后再进行操作!"
         return auth_module(module_id, module_name, modules)
 
+
+def set_previous_variety(module_name, variety_name, variety_en, flag):
+    """ 设置用户最近使用的品种 """
+    # {'top':[{variety_en:'',variety_name:''},{}], 'bottom': []}
+    previous_filepath = os.path.join(BASE_DIR, "dawn/{}.dat".format(module_name))
+    if not os.path.exists(previous_filepath):
+        with open(previous_filepath, "wb") as f:
+            pickle.dump({'top': [{}, {}], 'bottom': [{}, {}]}, f)
+            f.close()
+    # 先读取,后写入
+    with open(previous_filepath, "rb") as fp:
+        old_variety = pickle.load(fp)
+        fp.close()
+    if flag == 'top':
+        top_v = old_variety['top']
+        top_v[0], top_v[1] = top_v[1], top_v[0]  # 交换位置
+        # 写入第一个
+        top_v[0] = {'variety_en': variety_en, 'variety_name': variety_name}
+    if flag == 'bottom':
+        bottom_v = old_variety['bottom']
+        bottom_v[0], bottom_v[1] = bottom_v[1], bottom_v[0]  # 交换位置
+        bottom_v[0] = {'variety_en': variety_en, 'variety_name': variety_name}
+    with open(previous_filepath, "wb") as fp:
+        # 写入文件
+        pickle.dump(old_variety, fp)
+
+
+def get_previous_variety(module_name):
+    """ 获取用户最近使用的品种 """
+    previous_filepath = os.path.join(BASE_DIR, "dawn/{}.dat".format(module_name))
+    if not os.path.exists(previous_filepath):
+        return {'top': [{}, {}], 'bottom': [{}, {}]}
+    with open(previous_filepath, "rb") as fp:
+        variety = pickle.load(fp)
+    return variety
