@@ -7,7 +7,7 @@ import logging
 from PyQt5.QtCore import QSettings
 
 SYS_BIT = "32" if sys.maxsize < 2 ** 32 else "64"
-PLATE_FORM = "WIN10"
+PLATE_FORM = "WIN7"
 ADMINISTRATOR = True
 WINDOW_TITLE = '分析决策系统(研究员)' if ADMINISTRATOR else '分析决策系统客户端'
 
