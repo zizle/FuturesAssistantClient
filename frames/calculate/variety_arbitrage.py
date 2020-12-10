@@ -69,9 +69,12 @@ class VarietyArbitrageUi(QWidget):
 
         self.three_month_button = QPushButton("近3月", self)
         setattr(self.three_month_button, "day_count", 90)
+        self.three_month_button.setFocusPolicy(Qt.NoFocus)
         self.six_month_button = QPushButton("近6月", self)
+        self.six_month_button.setFocusPolicy(Qt.NoFocus)
         setattr(self.six_month_button, "day_count", 180)
         self.one_year_button = QPushButton("近1年", self)
+        self.one_year_button.setFocusPolicy(Qt.NoFocus)
         setattr(self.one_year_button, "day_count", 360)
         option_layout.addWidget(self.three_month_button, 2, 5)
         option_layout.addWidget(self.six_month_button, 2, 6)
@@ -125,31 +128,28 @@ class VarietyArbitrageUi(QWidget):
         self.previous_variety2.hide()
         self.previous_variety3.hide()
         self.previous_variety4.hide()
+        self.three_month_button.setCursor(Qt.PointingHandCursor)
+        self.six_month_button.setCursor(Qt.PointingHandCursor)
+        self.one_year_button.setCursor(Qt.PointingHandCursor)
         self.previous_label1.setObjectName('previousLabel')
         self.previous_label2.setObjectName('previousLabel')
         self.previous_variety1.setObjectName('previousVariety')
         self.previous_variety2.setObjectName('previousVariety')
         self.previous_variety3.setObjectName('previousVariety')
         self.previous_variety4.setObjectName('previousVariety')
-        self.initial_styles()
-
-    def initial_styles(self):
         self.three_month_button.setObjectName("monthButton")
         self.six_month_button.setObjectName("monthButton")
         self.one_year_button.setObjectName("monthButton")
-        self.three_month_button.setCursor(Qt.PointingHandCursor)
-        self.six_month_button.setCursor(Qt.PointingHandCursor)
-        self.one_year_button.setCursor(Qt.PointingHandCursor)
-        self.setStyleSheet(
+        option_widget.setStyleSheet(
+            "#optionWidget{background-color:rgb(245,245,245)}"
             "#pageTitle{background-color:rgb(91,155,210);color:rgb(250,250,250);padding:3px 5px}"
-            "#monthButton{background-color:rgb(250,250,250);border-radius: 7px;"
+            "#monthButton{background-color:rgb(250,250,250);border-radius:7px;"
             "font-size:12px;color:rgb(120,120,120);padding:4px 6px}"
             "#previousLabel{font-size:12px;color:rgb(20,50,210)}"
-            "#previousVariety{font-size:12px;border-radius:5px;color:rgb(250,250,250);padding:2px 6px;"
+            "#previousVariety{font-size:12px;border-radius:5px;color:rgb(250,250,250);padding:4px 6px;"
             "background-color:rgb(191,211,249)}"
         )
         self.three_month_button.setStyleSheet("background-color:rgb(191,211,249);color:rgb(78,110,242)")
-
 
 class VarietyArbitrage(VarietyArbitrageUi):
     def __init__(self, *args, **kwargs):
