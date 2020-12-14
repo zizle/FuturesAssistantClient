@@ -16,10 +16,26 @@ from settings import LOCAL_SPIDER_SRC, SERVER_API, USER_AGENTS
 from utils.characters import full_width_to_half_width, split_zh_en, split_number_en
 
 
+def get_ten_multiple(num: int):
+    """ 获取大于num最近的整十数 """
+    while num % 10 != 0:
+        num += 1
+    return num
+
+
 # 将品种月份修改为品种+4位合约的形式
 def modify_contract_express(contract, current_date):
-    number_en = split_number_en(contract)
-    return current_date[2].join(number_en)
+    date_str = current_date.strftime('%Y%m%d')
+    split_contract = split_number_en(contract)
+    contract = date_str[2].join(split_contract)  # 可能不是正确的合约年,需继续处理
+    split_contract = split_number_en(contract)
+    middle_contract = split_contract[1][:2]
+    suffix_year = date_str[2:4]
+    if int(middle_contract) < int(suffix_year):
+        contract_year = '%02d' % get_ten_multiple(int(suffix_year))
+        real_contract = split_contract[0] + '{}{}'.format(contract_year[0], middle_contract[1]) + split_contract[1][-2:]
+        return real_contract
+    return contract
 
 
 class DateValueError(Exception):
@@ -153,15 +169,15 @@ class CZCEParser(QObject):
         ]:
             self.parser_finished.emit("源数据文件格式有误,解析失败!", True)
             return DataFrame()
-        data_date = self.date.strftime('%Y%m%d')
-        xls_df['日期'] = [data_date for _ in range(xls_df.shape[0])]
+        int_date = int(self.date.timestamp())
+        xls_df['日期'] = [int_date for _ in range(xls_df.shape[0])]
         xls_df = xls_df.fillna(0)
         xls_df.columns = [
             "contract", "pre_settlement", "open_price", "highest", "lowest", "close_price", "settlement", "zd_1", "zd_2",
             "trade_volume", "empty_volume", "increase_volume", "trade_price", "delivery_price", "variety_en", "date",
         ]
         # 将品种月份处理为4位合约(分离字母数字后插入年份的第3个数)
-        xls_df["contract"] = xls_df["contract"].apply(modify_contract_express, args=(data_date,))
+        xls_df["contract"] = xls_df["contract"].apply(modify_contract_express, args=(self.date,))
         self.parser_finished.emit("解析数据文件成功!", False)
         return xls_df
 
@@ -241,7 +257,6 @@ class CZCEParser(QObject):
                           'short_position_company', 'short_position', 'short_position_increase']
 
         result_df = DataFrame(columns=column_indexes)
-        str_date = self.date.strftime("%Y%m%d")
         # 每个品种数据框
         for variety_en in variety_dict:
             variety_index_range = variety_index_dict[variety_en]
@@ -262,12 +277,12 @@ class CZCEParser(QObject):
             contract_df = self._parser_rank_sub_df(variety_name=variety_dict[variety_key], sub_df=contract_df)
             # 填充品种代码和合约的值
             contract_df["variety_en"] = [variety_key for _ in range(contract_df.shape[0])]
-            target_contract = modify_contract_express(contract.strip(), str_date)
+            target_contract = modify_contract_express(contract.strip(), self.date)
             contract_df["contract"] = [target_contract for _ in range(contract_df.shape[0])]
             # print(contract, "\n", contract_df)
             result_df = concat([result_df, contract_df])
-        str_date = self.date.strftime("%Y%m%d")
-        result_df["date"] = [str_date for _ in range(result_df.shape[0])]
+        int_date = int(self.date.timestamp())
+        result_df["date"] = [int_date for _ in range(result_df.shape[0])]
         return result_df
 
     def _parser_rank_sub_df(self, variety_name, sub_df):

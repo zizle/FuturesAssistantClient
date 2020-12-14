@@ -3,6 +3,7 @@
 # @Time  : 2020-07-22 21:00
 # @Author: zizle
 import json
+import datetime
 from PyQt5.QtWidgets import QTableWidgetItem, qApp
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtCore import QUrl
@@ -151,14 +152,26 @@ class ExchangeSpider(ExchangeSpiderUI):
                 return
             # 预览表格显示数据
             self.preview_parser_result(source_data_frame, exchange_lib, "daily")
-            self.parser_status.setText("解析{}的日行情数据完成!".format(parser_exchange_lib))
+            self.parser_status.setText(
+                "解析{}的日行情数据完成!日期:{} = {}".format(
+                    parser_exchange_lib, self.parser_date_edit.text(), int(datetime.datetime.strptime(
+                        self.parser_date_edit.text(), '%Y-%m-%d').timestamp()
+                    )
+                )
+            )
         elif parser_data_type == "rank":
             source_data_frame = self.parser.parser_rank_source_file()
             if source_data_frame.empty:
                 return
             # 预览数据
             self.preview_parser_result(source_data_frame, exchange_lib, "rank")
-            self.parser_status.setText("解析{}的日排名数据完成!".format(parser_exchange_lib))
+            self.parser_status.setText(
+                "解析{}的日排名数据完成!日期:{} = {}".format(
+                    parser_exchange_lib, self.parser_date_edit.text(), int(datetime.datetime.strptime(
+                        self.parser_date_edit.text(), '%Y-%m-%d').timestamp()
+                    )
+                )
+            )
 
         elif self.current_action == "receipt":
             source_data_frame = self.parser.parser_receipt_source_file()

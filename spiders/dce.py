@@ -196,8 +196,8 @@ class DCEParser(QObject):
         # 修改商品名称为英文
         xls_df["商品名称"] = xls_df["商品名称"].apply(get_variety_en)
         # 加入日期
-        str_date = self.date.strftime("%Y%m%d")
-        xls_df["日期"] = [str_date for _ in range(xls_df.shape[0])]
+        int_date = int(self.date.timestamp())
+        xls_df["日期"] = [int_date for _ in range(xls_df.shape[0])]
         # 重置列头并重命名
         xls_df = xls_df.reindex(columns=["日期", "商品名称", "交割月份", "前结算价", "开盘价", "最高价", "最低价", "收盘价",
                                          "结算价", "涨跌", "涨跌1", "成交量", "持仓量", "持仓量变化", "成交额"])
@@ -249,11 +249,11 @@ class DCEParser(QObject):
             zip_file.extract(filename, cache_folder)  # 循环解压文件到指定目录
         zip_file.close()
         # 取解压后的文件夹下的文件，逐个读取内容解析得到最终的数据集
-        date_value_df = self._parser_variety_rank(cache_folder)
-        if not date_value_df.empty:
+        value_df = self._parser_variety_rank(cache_folder)
+        if not value_df.empty:
             # 填充空值(合并后产生空值)
             print("改变数据类型")
-            value_df = date_value_df.fillna('-')
+            value_df = value_df.fillna('-')
             # 将数据需要为int列转为int
             value_df["rank"] = value_df["rank"].apply(str_to_int)
             value_df["trade"] = value_df["trade"].apply(str_to_int)
@@ -262,6 +262,8 @@ class DCEParser(QObject):
             value_df["long_position_increase"] = value_df["long_position_increase"].apply(str_to_int)
             value_df["short_position"] = value_df["short_position"].apply(str_to_int)
             value_df["short_position_increase"] = value_df["short_position_increase"].apply(str_to_int)
+            # 日期转为整形时间戳
+            value_df['date'] = value_df['date'].apply(lambda x: int(datetime.strptime(x, '%Y%m%d').timestamp()))
         return value_df
 
     def save_rank_server(self, source_df):
