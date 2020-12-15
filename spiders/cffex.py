@@ -150,8 +150,8 @@ class CFFEXParser(QObject):
         csv_df["合约代码"] = csv_df["合约代码"].str.strip()  # 去除前后空格
         csv_df["成交金额"] = csv_df["成交金额"].round(decimals=6)  # 成交金额保留6位小数
         csv_df["品种"] = csv_df["合约代码"].apply(split_number_en).apply(lambda x: x[0].upper())  # 使用合约代码列添加品种列
-        str_date = self.date.strftime("%Y%m%d")
-        csv_df["日期"] = [str_date for _ in range(csv_df.shape[0])]  # 增加日期列
+        int_date = int(self.date.timestamp())
+        csv_df["日期"] = [int_date for _ in range(csv_df.shape[0])]  # 增加日期列
         # 重置索引
         csv_df = csv_df.reindex(columns=["日期", "品种", "合约代码", "前结算", "今开盘", "最高价", "最低价", "今收盘",
                                 "今结算", "涨跌1", "涨跌2", "成交量", "成交金额", "持仓量", "持仓变化"])
@@ -215,6 +215,8 @@ class CFFEXParser(QObject):
             result_df["long_position_increase"] = result_df["long_position_increase"].astype("int")
             result_df["short_position"] = result_df["short_position"].astype("int")
             result_df["short_position_increase"] = result_df["short_position_increase"].astype("int")
+            # 时间戳的日期
+            result_df['date'] = result_df['date'].apply(lambda x: int(datetime.strptime(x, '%Y%m%d').timestamp()))
         return result_df
 
     @staticmethod

@@ -136,7 +136,7 @@ class SHFEParser(QObject):
         # 解析content转为DataFrame
         json_df = DataFrame(source_content['o_curinstrument'])
         # 选取PRODUCTID非总计、DELIVERYMONTH非小计的行
-        json_df = json_df[~json_df['PRODUCTID'].str.contains('总计|小计|合计|_tas')]  # 选取品种不含有小计和总计合计_tas的行
+        json_df = json_df[~json_df['PRODUCTID'].str.contains('总计|小计|合计|_tas|efp')]  # 选取品种不含有小计和总计合计_tas的行
         json_df = json_df[~json_df['DELIVERYMONTH'].str.contains('总计|小计|合计')]  # 选取合约不含有小计和总计合计的行
         # 处理空格
         json_df["PRODUCTID"] = json_df["PRODUCTID"].apply(lambda x: x.split("_")[0].upper())
@@ -145,8 +145,8 @@ class SHFEParser(QObject):
         json_df["DELIVERYMONTH"] = json_df["DELIVERYMONTH"].str.strip()
         json_df = json_df.reindex(columns=["DATE", "PRODUCTID", "DELIVERYMONTH", "PRESETTLEMENTPRICE", "OPENPRICE", "HIGHESTPRICE", "LOWESTPRICE", "CLOSEPRICE",
                                            "SETTLEMENTPRICE", "ZD1_CHG", "ZD2_CHG", "VOLUME", "OPENINTEREST", "OPENINTERESTCHG"])
-        str_date = self.date.strftime("%Y%m%d")
-        json_df["DATE"] = [str_date for _ in range(json_df.shape[0])]
+        int_date = int(self.date.timestamp())
+        json_df["DATE"] = [int_date for _ in range(json_df.shape[0])]
         # 修改列头，返回
         json_df.columns = ["date", "variety_en", "contract", "pre_settlement", "open_price", "highest", "lowest", "close_price",
                            "settlement", "zd_1", "zd_2", "trade_volume", "empty_volume", "increase_volume"]
@@ -203,8 +203,8 @@ class SHFEParser(QObject):
         json_df = json_df.fillna(0)
         # 新增品种代码列和DATE列
         json_df["VARIETYEN"] = json_df["INSTRUMENTID"].apply(split_number_en).apply(lambda x: x[0].upper())
-        str_date = self.date.strftime("%Y%m%d")
-        json_df["DATE"] = [str_date for _ in range(json_df.shape[0])]
+        int_date = int(self.date.timestamp())
+        json_df["DATE"] = [int_date for _ in range(json_df.shape[0])]
         # 重新设置索引
         json_df = json_df.reindex(columns=["DATE", "VARIETYEN", "INSTRUMENTID", "RANK", "PARTICIPANTABBR1", "CJ1", "CJ1_CHG", "PARTICIPANTABBR2", "CJ2", "CJ2_CHG","PARTICIPANTABBR3", "CJ3", "CJ3_CHG"])
         json_df.columns = ["date", "variety_en", "contract", "rank",

@@ -38,8 +38,8 @@ class SpotPriceAdminUI(QTabWidget):
 
         # 预览数据的表格
         self.preview_table = QTableWidget(self)
-        self.preview_table.setColumnCount(5)
-        self.preview_table.setHorizontalHeaderLabels(["日期", "品种", "交易代码", "现货价", "增减"])
+        self.preview_table.setColumnCount(4)
+        self.preview_table.setHorizontalHeaderLabels(["日期", "品种", "交易代码", "现货价"])
         layout.addWidget(self.preview_table)
 
         # 提交按钮

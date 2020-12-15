@@ -3,7 +3,6 @@
 # @Time  : 2020-08-25 15:01
 # @Author: zizle
 import os
-import re
 import json
 import pandas as pd
 from datetime import datetime
@@ -55,7 +54,7 @@ class SpotPriceAdmin(SpotPriceAdminUI):
         # 获取品种的英文
         data_df['variety_en'] = data_df['variety'].apply(lambda x: VARIETY_EN.get(x, 'VARIETYERROR'))
         # 在表中显示
-        value_keys = ['date', 'variety', 'variety_en', 'price', 'increase']
+        value_keys = ['date', 'variety', 'variety_en', 'price']
         spots_price = data_df.to_dict(orient='records')
         self.preview_table.setRowCount(len(spots_price))
         for row, row_item in enumerate(spots_price):
@@ -68,44 +67,6 @@ class SpotPriceAdmin(SpotPriceAdminUI):
                 item.setForeground(row_brush)
                 self.preview_table.setItem(row, col, item)
         self.final_data = spots_price
-
-
-
-
-
-        # self.tip_label.setText("正在提取数据... ")
-        # variety_item_list = re.split(r'[;；。]+', source_str)  # 根据分号切割
-        # self.preview_table.clearContents()
-        # self.preview_table.setRowCount(0)
-        # for row, variety_item in enumerate(variety_item_list):
-        #     print(variety_item)
-        #     data_list = re.split(r'[:,：，]+', variety_item)
-        #     variety_dict = {
-        #         "date": self.today_str,
-        #         "variety_en": VARIETY_EN.get(data_list[0].strip(), "未知"),
-        #         "spot_price": float(data_list[1]),
-        #         "price_increase": float(data_list[2])
-        #     }
-        #
-        #     self.preview_table.insertRow(row)
-        #     item0 = QTableWidgetItem(variety_dict["date"])
-        #     self.preview_table.setItem(row, 0, item0)
-        #     item1 = QTableWidgetItem(data_list[0].strip())
-        #     self.preview_table.setItem(row, 1, item1)
-        #     item2 = QTableWidgetItem(variety_dict["variety_en"])
-        #     self.preview_table.setItem(row, 2, item2)
-        #     item3 = QTableWidgetItem(str(variety_dict["spot_price"]))
-        #     self.preview_table.setItem(row, 3, item3)
-        #     item4 = QTableWidgetItem(str(variety_dict["price_increase"]))
-        #     self.preview_table.setItem(row, 4, item4)
-        #     if variety_dict["variety_en"] == "未知":
-        #         item0.setForeground(QBrush(QColor(250, 100, 100)))
-        #         item1.setForeground(QBrush(QColor(250, 100, 100)))
-        #         item2.setForeground(QBrush(QColor(250, 100, 100)))
-        #         item3.setForeground(QBrush(QColor(250, 100, 100)))
-        #         item4.setForeground(QBrush(QColor(250, 100, 100)))
-        #
-        #     self.final_data.append(variety_dict)
         self.tip_label.setText("数据提取完成! ")
 
     def commit_spot_data(self):

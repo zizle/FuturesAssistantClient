@@ -9,7 +9,7 @@ import pandas as pd
 from PyQt5.QtWidgets import (qApp, QWidget,QTableWidget, QTableWidgetItem, QSplitter, QDialog, QVBoxLayout, QDesktopWidget, QAbstractItemView,
                              QHeaderView, QTextEdit, QPushButton, QMessageBox, QComboBox, QLabel, QLineEdit, QGridLayout)
 from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QIcon, QIntValidator
+from PyQt5.QtGui import QIcon, QIntValidator, QDoubleValidator
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtWebChannel import QWebChannel
@@ -217,6 +217,7 @@ class EditChartOptionPopup(QDialog):
         self.network_manager = getattr(qApp, '_network')
         self.setAttribute(Qt.WA_DeleteOnClose)
         integer_validate = QIntValidator(self)
+        double_validate = QDoubleValidator(self)
 
         main_layout = QGridLayout()
         title_label = QLabel('左轴调整:', self)
@@ -229,12 +230,12 @@ class EditChartOptionPopup(QDialog):
 
         main_layout.addWidget(QLabel('最小值:', self), 1, 2)
         self.left_min_edit = QLineEdit(self)
-        self.left_min_edit.setValidator(integer_validate)
+        self.left_min_edit.setValidator(double_validate)
         main_layout.addWidget(self.left_min_edit, 1, 3)
 
         main_layout.addWidget(QLabel('最大值:', self), 1, 4)
         self.left_max_edit = QLineEdit(self)
-        self.left_max_edit.setValidator(integer_validate)
+        self.left_max_edit.setValidator(double_validate)
         main_layout.addWidget(self.left_max_edit, 1, 5)
 
         title_label = QLabel('右轴调整:', self)
@@ -247,12 +248,12 @@ class EditChartOptionPopup(QDialog):
 
         main_layout.addWidget(QLabel('最小值:', self), 3, 2)
         self.right_min_edit = QLineEdit(self)
-        self.right_min_edit.setValidator(integer_validate)
+        self.right_min_edit.setValidator(double_validate)
         main_layout.addWidget(self.right_min_edit, 3, 3)
 
         main_layout.addWidget(QLabel('最大值:', self), 3, 4)
         self.right_max_edit = QLineEdit(self)
-        self.right_max_edit.setValidator(integer_validate)
+        self.right_max_edit.setValidator(double_validate)
         main_layout.addWidget(self.right_max_edit, 3, 5)
 
         title_label = QLabel('横轴调整(范围仅限输入年份,为0时表示不限制)', self)
