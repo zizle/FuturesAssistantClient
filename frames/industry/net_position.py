@@ -267,7 +267,7 @@ class NetPositionChart(QWebEngineView):
         self.resize_chart()
 
     def resize_chart(self):
-        self.contact_channel.chartResize.emit(self.width() * 0.8, self.height())
+        self.contact_channel.chartResize.emit(self.width(), self.height())
 
 
 class ChartTablePositionWidget(QWidget):

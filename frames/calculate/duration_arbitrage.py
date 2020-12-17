@@ -5,17 +5,21 @@
 """ 跨期套利 """
 
 import json
-from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QComboBox, QPushButton)
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtCore import Qt, QMargins, QUrl, QEventLoop
+from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QComboBox, QPushButton,
+                             QSplitter, QTableWidget, QHeaderView, QTableWidgetItem)
+
+from PyQt5.QtCore import Qt, QMargins, QUrl
 from PyQt5.QtNetwork import QNetworkRequest
 from channels.chart import ArbitrageChannel
-from widgets import OptionWidget
+from popup.message import InformationPopup
+from utils.constant import VERTICAL_SCROLL_STYLE, BLUE_STYLE_HORIZONTAL_STYLE
+from widgets import OptionWidget, ChartViewWidget
 from settings import SERVER_API
 
 
 class DurationArbitrageUi(QWidget):
+    TITLE_WIDGET_HEIGHT = 90
+
     def __init__(self, *args, **kwargs):
         super(DurationArbitrageUi, self).__init__(*args, **kwargs)
         main_layout = QVBoxLayout()
@@ -69,22 +73,36 @@ class DurationArbitrageUi(QWidget):
         option_layout.addWidget(self.one_year_button, 2, 8)
 
         option_widget.setLayout(option_layout)
-        option_widget.setFixedHeight(90)
+        option_widget.setFixedHeight(self.TITLE_WIDGET_HEIGHT)
 
         main_layout.addWidget(option_widget)
 
-        self.web_container = QWebEngineView(self)
-        self.web_container.load(QUrl("file:///html/charts/arbitrage_chart.html"))  # 加载页面
-        # self.web_container.setContentsMargins(QMargins(5, 5, 0, 5))
-        # 设置与页面信息交互的通道
-        channel_qt_obj = QWebChannel(self.web_container.page())  # 实例化qt信道对象,必须传入页面参数
+        # 图形与数据显示拖动区
+        splitter = QSplitter(self)
+        splitter.setOrientation(Qt.Vertical)
+        splitter.setHandleWidth(1)
+
         self.contact_channel = ArbitrageChannel()  # 页面信息交互通道
-        self.web_container.page().setWebChannel(channel_qt_obj)
-        channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道，只能注册一个
-        event_loop = QEventLoop(self)  # 同步加载页面
-        self.web_container.loadFinished.connect(event_loop.quit)
-        event_loop.exec_()
-        main_layout.addWidget(self.web_container)
+        self.web_container = ChartViewWidget(data_channel=self.contact_channel,
+                                             filepath='file:/html/charts/arbitrage_chart.html')
+        self.web_container.setParent(self)
+        splitter.addWidget(self.web_container)
+        # 数据显示表
+        self.view_table = QTableWidget(self)
+        self.view_table.verticalHeader().hide()
+        self.view_table.horizontalHeader().setMinimumSectionSize(90)
+        self.view_table.setMaximumWidth(self.parent().width() * 0.8)
+        self.view_table.verticalHeader().setDefaultSectionSize(20)
+        self.view_table.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
+        self.view_table.horizontalHeader().setStyleSheet(BLUE_STYLE_HORIZONTAL_STYLE)
+        self.view_table.setAlternatingRowColors(True)
+
+        splitter.addWidget(self.view_table)
+        splitter.setSizes([(self.parent().height() - self.TITLE_WIDGET_HEIGHT) * 0.6,
+                           (self.parent().height() - self.TITLE_WIDGET_HEIGHT) * 0.4])
+        splitter.setContentsMargins(QMargins(5, 10, 5, 10))
+        main_layout.addWidget(splitter)
+
         self.setLayout(main_layout)
         self.three_month_button.setCursor(Qt.PointingHandCursor)
         self.six_month_button.setCursor(Qt.PointingHandCursor)
@@ -101,12 +119,19 @@ class DurationArbitrageUi(QWidget):
             "font-size:12px;color:rgb(120,120,120);padding:4px 6px}"
         )
         self.three_month_button.setStyleSheet("background-color:rgb(191,211,249);color:rgb(78,110,242)")
+        self.view_table.setObjectName('viewTable')
+        self.view_table.setStyleSheet(
+            "#viewTable{selection-color:rgb(80,100,200);selection-background-color:rgb(220,220,220);"
+            "alternate-background-color:rgb(242,242,242);gridline-color:rgb(60,60,60)}"
+        )
 
 
 class DurationArbitrage(DurationArbitrageUi):
     def __init__(self, *args, **kwargs):
         super(DurationArbitrage, self).__init__(*args, **kwargs)
         self.day_count = 90  # 默认为3个月
+        self.page_load_finished = False  # 是否初始化请求数据
+        self.web_container.page().loadFinished.connect(self.loadpage_finished)
         self.network_manager = getattr(qApp, "_network")
         # 品种下拉信号
         self.variety_top.currentTextChanged.connect(self.top_variety_changed)
@@ -121,6 +146,9 @@ class DurationArbitrage(DurationArbitrageUi):
         self.three_month_button.clicked.connect(self.day_count_selected)
         self.six_month_button.clicked.connect(self.day_count_selected)
         self.one_year_button.clicked.connect(self.day_count_selected)
+
+    def loadpage_finished(self):
+        self.page_load_finished = True
 
     def day_count_selected(self):
         button = self.sender()
@@ -185,7 +213,8 @@ class DurationArbitrage(DurationArbitrageUi):
             if self.contract_bottom.count() >= 1:
                 self.contract_bottom.setCurrentIndex(1)
         reply.deleteLater()
-        self.get_arbitrage_contract_data()
+        if self.page_load_finished:
+            self.get_arbitrage_contract_data()
 
     def bottom_variety_changed(self):
         """ 请求品种合约 """
@@ -206,6 +235,10 @@ class DurationArbitrage(DurationArbitrageUi):
 
     def get_arbitrage_contract_data(self):
         """ 获取两个品种的数据 """
+        if not self.page_load_finished:
+            p = InformationPopup('资源加载出错!', self)
+            p.exec_()
+            return
         self.start_calculate_button.setEnabled(False)
         url = SERVER_API + "arbitrage/variety/"
         body_data = {
@@ -227,9 +260,33 @@ class DurationArbitrage(DurationArbitrageUi):
         else:
             data = json.loads(reply.readAll().data().decode("utf8"))
             # 将数据传入界面出图
-            self.contact_channel.chartSource.emit(json.dumps(data["data"]), json.dumps(data["base_option"]), 'line')
+            self.web_container.set_chart_option(json.dumps(data["data"]), json.dumps(data["base_option"]), 'line')
+            # 将数据在表格中显示
+            headers = {
+                'date': '日期',
+                'closePrice1': '{}{}'.format(self.variety_top.currentText(), self.contract_top.currentText()),
+                'closePrice2': '{}{}'.format(self.variety_top.currentText(), self.contract_bottom.currentText()),
+            }
+            self.view_table_show(data['data'], headers=headers)
 
+    def view_table_show(self, values, headers):
+        """ 在表格中显示数据 """
+        # 将headers转为二维数组得到表头和表值的key
+        header_keys = [key for key in headers.keys()]
+        self.view_table.clear()
+        self.view_table.setColumnCount(len(header_keys))
+        self.view_table.setRowCount(len(values))
+        self.view_table.setHorizontalHeaderLabels([headers[key] for key in header_keys])
+        self.view_table.horizontalHeader().setDefaultAlignment(Qt.AlignCenter)
+        self.view_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.view_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
 
+        for row, row_item in enumerate(values):
+            for col, col_key in enumerate(header_keys):
+                item = QTableWidgetItem(str(row_item[col_key]))
+                item.setTextAlignment(Qt.AlignCenter)
+                self.view_table.setItem(row, col, item)
+            self.view_table.setRowHeight(row, 20)
 
 
 

@@ -6,7 +6,7 @@
     <script src="js/jquery-1.7.2.min.js"></script>
     <script src="js/echarts.min.js"></script>
     <script src="js/qwebchannel.js"></script>
-    <script src="js/theme/chalk.js"></script>
+    <script src="js/public.js"></script>
 </head>
 <style>
 html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
@@ -20,7 +20,7 @@ html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
 function generateChartOption(sourceData, baseOption){
     let chartTitle = baseOption["title"];
     return {
-        color: ["#0000ff","#ff0000", "#61a0a8"],
+        color: COLORS,
         grid: {
             bottom: 10,
             containLabel: true
@@ -157,7 +157,7 @@ $(function () {
             });
             // 传入重置大小
             pageContact.chartResize.connect(function (cWidth, cHeight) {
-                chartObj.resize({width: cWidth, height: cHeight});
+                chartObj.resize({width: cWidth * 0.8, height: cHeight});
             });
             // 清除图形
             // pageContact.clearChart.connect(function () {

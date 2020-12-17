@@ -14,7 +14,7 @@ from .path_edit import ImagePathLineEdit, FilePathLineEdit
 from .process_bar import CircleProgressBar
 
 from .button import OperateButton
-from .widget import OptionWidget
+from .widget import OptionWidget, ChartViewWidget
 from .loading import LoadingCover
 from .tree_widget import TreeWidget
 from .grid_widget import GridWidget

@@ -12,5 +12,7 @@ class ChartOptionChannel(QObject):
 
 # 跨品种套利计算管道
 class ArbitrageChannel(QObject):
-    # 参数1:源数据;参数2:基本信息;参数3:图表类型
+    # 参数1:源数据;参数2:基本信息;参数3:图表类型  (必须含这3个参数)
     chartSource = pyqtSignal(str, str, str)
+    # 调整图形大小
+    chartResize = pyqtSignal(int, int)  # (仅含这两个参数)

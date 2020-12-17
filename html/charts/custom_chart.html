@@ -6,6 +6,7 @@
     <script src="js/jquery-1.7.2.min.js"></script>
     <script src="js/echarts.min.js"></script>
     <script src="js/qwebchannel.js"></script>
+    <script src="js/public.js"></script>
 </head>
 <style>
 html,body{margin: 0;padding: 0}
@@ -79,6 +80,7 @@ function generateOption(baseOption, sourceData, sheetHeaders){
     let chartTitle = baseOption["title"];
     let seriesLegend = getSeriesLegend(baseOption.series_data, sourceData, sheetHeaders);
     return {
+        color: COLORS,
         grid: {
             top: chartTitle["font_size"] + 15,
             left: 5,
@@ -153,6 +155,7 @@ function generateSeasonOption(baseOption, sourceData, sheetHeaders){
     let chartTitle = baseOption["title"];
     let seriesLegend = getSeasonSeriesLegend(baseOption.series_data, sourceData);
     return {
+        color: COLORS,
         grid: {
             top: chartTitle["font_size"] + 15,
             left: 5,
