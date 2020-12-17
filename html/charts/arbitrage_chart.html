@@ -6,10 +6,11 @@
     <script src="js/jquery-1.7.2.min.js"></script>
     <script src="js/echarts.min.js"></script>
     <script src="js/qwebchannel.js"></script>
+    <script src="js/public.js"></script>
 </head>
 <style>
-html,body{margin:10px 0 0 22px;padding:0}
-#chartBox{width:720px;height:378px;background-color:rgb(252,252,252)}
+html,body{margin:0;padding:0;}
+#chartBox{width:80%;height:100%;background-color:rgb(252,252,252);margin: 0 auto}
 </style>
 <body>
     <div id="chartBox"></div>
@@ -77,9 +78,8 @@ function generateGraphic(watermark){
 // 实例化echarts option的函数
 function generateChartOption(sourceData, baseOption){
     let chartTitle = baseOption["title"];
-    // let seriesLegend = getSeriesLegend(sourceData);
-    let colors = ["#c23531","#2f4554", "#61a0a8"];
     return {
+        color: COLORS,
         grid: {
             top: 60,
             bottom: 10,
@@ -97,45 +97,23 @@ function generateChartOption(sourceData, baseOption){
             axisLabel: {
                 rotate: 90,
                 fontSize: 11
+            },
+            axisTick: {
+                length: 2
             }
         },
         yAxis: [
-            // {
-            //     type: "value",
-            //     name: "收盘价",
-            //     position:'left',
-            //     axisLine: {
-            //         lineStyle: {
-            //             color: colors[0]
-            //         },
-            //     },
-            //     // min: baseOption["axis1"][0],
-            //     // max: baseOption["axis1"][1],
-            //     // interval: (baseOption["axis1"][1] - baseOption["axis1"][0]) / baseOption["axis1"][2]
-            // },
-            // {
-            //     type: "value",
-            //     name: baseOption["name2"],
-            //     position:'right',
-            //     axisLine: {
-            //         lineStyle: {
-            //             color: colors[1]
-            //         }
-            //     },
-            //     min: baseOption["axis2"][0],
-            //     max: baseOption["axis2"][1],
-            //     interval: (baseOption["axis2"][1] - baseOption["axis2"][0]) / baseOption["axis2"][2]
-            // },
             {
                 type: "value",
                 name: "价差",
                 position:'left',
                 // offset: 80,
                 axisLine: {
-                    lineStyle: {
-                        color: colors[0]
-                    }
+                    show: false
                 },
+                axisTick:{
+                    show: false
+                }
                 // min: baseOption["axis3"][0],
                 // max: baseOption["axis3"][1],
                 // interval: (baseOption["axis3"][1] - baseOption["axis3"][0]) / baseOption["axis3"][2]
@@ -148,47 +126,30 @@ function generateChartOption(sourceData, baseOption){
             }
         },
         series: [
-        //     {
-        //     type: "line",
-        //     name: baseOption["name1"],
-        //     yAxisIndex: 0,
-        //     connectNulls: true,
-        //     symbol:'none',
-        //     lineStyle:{
-        //         width: 3
-        //     },
-        //     data: sourceData.map(item=>{return parseFloat(item.closePrice1)})
-        // }, {
-        //     type: "line",
-        //     name: baseOption["name2"],
-        //     yAxisIndex: 0,
-        //     connectNulls: true,
-        //     symbol:'none',
-        //     lineStyle:{
-        //         width: 3
-        //     },
-        //     data: sourceData.map(item=>{return parseFloat(item.closePrice2)})
-        // },
-        {
-            type: "line",
-            name: "价差",
-            yAxisIndex: 0,
-            connectNulls: true,
-            lineStyle:{
-                width: 3
+            {
+                type: "line",
+                name: "价差",
+                yAxisIndex: 0,
+                connectNulls: true,
+                lineStyle:{
+                    width: 3
+                },
+                symbol:'none',
+                data: sourceData.map(item=>{return Math.round(parseFloat(item.closePrice1 - item.closePrice2), 2)})
             },
-            symbol:'none',
-            data: sourceData.map(item=>{return Math.round(parseFloat(item.closePrice1 - item.closePrice2), 2)})
-        },
-
         ],
         legend:{
             type:'plain',
+            right:0,
+            top: 30,
+            icon:'rect',
+            itemHeight: 3,
+            itemWidth: 30,
+            orient: 'vertical',
             data:[
                 {name: '价差'},
             ]
         },
-        // graphic: generateGraphic(baseOption.watermark)
     };
 }
 
@@ -209,7 +170,6 @@ function getSeasonSeries(sourceData) {
         })
     })
     return [series, legendData]
-
 }
 
 // 季节图形的Option
@@ -217,12 +177,10 @@ function getSeasonChartOption(sourceData, baseOption){
     let chartTitle = baseOption["title"];
     let xAxis = baseOption['x_axis'];
     let seriesLegend = getSeasonSeries(sourceData)
-    let gridBottom = Math.ceil(seriesLegend[1].length / 4) * 25
+    let gridBottom = Math.ceil(seriesLegend[1].length / 5) * 20
     // 根据图例的个数计算出grid的bottom距离
     return {
-        color:['#5d9db5','#ed7d31','#a5a5a5','#ffc000',
-            '#4472c4','#70ad47','#255e91','#9e480e',
-            '#636363', '#997300'],
+        color:COLORS,
         grid: {
             containLabel: true,
             left:'5%',
@@ -237,14 +195,23 @@ function getSeasonChartOption(sourceData, baseOption){
             type: 'category',
             data: xAxis,
             axisLabel: {
-                rotate: 90,
+                rotate: 45,
                 fontSize: 11
+            },
+            axisTick: {
+                length: 2
             }
         },
         yAxis: {
             type: 'value',
             name: '价差',
             scale:true,
+            axisLine: {
+                show: false
+            },
+            axisTick:{
+                show: false
+            }
         },
         tooltip:{
             trigger: 'axis',
@@ -259,8 +226,8 @@ function getSeasonChartOption(sourceData, baseOption){
             data:seriesLegend[1],
             icon:'rect',
             top:'bottom',
-            left:'10%',
-            right:'10%',
+            left:'5%',
+            right:'5%',
             itemHeight: 3,
             itemWidth: 30,
         }
@@ -282,6 +249,10 @@ $(function () {
                     option = getSeasonChartOption(JSON.parse(sourceData), JSON.parse(baseOption))
                 }
                 chartObj.setOption(option, true)
+            });
+            // 传入重置大小
+            pageContact.chartResize.connect(function (cWidth, cHeight) {
+                chartObj.resize({width: cWidth * 0.8, height: cHeight});
             });
         }
     );

@@ -4,20 +4,22 @@
 # @Author: zizle
 """ 跨品种套利 """
 import json
+
 from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QComboBox, QPushButton,
-                             QSpinBox)
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtCore import Qt, QMargins, QUrl, QEventLoop
+                             QSpinBox, QSplitter, QTableWidget, QTableWidgetItem, QHeaderView)
+from PyQt5.QtCore import Qt, QMargins, QUrl
 from PyQt5.QtNetwork import QNetworkRequest
 from channels.chart import ArbitrageChannel
-from widgets import OptionWidget
+from widgets import OptionWidget, ChartViewWidget
 from utils.date_handler import generate_date_with_limit
 from utils.client import get_previous_variety, set_previous_variety
+from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE, BLUE_STYLE_HORIZONTAL_STYLE
 from settings import SERVER_API
 
 
 class VarietyArbitrageUi(QWidget):
+    TITLE_WIDGET_HEIGHT = 120
+
     def __init__(self, *args, **kwargs):
         super(VarietyArbitrageUi, self).__init__(*args, **kwargs)
         main_layout = QVBoxLayout()
@@ -103,22 +105,37 @@ class VarietyArbitrageUi(QWidget):
         option_layout.addWidget(self.year_arbitrage_button, 3, 4)
 
         option_widget.setLayout(option_layout)
-        option_widget.setFixedHeight(120)
+        option_widget.setFixedHeight(self.TITLE_WIDGET_HEIGHT)
 
         main_layout.addWidget(option_widget)
 
-        self.web_container = QWebEngineView(self)
-        self.web_container.load(QUrl("file:///html/charts/arbitrage_chart.html"))  # 加载页面
-        # self.web_container.setContentsMargins(QMargins(5, 5, 0, 5))
-        # 设置与页面信息交互的通道
-        channel_qt_obj = QWebChannel(self.web_container.page())  # 实例化qt信道对象,必须传入页面参数
+        # 图形与数据显示拖动区
+        splitter = QSplitter(self)
+        splitter.setOrientation(Qt.Vertical)
+        splitter.setHandleWidth(1)
+
         self.contact_channel = ArbitrageChannel()  # 页面信息交互通道
-        self.web_container.page().setWebChannel(channel_qt_obj)
-        channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道，只能注册一个
-        event_loop = QEventLoop(self)  # 加载也页面同步
-        self.web_container.loadFinished.connect(event_loop.quit)
-        event_loop.exec_()
-        main_layout.addWidget(self.web_container)
+        self.web_container = ChartViewWidget(data_channel=self.contact_channel,
+                                             filepath='file:/html/charts/arbitrage_chart.html')
+        self.web_container.setParent(self)
+        splitter.addWidget(self.web_container)
+
+        # 数据显示表
+        self.view_table = QTableWidget(self)
+        self.view_table.verticalHeader().hide()
+        self.view_table.horizontalHeader().setMinimumSectionSize(90)
+        self.view_table.setMaximumWidth(self.parent().width() * 0.8)
+        self.view_table.verticalHeader().setDefaultSectionSize(20)
+        self.view_table.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
+        self.view_table.horizontalHeader().setStyleSheet(BLUE_STYLE_HORIZONTAL_STYLE)
+        self.view_table.setAlternatingRowColors(True)
+
+        splitter.addWidget(self.view_table)
+        splitter.setSizes([(self.parent().height() - self.TITLE_WIDGET_HEIGHT) * 0.6,
+                           (self.parent().height() - self.TITLE_WIDGET_HEIGHT) * 0.4])
+        splitter.setContentsMargins(QMargins(5, 10, 5, 10))
+        main_layout.addWidget(splitter)
+
         self.setLayout(main_layout)
 
         page_title.setObjectName("pageTitle")
@@ -150,6 +167,12 @@ class VarietyArbitrageUi(QWidget):
             "background-color:rgb(191,211,249)}"
         )
         self.three_month_button.setStyleSheet("background-color:rgb(191,211,249);color:rgb(78,110,242)")
+        self.view_table.setObjectName('viewTable')
+        self.view_table.setStyleSheet(
+            "#viewTable{selection-color:rgb(80,100,200);selection-background-color:rgb(220,220,220);"
+            "alternate-background-color:rgb(242,242,242);gridline-color:rgb(60,60,60)}"
+        )
+
 
 class VarietyArbitrage(VarietyArbitrageUi):
     def __init__(self, *args, **kwargs):
@@ -157,6 +180,7 @@ class VarietyArbitrage(VarietyArbitrageUi):
         self.has_top_contract = False  # 合约获取完毕标志
         self.has_bottom_contract = False  # 当两个合约都获取完毕才请求数据
         self.previous_variety_filename = 'VARIETYARBITRAGE'
+
         # 读取用户最近使用的品种
         self.read_previous_variety()
 
@@ -166,11 +190,11 @@ class VarietyArbitrage(VarietyArbitrageUi):
         self.variety_top.currentTextChanged.connect(self.top_variety_changed)
         # 获取所有品种
         self.get_all_variety()
+
         # 品种下拉信号
         self.variety_bottom.currentTextChanged.connect(self.bottom_variety_changed)
         # 开始计算的信号
         self.start_calculate_button.clicked.connect(self.get_arbitrage_contract_data)
-
         # 数据范围选择
         self.three_month_button.clicked.connect(self.day_count_selected)
         self.six_month_button.clicked.connect(self.day_count_selected)
@@ -204,23 +228,23 @@ class VarietyArbitrage(VarietyArbitrageUi):
         previous_en3, previous_name3 = values['bottom'][0].get('variety_en'), values['bottom'][0].get('variety_name')
         previous_en4, previous_name4 = values['bottom'][1].get('variety_en'), values['bottom'][1].get('variety_name')
         if previous_en1 and previous_name1:
-            self.previous_variety1.setText(previous_name1)
-            setattr(self.previous_variety1, 'variety_en', previous_en1)
+            self.show_previous_variety(self.previous_variety1, previous_en1, previous_name1)
             self.previous_label1.show()
-            self.previous_variety1.show()
             if previous_en2 and previous_name2:
-                self.previous_variety2.setText(previous_name2)
-                setattr(self.previous_variety2, 'variety_en', previous_en2)
-                self.previous_variety2.show()
+                self.show_previous_variety(self.previous_variety2, previous_en2, previous_name2)
         if previous_en3 and previous_name3:
-            self.previous_variety3.setText(previous_name3)
-            setattr(self.previous_variety3, 'variety_en', previous_en3)
             self.previous_label2.show()
-            self.previous_variety3.show()
+            self.previous_variety3.setText(previous_name3)
+            self.show_previous_variety(self.previous_variety3, previous_en3, previous_name3)
             if previous_en4 and previous_name4:
-                self.previous_variety4.setText(previous_name4)
-                setattr(self.previous_variety4, 'variety_en', previous_en4)
-                self.previous_variety4.show()
+                self.show_previous_variety(self.previous_variety4, previous_en4, previous_name4)
+
+    @staticmethod
+    def show_previous_variety(button, variety_en, variety_name):
+        """ 显示 """
+        button.setText(variety_name)
+        setattr(button, 'variety_en', variety_en)
+        button.show()
 
     def save_previous_variety(self):
         """ 保存最近使用品种 """
@@ -314,9 +338,6 @@ class VarietyArbitrage(VarietyArbitrageUi):
                 self.contract_bottom.setCurrentIndex(1)
             self.has_bottom_contract = True
         reply.deleteLater()
-        # if self.has_top_contract and self.has_bottom_contract:
-        #     # 初始化数据
-        #     self.get_arbitrage_contract_data()
 
     def get_arbitrage_contract_data(self):
         """ 获取两个品种的数据 """
@@ -343,7 +364,15 @@ class VarietyArbitrage(VarietyArbitrageUi):
         else:
             data = json.loads(reply.readAll().data().decode("utf8"))
             # 将数据传入界面出图(参数1:数据源,参数2:基本信息;参数3:图形类型)
-            self.contact_channel.chartSource.emit(json.dumps(data["data"]), json.dumps(data["base_option"]), 'line')
+            self.web_container.set_chart_option(json.dumps(data["data"]), json.dumps(data["base_option"]), 'line')
+            # 将数据在表格中显示
+            headers = {
+                'date': '日期',
+                'closePrice1': '{}{}'.format(self.variety_top.currentText(), self.contract_top.currentText()),
+                'closePrice2': '{}{}'.format(self.variety_bottom.currentText(), self.contract_bottom.currentText()),
+            }
+            self.view_table_show(data['data'], headers=headers)
+
         self.read_previous_variety()
 
     def get_season_arbitrage_data(self):
@@ -376,25 +405,44 @@ class VarietyArbitrage(VarietyArbitrageUi):
 
     def show_arbitrage_charts(self, source_data, date_limit):
         """ 显示季节性图形 """
-        try:
-            variety1 = self.variety_top.currentText()
-            variety2 = self.variety_bottom.currentText()
-            if variety1 == variety2:
-                title = '{}历史价差走势'.format(variety1)
-            else:
-                title = '{}与{}历史价差走势'.format(variety1, variety2)
-            base_option = {
-                'title': title,
-                'x_axis': generate_date_with_limit(date_limit[0], date_limit[1])
-            }
+        variety1 = self.variety_top.currentText()
+        variety2 = self.variety_bottom.currentText()
+        if variety1 == variety2:
+            title = '{}历史价差走势'.format(variety1)
+        else:
+            title = '{}与{}历史价差走势'.format(variety1, variety2)
+        base_option = {
+            'title': title,
+            'x_axis': generate_date_with_limit(date_limit[0], date_limit[1])
+        }
+        # 将数据传入界面出图(参数1:数据源,参数2:基本信息;参数3:图形类型)
+        self.web_container.set_chart_option(json.dumps(source_data), json.dumps(base_option), 'season')
+        self.clear_view_table()
 
-            # 将数据传入界面出图(参数1:数据源,参数2:基本信息;参数3:图形类型)
-            self.contact_channel.chartSource.emit(json.dumps(source_data), json.dumps(base_option), 'season')
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
+    def clear_view_table(self):
+        """ 清除表格数据 """
+        self.view_table.clear()
+        self.view_table.setRowCount(0)
+        self.view_table.setColumnCount(0)
 
+    def view_table_show(self, values, headers):
+        """ 在表格中显示数据 """
+        # 将headers转为二维数组得到表头和表值的key
+        header_keys = [key for key in headers.keys()]
+        self.view_table.clear()
+        self.view_table.setColumnCount(len(header_keys))
+        self.view_table.setRowCount(len(values))
+        self.view_table.setHorizontalHeaderLabels([headers[key] for key in header_keys])
+        self.view_table.horizontalHeader().setDefaultAlignment(Qt.AlignCenter)
+        self.view_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.view_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
 
+        for row, row_item in enumerate(values):
+            for col, col_key in enumerate(header_keys):
+                item = QTableWidgetItem(str(row_item[col_key]))
+                item.setTextAlignment(Qt.AlignCenter)
+                self.view_table.setItem(row, col, item)
+            self.view_table.setRowHeight(row, 20)
 
 
 
