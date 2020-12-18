@@ -21,14 +21,13 @@ from .frameless_ui import FrameLessWindowUI
 from admin.operator.user_manager import UserManager
 from admin.operator.client_manager import ClientManage
 from admin.operator.variety import VarietyAdmin
-from admin.product.short_message import ShortMessageAdmin
 from admin.industry.user_data import UserDataMaintain
 from admin.industry.exchange_spider import ExchangeSpider
 from admin.industry.spot_price import SpotPriceAdmin
 from admin.operator.user_extension import UserExtensionPage
 from admin.receipt_parser import ReceiptParser
-from admin.homepage.report_file import ReportFileAdmin
 from admin.homepage.advertisement import HomepageAdAdmin
+from admin.product.message_service import MessageServiceAdmin
 from frames.homepage_extend import DailyReport, WeeklyReport, MonthlyReport, AnnualReport
 from frames.homepage import Homepage
 from frames.product.short_message import ShortMessage
@@ -422,33 +421,28 @@ class ClientMainApp(FrameLessWindowUI):
         elif module_id == "4":           # 计算平台
             page = CalculatePlat()
         elif module_id == "-9_0_0":      # 后台管理-广告设置
-            page = HomepageAdAdmin()
-        elif module_id == "-9_0_1":
-            page = ReportFileAdmin()     # 后台管理-常规报告
+            page = HomepageAdAdmin(self)
         elif module_id == "-9_1_0":
-            page = VarietyAdmin()        # 后台管理-品种管理
+            page = VarietyAdmin(self)        # 后台管理-品种管理
         elif module_id == "-9_1_1":      # 后台管理-用户管理
-            page = UserManager()
+            page = UserManager(self)
         elif module_id == "-9_1_2":
-            page = ClientManage()
+            page = ClientManage(self)
         elif module_id == "-9_1_3":      # 后台管理-研究员微信ID
-            page = UserExtensionPage()
+            page = UserExtensionPage(self)
         elif module_id == "-9_2_0":
-            page = ShortMessageAdmin()   # 短信通管理
+            page = MessageServiceAdmin(self)      # 后台管理资讯服务
         elif module_id == "-9_3_0":      # 后台管理-产业数据库
-            page = UserDataMaintain()
+            page = UserDataMaintain(self)
         elif module_id == "-9_3_1":
-            page = ExchangeSpider()
+            page = ExchangeSpider(self)
         elif module_id == "-9_3_2":
-            page = SpotPriceAdmin()     # 后台管理-现货价格数据提取
+            page = SpotPriceAdmin(self)     # 后台管理-现货价格数据提取
         elif module_id == "-9_4_0":
-            try:
-                from admin.delivery_b import DeliveryInfoAdmin
-                page = DeliveryInfoAdmin()  # 后台管理-交割服务-仓库管理
-            except Exception as e:
-                print(e)
+            from admin.delivery_b import DeliveryInfoAdmin
+            page = DeliveryInfoAdmin(self)  # 后台管理-交割服务-仓库管理
         elif module_id == '-9_4_1':
-            page = ReceiptParser()      # 后台管理-交割服务-仓单数据提取
+            page = ReceiptParser(self)      # 后台管理-交割服务-仓单数据提取
         else:
             page = QLabel(
                 "「" + module_text + "」暂未开放···\n更多资讯请访问【首页】查看.",

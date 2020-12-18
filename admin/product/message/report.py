@@ -1,26 +1,168 @@
 # _*_ coding:utf-8 _*_
-# @File  : report_file.py
-# @Time  : 2020-09-29 15:58
+# @File  : report.py
+# @Time  : 2020-12-18 15:32
 # @Author: zizle
-import os
+"""
+定期报告
+界面设计
+-------------------------
+tab切换上传|管理
+-------------------------
+显示操作窗口
+
+"""
 import json
-from PyQt5.QtWidgets import qApp, QTableWidgetItem, QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QDateEdit, QComboBox, QLabel, QLineEdit
+import os
+
 from PyQt5.QtNetwork import QNetworkRequest
-from PyQt5.QtCore import Qt, QUrl, QFile, QDate
-from popup.message import InformationPopup
+from PyQt5.QtWidgets import (QWidget, QTabWidget, QHBoxLayout, QVBoxLayout, QDateEdit, QLabel, QComboBox, QPushButton,
+                             QTableWidget, QHeaderView, QAbstractItemView, QLineEdit, QCompleter, qApp,
+                             QTableWidgetItem, QDialog)
+from PyQt5.QtCore import QDate, Qt, QUrl, QFile
+
+from settings import SERVER_API, STATIC_URL, logger
 from utils.client import get_user_token
 from utils.multipart import generate_multipart_data
-from settings import SERVER_API, logger, STATIC_URL
-from widgets.pdf_shower import PDFContentPopup
-from .report_file_ui import ReportFileAdminUI
+from popup.message import InformationPopup
+from widgets import PDFContentPopup
+from widgets.path_edit import FilePathLineEdit
 
 
-class ReportFileAdmin(ReportFileAdminUI):
+class ReportFileAdmin(QTabWidget):
     def __init__(self, *args, **kwargs):
         super(ReportFileAdmin, self).__init__(*args, **kwargs)
+
+        upload_widget = QWidget(self)
+
+        main_layout = QVBoxLayout()
+        local_file_layout = QHBoxLayout()
+
+        local_file_layout.addWidget(QLabel('本地文件:', self))
+        self.local_file_edit = FilePathLineEdit(self)
+        self.local_file_edit.setPlaceholderText("点击选择本地文件进行上传")
+        self.local_file_edit.setFixedWidth(400)
+        local_file_layout.addWidget(self.local_file_edit)
+        self.explain_label = QLabel("说明:[本地文件]或[网络文件]只能选择一种,相关信息共享。", self)
+        self.explain_label.setStyleSheet("color:rgb(66,233,66)")
+        local_file_layout.addWidget(self.explain_label)
+        local_file_layout.addStretch()
+        main_layout.addLayout(local_file_layout)
+
+        network_file_layout = QHBoxLayout()
+        network_file_layout.addWidget(QLabel('网络文件:', self))
+        self.filename = QLabel("从表格选择文件", self)
+        self.filename.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.filename.setAlignment(Qt.AlignLeft)
+        self.filename.setFixedWidth(400)
+        network_file_layout.addWidget(self.filename)
+        self.explain_label = QLabel("说明:[本地文件]或[网络文件]只能选择一种,相关信息共享。", self)
+        self.explain_label.setStyleSheet("color:rgb(66,233,66)")
+        network_file_layout.addWidget(self.explain_label)
+        network_file_layout.addStretch()
+        main_layout.addLayout(network_file_layout)
+
+        option_layout = QHBoxLayout()
+
+        option_layout.addWidget(QLabel("报告日期:", self))
+        self.date_edit = QDateEdit(self)
+        self.date_edit.setCalendarPopup(True)
+        self.date_edit.setDisplayFormat("yyyy-MM-dd")
+        self.date_edit.setDate(QDate.currentDate())
+        option_layout.addWidget(self.date_edit)
+
+        option_layout.addWidget(QLabel("报告类型:", self))
+        self.report_type = QComboBox(self)
+        option_layout.addWidget(self.report_type)
+
+        option_layout.addWidget(QLabel("备选品种:", self))
+        self.variety_combobox = QComboBox(self)
+        self.variety_combobox.setMinimumWidth(100)
+        self.variety_combobox.setEditable(True)
+        self.completer = QCompleter(self.variety_combobox.model(), self)
+        self.variety_combobox.setCompleter(self.completer)
+        option_layout.addWidget(self.variety_combobox)
+
+        option_layout.addWidget(QLabel("关联品种:", self))
+        self.relative_variety = QLabel("下拉框选择品种(多选)", self)
+        option_layout.addWidget(self.relative_variety)
+
+        self.clear_relative_button = QPushButton("清除", self)
+        option_layout.addWidget(self.clear_relative_button)
+        option_layout.addStretch()
+        main_layout.addLayout(option_layout)
+
+        rename_layout = QHBoxLayout()
+        self.rename_edit = QLineEdit(self)
+        self.rename_edit.setPlaceholderText("重命名文件(无需重命名请留空),无需填后缀.")
+        self.rename_edit.setFixedWidth(330)
+        rename_layout.addWidget(self.rename_edit)
+
+        self.confirm_button = QPushButton("确定添加", self)
+        rename_layout.addWidget(self.confirm_button)
+
+        rename_layout.addStretch()
+        main_layout.addLayout(rename_layout)
+
+        self.file_table = QTableWidget(self)
+        self.file_table.setColumnCount(7)
+        self.file_table.verticalHeader().hide()
+        self.file_table.setEditTriggers(QHeaderView.NoEditTriggers)
+        self.file_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.file_table.setHorizontalHeaderLabels(["序号", "文件名", "大小", "创建时间", "", "", ""])
+        self.file_table.horizontalHeader().setDefaultSectionSize(55)
+        self.file_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.file_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.file_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        main_layout.addWidget(self.file_table)
+
+        upload_widget.setLayout(main_layout)
+
+        self.addTab(upload_widget, "上传报告")
+
+        # 管理报告
+        manager_widget = QWidget(self)
+        manager_layout = QVBoxLayout()
+        manager_option_layout = QHBoxLayout()
+        self.manager_date = QDateEdit(self)
+        self.manager_date.setDate(QDate.currentDate())
+        self.manager_date.setDisplayFormat("yyyy-MM-dd")
+        self.manager_date.setCalendarPopup(True)
+        manager_option_layout.addWidget(self.manager_date)
+
+        manager_option_layout.addWidget(QLabel("报告类型:", self))
+        self.manager_report_type = QComboBox(self)
+        manager_option_layout.addWidget(self.manager_report_type)
+
+        manager_option_layout.addWidget(QLabel("相关品种:", self))
+        self.manager_variety_combobox = QComboBox(self)
+        manager_option_layout.addWidget(self.manager_variety_combobox)
+        manager_layout.addLayout(manager_option_layout)
+
+        self.manager_query_button = QPushButton("查询", self)
+        manager_option_layout.addWidget(self.manager_query_button)
+
+        manager_option_layout.addStretch()
+
+        self.manager_table = QTableWidget(self)
+        self.manager_table.setColumnCount(8)
+        self.manager_table.setHorizontalHeaderLabels(["日期", "关联品种", "报告类型", "报告名称", "", "是否公开", "", "相对路径"])
+        self.manager_table.horizontalHeader().setDefaultSectionSize(80)
+        self.manager_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.manager_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        manager_layout.addWidget(self.manager_table)
+
+        manager_widget.setLayout(manager_layout)
+
+        self.addTab(manager_widget, "管理报告")
+
+        self.no_selected_file()
+        self.no_relative_variety()
+
+        self.network_manager = getattr(qApp, "_network")
+
         self.modify_dialog = None
         self.selected_file_path = None  # 选择的文件
-        self.local_file_path = None     # 本地文件路径
+        self.local_file_path = None  # 本地文件路径
         self.selected_varieties = list()  # 选择的关联品种
         self.selected_varieties_zh = list()  # 关联品种的中文
         # 添加报告类型
@@ -53,6 +195,18 @@ class ReportFileAdmin(ReportFileAdminUI):
         self.manager_query_button.clicked.connect(self.query_reports)
         # 管理表格的点击事件
         self.manager_table.cellClicked.connect(self.clicked_manager_report)
+
+    def has_selected_file(self):
+        self.filename.setStyleSheet("color:rgb(66,66,233);font-size:13px")
+
+    def no_selected_file(self):
+        self.filename.setStyleSheet("color:rgb(233,66,66);font-size:13px")
+
+    def has_relative_variety(self):
+        self.relative_variety.setStyleSheet("color:rgb(66,66,233);font-size:13px")
+
+    def no_relative_variety(self):
+        self.relative_variety.setStyleSheet("color:rgb(233,66,66);font-size:13px")
 
     def selected_relative_variety(self):
         """ 选择关联的品种 """
@@ -89,12 +243,10 @@ class ReportFileAdmin(ReportFileAdminUI):
 
     def _get_user_variety(self):
         """ 获取用户有权限的品种 """
-        network_manager = getattr(qApp, "_network")
-        user_token = get_user_token()
         url = SERVER_API + "user/variety-authenticate/"
         request = QNetworkRequest(QUrl(url))
-        request.setRawHeader("Authorization".encode("utf-8"), user_token.encode("utf-8"))
-        reply = network_manager.get(request)
+        request.setRawHeader("Authorization".encode("utf-8"), get_user_token().encode("utf-8"))
+        reply = self.network_manager.get(request)
         reply.finished.connect(self.user_variety_reply)
 
     def user_variety_reply(self):
@@ -121,9 +273,8 @@ class ReportFileAdmin(ReportFileAdminUI):
 
     def _get_files_in_server(self):
         """ 获取服务端当前有的pdf文件 """
-        network_manager = getattr(qApp, "_network")
         url = SERVER_API + "wechat-files/"
-        reply = network_manager.get(QNetworkRequest(QUrl(url)))
+        reply = self.network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.wechat_files_reply)
 
     def wechat_files_reply(self):
@@ -228,6 +379,7 @@ class ReportFileAdmin(ReportFileAdminUI):
             reply.deleteLater()
             p = InformationPopup(message, self)
             p.exec_()
+
         # 文件信息
         file = QFile(self.local_file_path)
         file.open(QFile.ReadOnly)
@@ -238,13 +390,13 @@ class ReportFileAdmin(ReportFileAdminUI):
         url = SERVER_API + 'report-file/'
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader("Authorization".encode("utf-8"), get_user_token().encode("utf-8"))
-        network_manager = getattr(qApp, "_network")
-        reply = network_manager.post(request, multipart_data)
+        reply = self.network_manager.post(request, multipart_data)
         reply.finished.connect(create_report_reply)
         multipart_data.setParent(reply)
 
     def send_network_report(self, body_data):
         """ 使用网络文件创建 """
+
         def create_report_reply():
             if reply.error():
                 message = "创建报告失败!"
@@ -263,8 +415,7 @@ class ReportFileAdmin(ReportFileAdminUI):
         url = SERVER_API + "wechat-files/{}".format(self.selected_file_path)
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader("Authorization".encode("utf-8"), get_user_token().encode("utf-8"))
-        network_manager = getattr(qApp, "_network")
-        reply = network_manager.post(request, json.dumps(body_data).encode("utf-8"))
+        reply = self.network_manager.post(request, json.dumps(body_data).encode("utf-8"))
         reply.finished.connect(create_report_reply)
 
     def delete_wechat_file(self, current_row, relative_path):
@@ -293,7 +444,8 @@ class ReportFileAdmin(ReportFileAdminUI):
         report_type = self.manager_report_type.currentData()
         current_date = self.manager_date.text()
         # 进行查询
-        url = SERVER_API + "report-file/?query_date={}&report_type={}&variety_en={}".format(current_date, report_type, variety_en)
+        url = SERVER_API + "report-file/?query_date={}&report_type={}&variety_en={}".format(current_date, report_type,
+                                                                                            variety_en)
         network_manager = getattr(qApp, "_network")
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.query_report_reply)
@@ -349,7 +501,6 @@ class ReportFileAdmin(ReportFileAdminUI):
 
             self.manager_table.setItem(row, 7, QTableWidgetItem(str(row_item["filepath"])))
 
-
     def clicked_manager_report(self, row, col):
         """ 点击管理报告 """
         report_id = self.manager_table.item(row, 0).data(Qt.UserRole)
@@ -381,9 +532,11 @@ class ReportFileAdmin(ReportFileAdminUI):
 
     def modify_report_date(self, report_id, current_date):
         """ 修改报告时间 """
+
         def send_request():
             body = {"date": date_edit.text()}
             self.send_modify_request(report_id, body)
+
         # 弹窗
         self.modify_dialog = QDialog(self)
         self.modify_dialog.setWindowTitle("修改日期")
@@ -403,6 +556,7 @@ class ReportFileAdmin(ReportFileAdminUI):
     def modify_report_variety(self, report_id, current_variety):
         """ 修改报告关联品种 """
         variety_ens = current_variety.split(";")
+
         def select_variety():
             variety_ens.append(variety_combo.currentData())
             selected_varietys.setText(';'.join(variety_ens))
@@ -416,6 +570,7 @@ class ReportFileAdmin(ReportFileAdminUI):
                 return
             body = {"variety_en": selected_varietys.text()}
             self.send_modify_request(report_id, body)
+
         # 弹窗
         self.modify_dialog = QDialog(self)
         self.modify_dialog.setWindowTitle("修改品种")
@@ -444,6 +599,7 @@ class ReportFileAdmin(ReportFileAdminUI):
 
     def modify_report_type(self, report_id, report_type):
         """ 修改报告类型 """
+
         def send_request():
             body = {"report_type": type_combo.currentData()}
             self.send_modify_request(report_id, body)
@@ -466,6 +622,7 @@ class ReportFileAdmin(ReportFileAdminUI):
 
     def modify_report_filename(self, report_id, filename):
         """ 修改报告名称 """
+
         def send_request():
             new_filename = name_edit.text().strip()
             if not new_filename:
@@ -491,7 +648,6 @@ class ReportFileAdmin(ReportFileAdminUI):
         """ 修改报告是否公开 """
         body = {"is_active": 1}  # 只要非None即可
         self.send_modify_request(report_id, body)
-
 
     def send_modify_request(self, report_id, body_data):
         url = SERVER_API + "report-file/{}/".format(report_id)
