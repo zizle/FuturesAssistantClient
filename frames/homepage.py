@@ -68,20 +68,6 @@ class Homepage(HomepageUI):
         self.weekly_report_widget.content_table.cellClicked.connect(self.view_detail_weekly_report)
         # 周度报告评论点击更多
         self.weekly_report_widget.more_button.clicked.connect(self.view_more_weekly_report)
-        #
-        # # 获取月季报告
-        # self.get_latest_monthly_report()
-        # # 月季报告的内容表格点击事件
-        # self.monthly_report_widget.content_table.cellClicked.connect(self.view_detail_monthly_report)
-        # # 周度报告评论点击更多
-        # self.monthly_report_widget.more_button.clicked.connect(self.view_more_monthly_report)
-        #
-        # # 获取年度报告
-        # self.get_latest_annual_report()
-        # # 月季报告的内容表格点击事件
-        # self.annual_report_widget.content_table.cellClicked.connect(self.view_annual_monthly_report)
-        # # 周度报告评论点击更多
-        # self.annual_report_widget.more_button.clicked.connect(self.view_more_annual_report)
 
     def get_exchange_lib_variety(self):
         """ 获取以交易所分组的品种 """
@@ -127,9 +113,7 @@ class Homepage(HomepageUI):
 
     def left_children_menu_selected(self, menu_id, menu_text):
         """ 点击左侧的子菜单 """
-        print(menu_id, menu_text)
         # 处理菜单能在本页面完成的在本页面,如不能在本页面完成的,传出信号到主窗口去跳转
-
         self.SkipPage.emit(menu_id, menu_text)
 
     def horizontal_scroll_value_changed(self, value):

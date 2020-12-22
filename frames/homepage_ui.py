@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QP
                              QAbstractItemView, QGraphicsDropShadowEffect)
 from PyQt5.QtCore import Qt, QRect, QMargins, QSize, QUrl, QThread, pyqtSignal
 from PyQt5.QtGui import QPainter, QPixmap, QIcon, QImage, QBrush, QColor
-from PyQt5.QtNetwork import QNetworkRequest
+from PyQt5.QtNetwork import QNetworkRequest, QNetworkAccessManager
 from widgets.sliding_stacked import SlidingStackedWidget
 from settings import STATIC_URL, HOMEPAGE_TABLE_ROW_HEIGHT, HOMEPAGE_MENUS
 
@@ -108,7 +108,7 @@ class AdImageThread(QThread):
         self.image_url = image_url
 
     def run(self):
-        network_manager = getattr(qApp, "_network")
+        network_manager = QNetworkAccessManager()  # 当前是子线程,设置parent会引发警告,使用主线程的manager也会引发警告,重新实例化
         reply = network_manager.get(QNetworkRequest(QUrl(self.image_url)))
         reply.finished.connect(self.image_reply)
         self.exec_()
@@ -121,6 +121,7 @@ class AdImageThread(QThread):
             image = QImage.fromData(reply.readAll().data())
             self.get_back_image.emit(image)
         reply.deleteLater()
+        reply.manager().deleteLater()  # 当前是子线程,无法为manger设置parent,手动删除
         self.quit()
 
 
@@ -395,6 +396,7 @@ class HomepageUI(QWidget):
 
         # 左侧的菜单列表控件
         self.left_menu = QListWidget(self)
+        self.left_menu.setFocusPolicy(Qt.NoFocus)
         # 固定宽度
         self.left_menu.setFixedWidth(42)
         layout.addWidget(self.left_menu)
@@ -488,7 +490,7 @@ class HomepageUI(QWidget):
         self.left_menu.setObjectName("LeftMenuList")
         self.setStyleSheet(
             "#LeftMenuList{border:none;color:rgb(254,254,254);font-size:14px;"
-            "background-color:rgb(233,26,46);outline:none;}"
+            "background-color:rgb(233,26,46);}"
             "#LeftMenuList::item{padding:5px 0 5px 0px}"
-            "#LeftMenuList::item:selected{background-color:rgb(255,255,255);color:rgb(0,0,0);out-line:none}"
+            "#LeftMenuList::item:selected{background-color:rgb(255,255,255);color:rgb(0,0,0);}"
         )

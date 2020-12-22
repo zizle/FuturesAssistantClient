@@ -171,6 +171,8 @@ class ReportFileAdmin(QTabWidget):
             {"name": "周度报告", "type": "weekly"},
             {"name": "月季报告", "type": "monthly"},
             {"name": "年度报告", "type": "annual"},
+            {"name": "专题研究", "type": "special"},
+            {"name": "调研报告", "type": "research"},
         ]:
             self.report_type.addItem(type_item["name"], type_item["type"])
             self.manager_report_type.addItem(type_item["name"], type_item["type"])

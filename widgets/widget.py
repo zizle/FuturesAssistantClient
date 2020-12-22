@@ -5,11 +5,14 @@
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWidgets import QWidget, QGraphicsDropShadowEffect
-from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtCore import Qt, QUrl, pyqtSignal
 from PyQt5.QtGui import QColor
 
 
 class OptionWidget(QWidget):
+    enter_signal = pyqtSignal()
+    leave_signal = pyqtSignal()
+
     def __init__(self, *args, **kwargs):
         super(OptionWidget, self).__init__(*args, **kwargs)
         self.setAttribute(Qt.WA_StyledBackground, True)  # 必须设置,如果不设置将导致子控件产生阴影
@@ -22,14 +25,18 @@ class OptionWidget(QWidget):
         self.setStyleSheet("#optionWidget{background-color:rgb(245,245,245)}")
 
     def enterEvent(self, event):
+        super(OptionWidget, self).enterEvent(event)
         effect = self.graphicsEffect()
         effect.setOffset(1, 2)
         self.setGraphicsEffect(effect)
+        self.enter_signal.emit()
 
     def leaveEvent(self, event):
+        super(OptionWidget, self).leaveEvent(event)
         effect = self.graphicsEffect()
         effect.setOffset(0, 1)
         self.setGraphicsEffect(effect)
+        self.leave_signal.emit()
 
 
 class ChartViewWidget(QWebEngineView):

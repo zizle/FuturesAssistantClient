@@ -30,7 +30,7 @@ from admin.homepage.advertisement import HomepageAdAdmin
 from admin.product.message_service import MessageServiceAdmin
 from frames.homepage_extend import DailyReport, WeeklyReport, MonthlyReport, AnnualReport
 from frames.homepage import Homepage
-from frames.product.short_message import ShortMessage
+from frames.product.message_service import ShortMessage
 from frames.product import ProductPage
 from frames.calculate.calculate_plat import CalculatePlat
 from frames.industry.variety_data import VarietyData

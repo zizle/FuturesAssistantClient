@@ -12,11 +12,9 @@ from .message.report import ReportFileAdmin
 class MessageServiceAdmin(ProductServiceAdmin):
     MENUS = [
         {"id": 1, "name": "短信通"},
-        {"id": 2, "name": "定期报告"},
-        {"id": 3, "name": "专题研究"},
-        {"id": 4, "name": "调研报告"},
-        {"id": 5, "name": "市场路演"},
-        {"id": 6, "name": "技术解盘"},
+        {"id": 2, "name": "报告管理"},
+        {"id": 3, "name": "市场路演"},
+        {"id": 4, "name": "技术解盘"},
     ]
 
     def selected_menu(self, item):

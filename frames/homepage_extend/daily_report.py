@@ -2,12 +2,6 @@
 # @File  : daily_report.py
 # @Time  : 2020-10-15 09:37
 # @Author: zizle
-import json
-from PyQt5.QtWidgets import qApp, QTableWidgetItem, QHeaderView
-from PyQt5.QtNetwork import QNetworkRequest
-from PyQt5.QtCore import Qt, QUrl
-from widgets.pdf_shower import PDFContentPopup
-from settings import SERVER_API, STATIC_URL
 from .abstract_report import ReportAbstract
 
 

@@ -10,7 +10,7 @@ import sys
 import pickle
 from PyQt5.QtWidgets import qApp, QSplashScreen
 from PyQt5.QtGui import QPixmap, QFont, QImage
-from PyQt5.QtCore import Qt, QSize, QUrl, QSettings, QEventLoop
+from PyQt5.QtCore import Qt, QSize, QUrl, QSettings, QEventLoop, QVariant
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from utils.client import get_client_uuid
 from settings import ADMINISTRATOR, SERVER_API, STATIC_URL, BASE_DIR, logger
@@ -53,7 +53,9 @@ class WelcomePage(QSplashScreen):
         }
         network_manager = getattr(qApp, '_network')
         url = SERVER_API + "client/"
-        reply = network_manager.post(QNetworkRequest(QUrl(url)), json.dumps(client_info).encode('utf-8'))
+        r = QNetworkRequest(QUrl(url))
+        r.setHeader(QNetworkRequest.ContentTypeHeader, QVariant('application/json'))
+        reply = network_manager.post(r, json.dumps(client_info).encode('utf-8'))
         reply.finished.connect(self.add_client_reply)
         self.event_loop.exec_()
 
