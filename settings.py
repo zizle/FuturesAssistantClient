@@ -11,8 +11,8 @@ PLATE_FORM = "WIN7"
 ADMINISTRATOR = True
 WINDOW_TITLE = '分析决策系统(研究员)' if ADMINISTRATOR else '分析决策系统客户端'
 
-SERVER_API = "http://127.0.0.1:8000/api/"
-# SERVER_API = "http://210.13.218.130:9004/api/"
+# SERVER_API = "http://127.0.0.1:8000/api/"
+SERVER_API = "http://210.13.218.130:9004/api/"
 
 STATIC_URL = SERVER_API[:-4] + 'static/'
 
@@ -61,10 +61,12 @@ SYSTEM_MENUS = [
         ]},
         {"id": "-9_0", "name": "首页管理", "logo": "", "children": [
             {"id": "-9_0_0", "name": "广告设置", "logo": "", "children": None},
-            {"id": "-9_0_1", "name": "常规报告", "logo": "", "children": None},
         ]},
         {"id": "-9_2", "name": "产品服务", "logo": "", "children": [
-            {"id": "-9_2_0", "name": "短信通", "logo": "", "children": None},
+            {"id": "-9_2_0", "name": "资讯服务", "logo": "", "children": None},
+            {"id": "-9_2_1", "name": "顾问服务", "logo": "", "children": None},
+            {"id": "-9_2_2", "name": "策略服务", "logo": "", "children": None},
+            {"id": "-9_2_3", "name": "品种服务", "logo": "", "children": None},
         ]},
         {"id": "-9_4", "name": "交割服务", "logo": "", "children": [
             {"id": "-9_4_0", "name": "仓库信息管理", "logo": "", "children": None},
