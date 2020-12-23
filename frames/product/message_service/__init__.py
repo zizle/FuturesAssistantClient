@@ -6,4 +6,4 @@
 """ 资讯服务"""
 
 from .shortmsg import ShortMessage
-from .reports import RegularReport, ReportTable
+from .reports import RegularReport, ReportTable, SpecialReport, ResearchReport

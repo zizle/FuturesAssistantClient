@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>图形</title>
+    <script src="js/jquery-1.7.2.min.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/qwebchannel.js"></script>
+    <script src="js/public.js"></script>
+</head>
+<style>
+html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
+#chartBox{width: 80%; height:100%;background-color: rgb(252,252,252);margin: 0 auto}
+</style>
+<body>
+    <div id="chartBox"></div>
+</body>
+<script>
+// 实例化echarts option的函数
+function generateChartOption(sourceData, baseOption){
+    let chartTitle = baseOption["title"];
+    return {
+        title:{
+            left: 'center',
+            text: baseOption['title'],
+            subtext: baseOption['subtext'],
+            textStyle:{
+                color:'#222'
+            },
+            subtextStyle:{
+                color: '#333'
+            }
+        },
+        color: ['#993366', '#081388'],
+        grid:{
+            show: true,
+            backgroundColor: '#4bacc6'
+        },
+        xAxis:{
+            type: 'category',
+            data: sourceData.map(item=>item.variety_name),
+            axisLabel: {
+                rotate: 90,
+                fontSize: 11,
+                color: '#222',
+                interval: 0
+            },
+
+            axisTick:{
+                show: false,
+                lineStyle: {
+                    color: '#4e6ef2'
+                }
+            }
+        },
+        yAxis: [
+            {
+                type: "value",
+                scale: true,
+                name: "持仓涨跌(%)",
+                // nameLocation: 'top',
+                position:'left',
+                splitLine:{
+                    show: false
+                }
+            },
+            {
+                type: "value",
+                name: "指数涨跌(%)",
+                // nameLocation: 'top',
+                position:'right',
+                splitLine:{
+                    show: false
+                }
+            },
+        ],
+        tooltip:{
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross',
+            }
+        },
+        series: [
+            {
+                type: "bar",
+                name: "持仓涨跌(%)",
+                yAxisIndex: 0,
+                connectNulls: true,
+                barWidth:'50%',
+                itemStyle: {
+                    borderWidth:1,
+                    borderType: 'solid',
+                    borderColor: '#000'
+                },
+                data: sourceData.map(item=>{return Math.round(item.position_increase * 100, 2)})
+            },{
+                type: "line",
+                name: '指数涨跌(%)',
+                yAxisIndex: 1,
+                connectNulls: true,
+                symbolSize: 6,
+                lineStyle:{
+                    width: 1
+                },
+                data: sourceData.map(item=>{return Math.round(item.wp_increase * 100, 2)})
+            },
+        ]
+    }
+}
+// 主入口函数
+$(function () {
+    let chartObj = echarts.init(document.getElementById('chartBox'));
+    // 与UI界面通讯的实例
+    new QWebChannel(qt.webChannelTransport, function(channel)
+        {
+            let pageContact = channel.objects.pageContactChannel;
+            // 传入绘图数据
+            pageContact.chartSource.connect(function (sourceData, baseOption) {
+                let option = generateChartOption(JSON.parse(sourceData), JSON.parse(baseOption));
+                chartObj.clear();
+                chartObj.setOption(option, true)
+            });
+            // 传入重置大小
+            pageContact.chartResize.connect(function (cWidth, cHeight) {
+                chartObj.resize({width: cWidth * 0.8, height: cHeight});
+            });
+        }
+    );
+})
+</script>
+</html>

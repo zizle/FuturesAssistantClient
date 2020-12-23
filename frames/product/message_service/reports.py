@@ -98,7 +98,8 @@ class MultiReport(QWidget):
         layout.setSpacing(5)
         option_widget = OptionWidget(self)
         option_layout = QHBoxLayout()
-        option_layout.addWidget(QLabel('类型:', self))
+        self.type_label = QLabel('类型', self)
+        option_layout.addWidget(self.type_label)
 
         self.report_combobox = QComboBox(self)
         option_layout.addWidget(self.report_combobox)
@@ -146,9 +147,11 @@ class MultiReport(QWidget):
         # 页码变化
         self.paginator.clicked.connect(self.get_current_reports)
 
-        # 品种变化
-
         # 类型变化
+        self.report_combobox.currentTextChanged.connect(self.current_report_type_changed)
+
+        # 品种变化
+        self.variety_combobox.currentTextChanged.connect(self.current_variety_changed)
 
     def varieties_reply(self, data):
         """ 品种返回 """
@@ -157,7 +160,25 @@ class MultiReport(QWidget):
         for v_item in data['varieties']:
             self.variety_combobox.addItem(v_item['variety_name'], v_item['variety_en'])
 
-        # 初始化报告
+    def reset_paginator_pages(self):
+        """ 重置翻页器 """
+        self.paginator.setCurrentPage(1)
+        self.paginator.setTotalPages(1)
+
+    def current_variety_changed(self):
+        """ 品种变化 """
+        if self.report_combobox.currentData() is None:
+            return
+        self.reset_paginator_pages()
+        self.get_current_reports()
+
+    def current_report_type_changed(self):
+        """ 类型变化 """
+        print(self.variety_combobox.currentData())
+        if self.variety_combobox.currentData() is None:
+            return
+        self.REPORT_TYPE = self.report_combobox.currentData()
+        self.reset_paginator_pages()
         self.get_current_reports()
 
     def get_current_reports(self):
@@ -174,6 +195,7 @@ class MultiReport(QWidget):
 
 
 class RegularReport(MultiReport):
+    """ 定期报告 """
     def __init__(self, *args, **kwargs):
         super(RegularReport, self).__init__(*args, **kwargs)
         # 添加类型
@@ -185,8 +207,23 @@ class RegularReport(MultiReport):
 
         self.REPORT_TYPE = 'daily'
 
-        self.report_combobox.currentTextChanged.connect(self.report_type_changed)
 
-    def report_type_changed(self):
-        self.REPORT_TYPE = self.report_combobox.currentData()
+class SpecialReport(MultiReport):
+    """ 专题研究 """
+    REPORT_TYPE = 'special'
+
+    def __init__(self, *args, **kwargs):
+        super(SpecialReport, self).__init__(*args, **kwargs)
+        self.type_label.hide()
+        self.report_combobox.hide()
+
+
+class ResearchReport(MultiReport):
+    """ 调研报告 """
+    REPORT_TYPE = 'research'
+
+    def __init__(self, *args, **kwargs):
+        super(ResearchReport, self).__init__(*args, **kwargs)
+        self.type_label.hide()
+        self.report_combobox.hide()
 

@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QLabel, QWidget, QHBoxLayout, QSplitter, QMainWindow
 from PyQt5.QtCore import Qt, QMargins
 from PyQt5.QtGui import QFont, QIcon
 from widgets import TreeWidget
-from .message_service import ShortMessage, RegularReport
+from .message_service import ShortMessage, RegularReport, SpecialReport, ResearchReport
 
 
 class ProductPage(QWidget):
@@ -89,6 +89,10 @@ class ProductPage(QWidget):
             page = ShortMessage(self)
         elif menu_id == "1_2":
             page = RegularReport(self)
+        elif menu_id == "1_3":
+            page = SpecialReport(self)
+        elif menu_id == "1_4":
+            page = ResearchReport(self)
         else:
             page = QLabel("「" + menu_text + "」正在研发中···\n更多资讯请访问【首页】查看.")
             page.setStyleSheet('font-size:16px;font-weight:bold;color:rgb(230,50,50)')
