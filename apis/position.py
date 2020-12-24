@@ -20,10 +20,10 @@ class PositionAPI(QObject):
         if not self.network_manager:
             self.network_manager = QNetworkAccessManager(self)
 
-    def get_weekly_increase(self, query_date: str):
+    def get_weekly_increase(self, query_date: str, exclude_variety: str):
         """ 获取周度涨跌幅数据 """
         url = QUrl(SERVER_API + 'position-weight-price/')
-        url.setQuery("date={}".format(query_date))
+        url.setQuery("date={}&exclude={}".format(query_date, exclude_variety))
         reply = self.network_manager.get(QNetworkRequest(url))
         reply.finished.connect(self.weekly_increase_reply)
 

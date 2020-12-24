@@ -10,7 +10,7 @@
 </head>
 <style>
 html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
-#chartBox{width: 80%; height:100%;background-color: rgb(252,252,252);margin: 0 auto}
+#chartBox{width: 90%; height:100%;background-color: rgb(252,252,252);margin: 0 auto}
 </style>
 <body>
     <div id="chartBox"></div>
@@ -18,7 +18,6 @@ html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
 <script>
 // 实例化echarts option的函数
 function generateChartOption(sourceData, baseOption){
-    let chartTitle = baseOption["title"];
     return {
         title:{
             left: 'center',
@@ -34,7 +33,11 @@ function generateChartOption(sourceData, baseOption){
         color: ['#993366', '#081388'],
         grid:{
             show: true,
-            backgroundColor: '#4bacc6'
+            backgroundColor: '#4bacc6',
+            containLabel: true,
+            bottom: 5,
+            right: 30,
+            left: 30
         },
         xAxis:{
             type: 'category',
@@ -104,6 +107,28 @@ function generateChartOption(sourceData, baseOption){
                 },
                 data: sourceData.map(item=>{return Math.round(item.wp_increase * 100, 2)})
             },
+        ],
+        legend:[
+            {
+                type: 'plain',
+                left: 60,
+                bottom:70,
+                itemHeight: 10,
+                orient: 'vertical',
+                data: [
+                    {name: '持仓涨跌(%)', icon: 'rect'},
+                ],
+            },
+            {
+                type: 'plain',
+                itemHeight: 2,
+                left: 170,
+                bottom:70,
+                orient: 'vertical',
+                data: [
+                    {name: '指数涨跌(%)', icon: 'rect'},
+                ],
+            }
         ]
     }
 }
@@ -122,7 +147,7 @@ $(function () {
             });
             // 传入重置大小
             pageContact.chartResize.connect(function (cWidth, cHeight) {
-                chartObj.resize({width: cWidth * 0.8, height: cHeight});
+                chartObj.resize({width: cWidth * 0.9, height: cHeight});
             });
         }
     );

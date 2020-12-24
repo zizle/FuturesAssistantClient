@@ -23,9 +23,11 @@ from PyQt5.QtCore import QDate, Qt, QUrl, QFile
 from settings import SERVER_API, STATIC_URL, logger
 from utils.client import get_user_token
 from utils.multipart import generate_multipart_data
-from popup.message import InformationPopup
-from widgets import PDFContentPopup
+from utils.constant import REPORT_TYPE
+from popup.message import InformationPopup, WarningPopup
+from widgets import PDFContentPopup, OperateButton
 from widgets.path_edit import FilePathLineEdit
+from apis.product import ReportsAPI
 
 
 class ReportFileAdmin(QTabWidget):
@@ -144,11 +146,15 @@ class ReportFileAdmin(QTabWidget):
         manager_option_layout.addStretch()
 
         self.manager_table = QTableWidget(self)
-        self.manager_table.setColumnCount(8)
-        self.manager_table.setHorizontalHeaderLabels(["日期", "关联品种", "报告类型", "报告名称", "", "是否公开", "", "相对路径"])
+        self.manager_table.setColumnCount(10)
+        self.manager_table.setHorizontalHeaderLabels([
+            "创建时间", "更新时间", "报告日期", "创建者", "关联品种", "标题", "类型", "相对路径", "公开", "删除"])
         self.manager_table.horizontalHeader().setDefaultSectionSize(80)
-        self.manager_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.manager_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.manager_table.horizontalHeader().setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.manager_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.manager_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Interactive)
+        self.manager_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.Interactive)
+        self.manager_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.Interactive)
         manager_layout.addWidget(self.manager_table)
 
         manager_widget.setLayout(manager_layout)
@@ -166,16 +172,9 @@ class ReportFileAdmin(QTabWidget):
         self.selected_varieties = list()  # 选择的关联品种
         self.selected_varieties_zh = list()  # 关联品种的中文
         # 添加报告类型
-        for type_item in [
-            {"name": "每日报告", "type": "daily"},
-            {"name": "周度报告", "type": "weekly"},
-            {"name": "月季报告", "type": "monthly"},
-            {"name": "年度报告", "type": "annual"},
-            {"name": "专题研究", "type": "special"},
-            {"name": "调研报告", "type": "research"},
-        ]:
-            self.report_type.addItem(type_item["name"], type_item["type"])
-            self.manager_report_type.addItem(type_item["name"], type_item["type"])
+        for k, v in REPORT_TYPE.items():
+            self.report_type.addItem(v, k)
+            self.manager_report_type.addItem(v, k)
 
         self._get_user_variety()  # 获取有权限的品种
 
@@ -197,6 +196,12 @@ class ReportFileAdmin(QTabWidget):
         self.manager_query_button.clicked.connect(self.query_reports)
         # 管理表格的点击事件
         self.manager_table.cellClicked.connect(self.clicked_manager_report)
+
+        # Network API
+        self.report_api = ReportsAPI(self)
+        self.report_api.date_query_reports_response.connect(self.date_query_reports_reply)
+        self.report_api.modify_report_message_response.connect(self.modify_report_message_reply)
+        self.report_api.delete_report_response.connect(self.delete_report_file_reply)
 
     def has_selected_file(self):
         self.filename.setStyleSheet("color:rgb(66,66,233);font-size:13px")
@@ -272,6 +277,8 @@ class ReportFileAdmin(QTabWidget):
         for variety_item in varieties:
             self.variety_combobox.addItem(variety_item["variety_name"], variety_item["variety_en"])
             self.manager_variety_combobox.addItem(variety_item["variety_name"], variety_item["variety_en"])
+        # 加入其他选项(没有品种关联的文件为OTHERS)
+        self.variety_combobox.addItem('其他', 'OTHERS')
 
     def _get_files_in_server(self):
         """ 获取服务端当前有的pdf文件 """
@@ -443,124 +450,124 @@ class ReportFileAdmin(QTabWidget):
     def query_reports(self):
         """ 查询当前条件下的报告 """
         variety_en = self.manager_variety_combobox.currentData()
-        report_type = self.manager_report_type.currentData()
         current_date = self.manager_date.text()
         # 进行查询
-        url = SERVER_API + "report-file/?query_date={}&report_type={}&variety_en={}".format(current_date, report_type,
-                                                                                            variety_en)
-        network_manager = getattr(qApp, "_network")
-        reply = network_manager.get(QNetworkRequest(QUrl(url)))
-        reply.finished.connect(self.query_report_reply)
+        self.report_api.get_date_query_reports(query_date=current_date, variety_en=variety_en)
 
-    def query_report_reply(self):
-        """ 查询报告返回 """
-        reply = self.sender()
-        if reply.error():
-            report_list = list()
-        else:
-            data = json.loads(reply.readAll().data().decode("utf-8"))
-            report_list = data["reports"]
-        self.fill_manager_table(report_list)
-        reply.deleteLater()
-
-    def fill_manager_table(self, reports):
-        """ 填充管理报告的表格 """
+    def date_query_reports_reply(self, data):
+        """ 按日查询报告返回 """
+        reports = data['reports']
+        # 在管理表格中显示数据
         self.manager_table.clearContents()
         self.manager_table.setRowCount(len(reports))
+        col_keys = ['create_time', 'update_time', 'file_date', 'username', 'variety_en', 'title', 'type_text',
+                    'filepath', 'is_active']
         for row, row_item in enumerate(reports):
-            item0 = QTableWidgetItem(row_item["date"])
-            item0.setTextAlignment(Qt.AlignCenter)
-            item0.setData(Qt.UserRole, row_item["id"])
-            self.manager_table.setItem(row, 0, item0)
+            for col, col_key in enumerate(col_keys):
+                text = row_item[col_key]
+                if col_key == 'is_active':
+                    text = '是' if row_item['is_active'] else '否'
+                item = QTableWidgetItem(text)
+                if col == 0:
+                    item.setData(Qt.UserRole, row_item['id'])
+                self.manager_table.setItem(row, col, item)
+            # 加一个删除按钮
+            delete_button = OperateButton('media/icons/delete.png', 'media/icons/delete_hover.png', self.manager_table)
+            setattr(delete_button, 'row_index', row)
+            delete_button.clicked.connect(self.delete_current_report)
+            self.manager_table.setCellWidget(row, len(col_keys), delete_button)
 
-            item1 = QTableWidgetItem(row_item["variety_en"])
-            item1.setTextAlignment(Qt.AlignCenter)
-            self.manager_table.setItem(row, 1, item1)
+    def delete_current_report(self):
+        """ 删除报告 """
 
-            item2 = QTableWidgetItem(row_item["type_text"])
-            item2.setTextAlignment(Qt.AlignCenter)
-            self.manager_table.setItem(row, 2, item2)
+        def confirm_delete_report():
+            self.report_api.delete_report(report_id, get_user_token())
 
-            item3 = QTableWidgetItem(row_item["filename"])
-            item3.setTextAlignment(Qt.AlignCenter)
-            self.manager_table.setItem(row, 3, item3)
+        button = self.sender()
+        row = getattr(button, 'row_index', None)
+        if row is None:
+            return
+        report_id = self.manager_table.item(row, 0).data(Qt.UserRole)
+        print(report_id)
+        p = WarningPopup('确定删除当前文件吗?删除将不可恢复!', self)
+        p.confirm_operate.connect(confirm_delete_report)
+        p.exec_()
 
-            item4 = QTableWidgetItem("查看")
-            item4.setTextAlignment(Qt.AlignCenter)
-            item4.setData(Qt.UserRole, row_item["filepath"])
-            self.manager_table.setItem(row, 4, item4)
-
-            if row_item["is_active"]:
-                item5 = QTableWidgetItem("是")
-            else:
-                item5 = QTableWidgetItem("否")
-            item5.setTextAlignment(Qt.AlignCenter)
-            self.manager_table.setItem(row, 5, item5)
-
-            item6 = QTableWidgetItem("删除")
-            item6.setTextAlignment(Qt.AlignCenter)
-            self.manager_table.setItem(row, 6, item6)
-
-            self.manager_table.setItem(row, 7, QTableWidgetItem(str(row_item["filepath"])))
+    def get_current_message(self, row):
+        """ 获取row行报告的信息 """
+        report_type_dict = {v: k for k, v in REPORT_TYPE.items()}
+        report_type = report_type_dict.get(self.manager_table.item(row, 6).text(), None)
+        is_active = 1 if self.manager_table.item(row, 8).text() == '是' else 0
+        return {
+            'report_id': self.manager_table.item(row, 0).data(Qt.UserRole),
+            'file_date': self.manager_table.item(row, 2).text(),
+            'variety_en': self.manager_table.item(row, 4).text(),
+            'title': self.manager_table.item(row, 5).text(),
+            'file_type': report_type,
+            'is_active': is_active
+        }
 
     def clicked_manager_report(self, row, col):
         """ 点击管理报告 """
-        report_id = self.manager_table.item(row, 0).data(Qt.UserRole)
-        if col == 0:  # 修改日期
-            current_date = self.manager_table.item(row, 0).text()
-            self.modify_report_date(report_id, current_date)
-        elif col == 1:  # 修改关联品种
-            current_variety = self.manager_table.item(row, 1).text()
-            self.modify_report_variety(report_id, current_variety)
-        elif col == 2:  # 修改报告类型
-            current_type = self.manager_table.item(row, 2).text()
-            self.modify_report_type(report_id, current_type)
-        elif col == 3:
-            current_name = self.manager_table.item(row, 3).text()
-            current_name = os.path.splitext(current_name)[0]
-            self.modify_report_filename(report_id, current_name)
-        elif col == 5:  # 改变是否公开
-            self.modify_report_open(report_id)
-        elif col == 6:  # 删除报告
-            self.delete_report(row, report_id)
-        elif col == 4:  # 查看
-            filepath = self.manager_table.item(row, col).data(Qt.UserRole)
-            filename = self.manager_table.item(row, 3).text()
-            url = STATIC_URL + filepath
-            p = PDFContentPopup(title=filename, file=url)
-            p.exec_()
-        else:
-            pass
+        # 2 修改日期  4 关联品种  5 标题 6 类型 8 公开
+        if col in [2, 4, 5, 6, 8]:
+            report_item = self.get_current_message(row)
+            if col == 2:
+                self.modify_file_date(report_item)
+            elif col == 4:
+                self.modify_file_variety(report_item)
+            elif col == 5:
+                self.modify_file_title(report_item)
+            elif col == 6:
+                self.modify_file_type(report_item)
+            elif col == 8:
+                self.modify_file_is_active(report_item)
+            else:
+                pass
 
-    def modify_report_date(self, report_id, current_date):
-        """ 修改报告时间 """
+    def modify_report_message_reply(self, result):
+        p = InformationPopup('修改成功!' if result else '修改失败了!', self)
+        p.exec_()
+        # 刷新数据
+        self.query_reports()
+
+    def delete_report_file_reply(self, result):
+        p = InformationPopup('删除成功!' if result else '删除失败了!', self)
+        p.exec_()
+        # 刷新数据
+        self.query_reports()
+
+    def modify_file_date(self, report_message):
 
         def send_request():
-            body = {"date": date_edit.text()}
-            self.send_modify_request(report_id, body)
+            report_message['file_date'] = date_edit.text()
+            self.report_api.put_modify_report_message(report_message, get_user_token())
+            modify_dialog.close()
 
-        # 弹窗
-        self.modify_dialog = QDialog(self)
-        self.modify_dialog.setWindowTitle("修改日期")
+        modify_dialog = QDialog(self)
+        modify_dialog.setWindowTitle("修改日期")
         layout = QVBoxLayout()
         date_edit = QDateEdit(self.modify_dialog)
         date_edit.setDisplayFormat("yyyy-MM-dd")
         date_edit.setCalendarPopup(True)
+        current_date = report_message['file_date']
         date_edit.setDate(QDate(int(current_date[:4]), int(current_date[5:7]), int(current_date[-2:])))
         layout.addWidget(date_edit)
         button = QPushButton("确定", self.modify_dialog)
         button.clicked.connect(send_request)
         layout.addWidget(button, alignment=Qt.AlignRight)
-        self.modify_dialog.setLayout(layout)
-        self.modify_dialog.setFixedSize(250, 90)
-        self.modify_dialog.exec_()
+        modify_dialog.setLayout(layout)
+        modify_dialog.setFixedSize(250, 90)
+        modify_dialog.exec_()
 
-    def modify_report_variety(self, report_id, current_variety):
-        """ 修改报告关联品种 """
-        variety_ens = current_variety.split(";")
+    def modify_file_variety(self, report_message):
+        """ 修改关联品种 """
+        current_variety = report_message.get('variety_en', '')
+        variety_ens = current_variety.split(';')
 
         def select_variety():
-            variety_ens.append(variety_combo.currentData())
+            if variety_combo.currentData() not in variety_ens:
+                variety_ens.append(variety_combo.currentData())
             selected_varietys.setText(';'.join(variety_ens))
 
         def clear_varietys():
@@ -570,12 +577,13 @@ class ReportFileAdmin(QTabWidget):
         def send_request():
             if not selected_varietys.text():
                 return
-            body = {"variety_en": selected_varietys.text()}
-            self.send_modify_request(report_id, body)
+            report_message['variety_en'] = selected_varietys.text()
+            self.report_api.put_modify_report_message(report_message, get_user_token())
+            modify_dialog.close()
 
         # 弹窗
-        self.modify_dialog = QDialog(self)
-        self.modify_dialog.setWindowTitle("修改品种")
+        modify_dialog = QDialog(self)
+        modify_dialog.setWindowTitle("修改品种")
         layout = QVBoxLayout()
         variety_combo = QComboBox(self.modify_dialog)
         for i in range(self.variety_combobox.count()):
@@ -595,103 +603,62 @@ class ReportFileAdmin(QTabWidget):
 
         button.clicked.connect(send_request)
         layout.addWidget(button, alignment=Qt.AlignRight)
-        self.modify_dialog.setLayout(layout)
-        self.modify_dialog.setFixedSize(280, 130)
-        self.modify_dialog.exec_()
+        modify_dialog.setLayout(layout)
+        modify_dialog.setFixedSize(280, 130)
+        modify_dialog.exec_()
 
-    def modify_report_type(self, report_id, report_type):
-        """ 修改报告类型 """
-
-        def send_request():
-            body = {"report_type": type_combo.currentData()}
-            self.send_modify_request(report_id, body)
-
-        # 弹窗
-        self.modify_dialog = QDialog(self)
-        self.modify_dialog.setWindowTitle("修改类型")
-        layout = QVBoxLayout()
-        type_combo = QComboBox(self.modify_dialog)
-        for i in range(self.report_type.count()):
-            type_combo.addItem(self.report_type.itemText(i), self.report_type.itemData(i))
-        type_combo.setCurrentText(report_type)
-        layout.addWidget(type_combo)
-        button = QPushButton("确定", self.modify_dialog)
-        button.clicked.connect(send_request)
-        layout.addWidget(button, alignment=Qt.AlignRight)
-        self.modify_dialog.setLayout(layout)
-        self.modify_dialog.setFixedSize(250, 90)
-        self.modify_dialog.exec_()
-
-    def modify_report_filename(self, report_id, filename):
-        """ 修改报告名称 """
+    def modify_file_title(self, report_message):
+        """ 修改标题 """
+        current_name = report_message.get('title', '')
 
         def send_request():
             new_filename = name_edit.text().strip()
-            if not new_filename:
-                return
-            body = {"title": new_filename}
-            self.send_modify_request(report_id, body)
+            if new_filename:
+                report_message['title'] = new_filename
+                self.report_api.put_modify_report_message(report_message, get_user_token())
+                modify_dialog.close()
 
         # 弹窗
-        self.modify_dialog = QDialog(self)
-        self.modify_dialog.setWindowTitle("修改名称")
+        modify_dialog = QDialog(self)
+        modify_dialog.setWindowTitle("修改名称")
         layout = QVBoxLayout()
         name_edit = QLineEdit(self.modify_dialog)
-        name_edit.setText(filename)
+        name_edit.setText(current_name)
         layout.addWidget(name_edit)
         button = QPushButton("确定", self.modify_dialog)
         button.clicked.connect(send_request)
         layout.addWidget(button, alignment=Qt.AlignRight)
-        self.modify_dialog.setLayout(layout)
-        self.modify_dialog.setFixedSize(250, 90)
-        self.modify_dialog.exec_()
+        modify_dialog.setLayout(layout)
+        modify_dialog.setFixedSize(250, 90)
+        modify_dialog.exec_()
 
-    def modify_report_open(self, report_id):
-        """ 修改报告是否公开 """
-        body = {"is_active": 1}  # 只要非None即可
-        self.send_modify_request(report_id, body)
+    def modify_file_type(self, report_message):
+        """ 修改报告类型 """
+        current_type = report_message.get('file_type', 1)
 
-    def send_modify_request(self, report_id, body_data):
-        url = SERVER_API + "report-file/{}/".format(report_id)
-        request = QNetworkRequest(QUrl(url))
-        request.setRawHeader("Authorization".encode("utf-8"), get_user_token().encode("utf-8"))
-        network_manager = getattr(qApp, "_network")
-        reply = network_manager.put(request, json.dumps(body_data).encode("utf-8"))
-        reply.finished.connect(self.modify_report_info_reply)
+        def send_request():
+            report_message['file_type'] = type_combo.currentData()
+            self.report_api.put_modify_report_message(report_message, get_user_token())
+            modify_dialog.close()
 
-    def modify_report_info_reply(self):
-        """ 修改报告信息返回 """
-        reply = self.sender()
-        if reply.error():
-            message = "修改信息失败!"
-            p = InformationPopup(message, self)
-            p.exec_()
-        else:
-            p = InformationPopup("修改成功!", self)
-            p.exec_()
-            if isinstance(self.modify_dialog, QDialog):
-                self.modify_dialog.setAttribute(Qt.WA_DeleteOnClose)
-                self.modify_dialog.close()
-                self.modify_dialog = None
-            self.query_reports()
-        reply.deleteLater()
+        # 弹窗
+        modify_dialog = QDialog(self)
+        modify_dialog.setWindowTitle("修改类型")
+        layout = QVBoxLayout()
+        type_combo = QComboBox(self.modify_dialog)
+        for i in range(self.report_type.count()):
+            type_combo.addItem(self.report_type.itemText(i), self.report_type.itemData(i))
+        type_combo.setCurrentText(REPORT_TYPE.get(current_type))
+        layout.addWidget(type_combo)
+        button = QPushButton("确定", self.modify_dialog)
+        button.clicked.connect(send_request)
+        layout.addWidget(button, alignment=Qt.AlignRight)
+        modify_dialog.setLayout(layout)
+        modify_dialog.setFixedSize(250, 90)
+        modify_dialog.exec_()
 
-    def delete_report(self, current_row, report_id):
-        """ 删除一条报告 """
-
-        def delete_report_reply():
-            if reply.error():
-                p = InformationPopup("删除失败", self)
-            else:
-                p = InformationPopup("删除成功", self)
-                self.manager_table.removeRow(current_row)
-            p.exec_()
-            reply.deleteLater()
-
-        network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "report-file/{}/".format(report_id)
-        request = QNetworkRequest(QUrl(url))
-        request.setRawHeader("Authorization".encode("utf-8"), get_user_token().encode("utf-8"))
-        reply = network_manager.deleteResource(request)
-        reply.finished.connect(delete_report_reply)
+    def modify_file_is_active(self, report_message):
+        """ 修改是否公开 """
+        report_message['is_active'] = 0 if report_message['is_active'] else 1
+        self.report_api.put_modify_report_message(report_message, get_user_token())
 
