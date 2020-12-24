@@ -188,4 +188,9 @@ HORIZONTAL_HEADER_STYLE = "QHeaderView::section{background-color: qlineargradien
 BLUE_STYLE_HORIZONTAL_STYLE = "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1," \
             "stop:0 #66bbd5, stop: 0.48 #66bbd5,stop: 0.52 #66bbd5, stop:1 #66bbd5);" \
             "border:1px solid rgb(60,60,60);border-left:none;" \
-            "min-height:25px;min-width:40px;font-weight:bold;font-size:13px};"
+            "min-height:25px;min-width:40px;font-weight:bold};"
+
+HORIZONTAL_STYLE_NO_GRID = "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1," \
+            "stop:0 #66bbd5, stop: 0.48 #66bbd5,stop: 0.52 #66bbd5, stop:1 #66bbd5);" \
+            "border:1px solid rgb(60,60,60);border-left:none;border-right:none;" \
+            "min-height:25px;min-width:40px;font-weight:bold};"

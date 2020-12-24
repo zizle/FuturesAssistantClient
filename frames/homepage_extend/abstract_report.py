@@ -5,63 +5,14 @@
 
 """ 各种报告的UI """
 import json
-from PyQt5.QtWidgets import (qApp, QWidget, QVBoxLayout, QHBoxLayout, QDateEdit, QPushButton, QTableWidget, QLabel, QComboBox,
-                             QHeaderView, QFrame, QAbstractItemView, QTableWidgetItem)
-from PyQt5.QtCore import QDate, Qt, QTime, QRect, QUrl, QMargins
-from PyQt5.QtGui import QPixmap, QPainter, QPalette, QBrush, QColor
+from PyQt5.QtWidgets import (qApp, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QHeaderView, QTableWidgetItem)
+from PyQt5.QtCore import Qt, QRect, QUrl, QMargins
+from PyQt5.QtGui import QPixmap, QPainter
 from PyQt5.QtNetwork import QNetworkRequest
-from utils.constant import VERTICAL_SCROLL_STYLE, HORIZONTAL_SCROLL_STYLE, HORIZONTAL_HEADER_STYLE
 from widgets import Paginator, PDFContentPopup
 from settings import STATIC_URL, SERVER_API
 
-
-class ReportTable(QTableWidget):
-    def __init__(self, *args, **kwargs):
-        super(ReportTable, self).__init__(*args, **kwargs)
-        self.verticalHeader().hide()
-        self.setEditTriggers(QHeaderView.NoEditTriggers)
-        self.setFrameShape(QFrame.NoFrame)
-        self.setFocusPolicy(Qt.NoFocus)
-        self.setAlternatingRowColors(True)
-        # 不能选中
-        self.setSelectionMode(QAbstractItemView.NoSelection)
-        # 背景透明
-        table_palette = self.palette()
-        table_palette.setBrush(QPalette.Base, QBrush(QColor(255, 255, 255, 0)))
-        self.setPalette(table_palette)
-        self.setCursor(Qt.PointingHandCursor)
-        self.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
-        self.horizontalScrollBar().setStyleSheet(HORIZONTAL_SCROLL_STYLE)
-
-        # 设置鼠标进入整行颜色变化
-        self.setMouseTracking(True)
-        self.mouse_last_row = -1
-        self.last_row_background = None
-        self.itemEntered.connect(self.mouse_enter_item)
-
-        self.horizontalHeader().setStyleSheet(HORIZONTAL_HEADER_STYLE)
-
-    def mouse_enter_item(self, item):
-        current_row = self.row(item)
-        # 改变当前行的颜色
-        for col in range(self.columnCount()):
-            self.item(current_row, col).setForeground(QBrush(QColor(248, 121, 27)))
-            self.item(current_row, col).setBackground(QBrush(QColor(220, 220, 220)))
-        # 恢复离开行的颜色
-        self.recover_row_color()
-        self.mouse_last_row = current_row
-
-    def recover_row_color(self):
-        if self.mouse_last_row >= 0:
-            for col in range(self.columnCount()):
-                self.item(self.mouse_last_row, col).setForeground(QBrush(QColor(0, 0, 0)))
-                self.item(self.mouse_last_row, col).setBackground(QBrush(QColor(245, 245, 245, 0)))  # 透明
-
-    def leaveEvent(self, *args, **kwargs):
-        """ 鼠标离开事件 """
-        # 将最后记录行颜色变为原来的样子,且修改记录行为-1
-        self.recover_row_color()
-        self.mouse_last_row = -1
+from frames.product.message_service import ReportTable
 
 
 class ReportAbstract(QWidget):
@@ -111,8 +62,8 @@ class ReportAbstract(QWidget):
             "#pageName{color:rgb(233,66,66);font-style:italic;font-size:25px}"
         )
         self.get_all_variety()  # 获取所有品种
-        # 点击事件
-        self.report_table.cellClicked.connect(self.view_detail_report)
+        # # 点击事件
+        # self.report_table.cellClicked.connect(self.view_detail_report)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -163,28 +114,9 @@ class ReportAbstract(QWidget):
 
     def show_report_content(self, reports):
         """ 显示报告 """
-        self.report_table.clear()
+        self.report_table.setColumnCount(4)
+        self.report_table.setHorizontalHeaderLabels(['相关品种', '标题', '类型', '日期'])
         header_keys = ["variety_zh", "title", "type_text", "date"]
-        self.report_table.setColumnCount(len(header_keys))
-        self.report_table.setHorizontalHeaderLabels(["相关品种", "标题", "报告类型", "日期"])
-        self.report_table.setRowCount(len(reports))
-        self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        if len(reports) >= 20:
-            self.report_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        else:
-            self.report_table.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        for row, row_item in enumerate(reports):
-            for col, col_key in enumerate(header_keys):
-                item = QTableWidgetItem(str(row_item[col_key]))
-                if col == 0:
-                    item.setData(Qt.UserRole, row_item["filepath"])
-                item.setTextAlignment(Qt.AlignCenter)
-                self.report_table.setItem(row, col, item)
-
-    def view_detail_report(self, row, col):
-        """ 查看报告内容 """
-        item = self.report_table.item(row, 0)
-        title = self.report_table.item(row, 1).text()
-        file_url = STATIC_URL + item.data(Qt.UserRole)
-        p = PDFContentPopup(file=file_url, title=title, parent=self)
-        p.exec_()
+        self.report_table.horizontalHeader().setDefaultSectionSize(150)
+        self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.report_table.show_report_contents(reports, header_keys)

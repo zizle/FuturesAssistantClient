@@ -8,9 +8,7 @@ from PyQt5.QtWidgets import QLabel, QWidget, QHBoxLayout, QSplitter, QMainWindow
 from PyQt5.QtCore import Qt, QMargins
 from PyQt5.QtGui import QFont, QIcon
 from widgets import TreeWidget
-from .product_ui import ProductUI
-from .short_message import ShortMessage
-from .regular_report import RegularReport
+from .message_service import ShortMessage, RegularReport, SpecialReport, ResearchReport
 
 
 class ProductPage(QWidget):
@@ -91,22 +89,12 @@ class ProductPage(QWidget):
             page = ShortMessage(self)
         elif menu_id == "1_2":
             page = RegularReport(self)
+        elif menu_id == "1_3":
+            page = SpecialReport(self)
+        elif menu_id == "1_4":
+            page = ResearchReport(self)
         else:
-            page = QLabel("「" + menu_text + "」正在研发中···\n更多资讯请访问【首页】查看.",
-                          styleSheet='font-size:16px;font-weight:bold;color:rgb(230,50,50)',
-                          alignment=Qt.AlignCenter)
+            page = QLabel("「" + menu_text + "」正在研发中···\n更多资讯请访问【首页】查看.")
+            page.setStyleSheet('font-size:16px;font-weight:bold;color:rgb(230,50,50)')
+            page.setAlignment(Qt.AlignCenter)
         self.right_frame.setCentralWidget(page)
-    # def create_menu_tab(self, menu_id, parent_text, menu_name):
-    #     """ 进入功能页面 """
-    #     print(menu_id)
-    #     if menu_id == "1_1":
-    #         # 短信通页面
-    #         tab = ShortMessage()
-    #     elif menu_id == "1_2":
-    #         tab = RegularReport()
-    #     else:
-    #         tab = QLabel(
-    #             "「" + menu_name + "」正在研发中···\n更多资讯请访问【首页】查看.",
-    #             styleSheet='font-size:16px;font-weight:bold;color:rgb(230,50,50)',
-    #             alignment=Qt.AlignCenter)
-    #     self.frame_tab.setCentralWidget(tab)
