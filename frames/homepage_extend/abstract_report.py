@@ -116,7 +116,7 @@ class ReportAbstract(QWidget):
         """ 显示报告 """
         self.report_table.setColumnCount(4)
         self.report_table.setHorizontalHeaderLabels(['相关品种', '标题', '类型', '日期'])
-        header_keys = ["variety_zh", "title", "type_text", "date"]
+        header_keys = ["variety_zh", "title", "type_text", "file_date"]
         self.report_table.horizontalHeader().setDefaultSectionSize(150)
         self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.report_table.show_report_contents(reports, header_keys)

@@ -50,7 +50,7 @@ SYSTEM_MENUS = [
     {"id": "2", "name": "行业数据", "logo": "", "children": [
         {"id": "2_0", "name": "品种数据库", "logo": "", "children": None},
         {"id": "2_1", "name": "交易所数据", "logo": "", "children": None},
-        {"id": "2_2", "name": "品种净持仓", "logo": "", "children": None},
+        {"id": "2_2", "name": "品种数据分析", "logo": "", "children": None},
     ]},
     {"id": "-9", "name": "后台管理", "logo": "", "children": [
         {"id": "-9_1", "name": "运营管理", "logo": "", "children": [

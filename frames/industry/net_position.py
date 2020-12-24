@@ -16,6 +16,8 @@ from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE, BLUE_
 from settings import SERVER_API
 from widgets import OptionWidget, LoadingCover
 
+from .weekly_index import WeeklyPositionPrice  # 周度持仓指数变化
+
 """ 品种全览窗口 """
 
 
@@ -479,8 +481,9 @@ class NetPositionWidget(QWidget):
         """ 业务逻辑部分 """
         # 添加菜单
         for menu_item in [
-            {"id": 1, "name": "品种全览", "icon": None},
+            {"id": 1, "name": "品种全览(前20净持仓)", "icon": None},
             {"id": 2, "name": "图表分析(前20持仓)", "icon": None},
+            {"id": 3, "name": "周度持仓指数变化", "icon": None},
         ]:
             item = QListWidgetItem(menu_item['name'])
             item.setData(Qt.UserRole, menu_item["id"])
@@ -503,6 +506,8 @@ class NetPositionWidget(QWidget):
             widget = BriefPositionWidget(self)
         elif menu_id == 2:
             widget = ChartTablePositionWidget(self)
+        elif menu_id == 3:
+            widget = WeeklyPositionPrice(self)
         else:
             widget = QLabel("暂未开放", self, alignment=Qt.AlignCenter)
         return widget

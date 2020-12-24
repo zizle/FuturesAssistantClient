@@ -11,7 +11,7 @@ class DailyReport(ReportAbstract):
         # 设置页面名称
         self.set_page_name("收盘评论")
         # 获取初始页报告
-        self.get_current_page_report(report_type="daily", current_page=1)
+        self.get_current_page_report(report_type=1, current_page=1)
         # 品种下拉框选择
         self.variety_combobox.currentIndexChanged.connect(self.query_current_report)
         # 点击页码的事件
@@ -20,9 +20,9 @@ class DailyReport(ReportAbstract):
     def query_current_report(self):
         # 点击查询得先重置当前页码
         self.paginator.setCurrentPage(1)
-        self.get_current_page_report(report_type="daily", current_page=1)
+        self.get_current_page_report(report_type=1, current_page=1)
 
     def query_current_page(self):
-        self.get_current_page_report(report_type="daily")
+        self.get_current_page_report(report_type=1)
 
 

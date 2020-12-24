@@ -135,7 +135,7 @@ class MultiReport(QWidget):
 
         # 报告的API
         self.report_api = ReportsAPI(self)
-        self.report_api.reports_reply_signal.connect(self.reports_reply)
+        self.report_api.paginator_reports_response.connect(self.reports_reply)
 
         # 品种的API
         self.variety_api = VarietyAPI(self)
@@ -174,7 +174,6 @@ class MultiReport(QWidget):
 
     def current_report_type_changed(self):
         """ 类型变化 """
-        print(self.variety_combobox.currentData())
         if self.variety_combobox.currentData() is None:
             return
         self.REPORT_TYPE = self.report_combobox.currentData()
@@ -187,7 +186,7 @@ class MultiReport(QWidget):
 
     def reports_reply(self, data):
         """ 报告数据返回 """
-        header_keys = ['variety_zh', 'title', 'type_text', 'date']
+        header_keys = ['variety_zh', 'title', 'type_text', 'file_date']
         self.report_table.show_report_contents(data['reports'], header_keys)
 
         self.paginator.setCurrentPage(data['page'])
@@ -200,17 +199,17 @@ class RegularReport(MultiReport):
         super(RegularReport, self).__init__(*args, **kwargs)
         # 添加类型
         for item in [
-            {'name': '收盘日评', 'en': 'daily'}, {'name': '每周报告', 'en': 'weekly'}, {'name': '月度报告', 'en': 'monthly'},
-            {'name': '年度报告', 'en': 'annual'},
+            {'name': '收盘日评', 'en': 1}, {'name': '每周报告', 'en': 2}, {'name': '月度报告', 'en': 3},
+            {'name': '年度报告', 'en': 4},
         ]:
             self.report_combobox.addItem(item['name'], item['en'])
 
-        self.REPORT_TYPE = 'daily'
+        self.REPORT_TYPE = 1
 
 
 class SpecialReport(MultiReport):
     """ 专题研究 """
-    REPORT_TYPE = 'special'
+    REPORT_TYPE = 5
 
     def __init__(self, *args, **kwargs):
         super(SpecialReport, self).__init__(*args, **kwargs)
@@ -220,7 +219,7 @@ class SpecialReport(MultiReport):
 
 class ResearchReport(MultiReport):
     """ 调研报告 """
-    REPORT_TYPE = 'research'
+    REPORT_TYPE = 6
 
     def __init__(self, *args, **kwargs):
         super(ResearchReport, self).__init__(*args, **kwargs)
