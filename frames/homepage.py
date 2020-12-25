@@ -329,7 +329,7 @@ class Homepage(HomepageUI):
     def get_latest_weekly_report(self):
         """ 获取最新周报信息 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-report/?report_type=weekly&count=30"
+        url = SERVER_API + "latest-report/?report_type=2&count=30"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_weekly_report_reply)
 
@@ -343,7 +343,7 @@ class Homepage(HomepageUI):
             # 将数据进行展示
             self.weekly_report_widget.set_contents(
                 content_values=data["reports"],
-                content_keys=["title", "date"],
+                content_keys=["title", "file_date"],
                 data_keys=["filepath"], resize_cols=[1], column_text_color={1: QColor(100, 100, 100)},
                 zero_text_color=[], center_alignment_columns=[]
             )
