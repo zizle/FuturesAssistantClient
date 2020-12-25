@@ -226,3 +226,12 @@ class ResearchReport(MultiReport):
         self.type_label.hide()
         self.report_combobox.hide()
 
+
+class TechnicalDisk(MultiReport):
+    REPORT_TYPE = 7
+
+    def __init__(self, *args, **kwargs):
+        super(TechnicalDisk, self).__init__(*args, **kwargs)
+        self.type_label.hide()
+        self.report_combobox.hide()
+
