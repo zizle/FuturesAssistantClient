@@ -120,3 +120,18 @@ def get_previous_variety(module_name):
     with open(previous_filepath, "rb") as fp:
         variety = pickle.load(fp)
     return variety
+
+
+def set_weekly_exclude_variety(exclude: str):
+    """设置(周度持仓变化)排除的品种 """
+    config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
+    config = QSettings(config_filepath, QSettings.IniFormat)
+    config.setValue("USER/VEXCLUDE", exclude)
+
+
+def get_weekly_exclude_variety():
+    """ 获取(周度持仓变化)用户排除的品种 """
+    config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
+    config = QSettings(config_filepath, QSettings.IniFormat)
+    exclude_variety = config.value('USER/VEXCLUDE')
+    return exclude_variety if exclude_variety else ''

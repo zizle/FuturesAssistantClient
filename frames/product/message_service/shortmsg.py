@@ -35,8 +35,22 @@ class CirclePoint(QLabel):
         painter.drawEllipse(rect)
 
 
+class MsgTextLabel(QLabel):
+    """ 显示内容的QLabel """
+    # def __init__(self, *args, **kwargs):
+    #     super(MsgTextLabel, self).__init__(*args, **kwargs)
+
+    def enterEvent(self, event):
+        super(MsgTextLabel, self).enterEvent(event)
+        self.setStyleSheet('background-color:rgb(200,200,200);border-radius:5px')
+
+    def leaveEvent(self, event):
+        super(MsgTextLabel, self).leaveEvent(event)
+        self.setStyleSheet('background-color:rgb(245,245,245);border-radius:5px')
+
+
 class ShortMsgContentWidget(QWidget):
-    """ 每个短讯的内容块 """
+    """ 每个短讯的内容块(总) """
     def __init__(self, time_str: str, content_str: str, *args, **kwargs):
         super(ShortMsgContentWidget, self).__init__(*args, **kwargs)
         layout = QGridLayout()
@@ -52,7 +66,10 @@ class ShortMsgContentWidget(QWidget):
         time_label.setPalette(p)
         time_label.setFont(time_font)
         layout.addWidget(time_label, 0, 1)
-        c = QLabel(content_str, self)
+        c = MsgTextLabel(content_str, self)
+        c.setStyleSheet('background-color:rgb(245,245,245);border-radius:5px')
+        c.setContentsMargins(QMargins(8, 0, 8, 2))
+        c.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
         c.setWordWrap(True)
         layout.addWidget(c, 1, 1)
         self.setLayout(layout)
@@ -203,6 +220,8 @@ class ShortMessage(QWidget):
         for msg_item in data['short_messages']:
             m = ShortMsgContentWidget(time_str=msg_item['time_str'], content_str=msg_item['content'], parent=self)
             self.content_widget.layout().insertWidget(0, m)
+
+        self.content_widget.layout().addStretch()
 
         if len(data['short_messages']) > 0:
             item = data['short_messages'][-1]

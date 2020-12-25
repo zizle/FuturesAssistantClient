@@ -18,6 +18,7 @@ from popup.message import InformationPopup
 from apis.position import PositionAPI
 from utils.constant import VERTICAL_SCROLL_STYLE, BLUE_STYLE_HORIZONTAL_STYLE
 from utils.characters import full_width_to_half_width
+from utils.client import set_weekly_exclude_variety, get_weekly_exclude_variety
 
 
 # 图形数据交互
@@ -27,6 +28,7 @@ class ChartChannel(QObject):
 
 
 class WeeklyPositionPrice(QWidget):
+    """ 周度持仓指数变化窗口 """
     def __init__(self, *args, **kwargs):
         super(WeeklyPositionPrice, self).__init__(*args, **kwargs)
         layout = QVBoxLayout()
@@ -54,7 +56,6 @@ class WeeklyPositionPrice(QWidget):
         # 屏蔽品种
         option_layout.addWidget(QLabel('屏蔽品种(中横线间隔):', self))
         self.exclude_variety = QLineEdit(self)
-        self.exclude_variety.setText('IC-IF-IH-T-TF-TS')
         self.exclude_variety.setToolTip('输入想要去除的品种交易代码,以 - 间隔')
         option_layout.addWidget(self.exclude_variety)
 
@@ -84,6 +85,9 @@ class WeeklyPositionPrice(QWidget):
         self.setLayout(layout)
 
         """ 逻辑部分 """
+        # 设置初始化的屏蔽持仓品种
+        self.exclude_variety.setText(get_weekly_exclude_variety())
+
         self.query_api = PositionAPI(self)
         self.query_api.weekly_increase_data.connect(self.weekly_increase_reply)
 
@@ -141,6 +145,7 @@ class WeeklyPositionPrice(QWidget):
     def get_current_data(self):
         """ 获取数据 """
         self.table.clear()
+        set_weekly_exclude_variety(self.exclude_variety.text().strip())  # 保存本次使用的屏蔽品种
         exclude_variety = (full_width_to_half_width(self.exclude_variety.text())).upper()
         self.query_api.get_weekly_increase(
             query_date=self.date_edit.date().toString('yyyyMMdd'), exclude_variety=exclude_variety)
