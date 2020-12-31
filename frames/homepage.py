@@ -12,7 +12,7 @@ from widgets.pdf_shower import PDFContentPopup
 from popup.advertisement import TextPopup
 from popup.spot_price import SpotPricePopup
 from .homepage_ui import HomepageUI, ControlButton, PixMapLabel, LeftChildrenMenuWidget
-from settings import SERVER_API, STATIC_URL, HOMEPAGE_MENUS
+from settings import SERVER_API, STATIC_URL, HOMEPAGE_MENUS, SHIELD_VARIETY, RENAME_VARIETY
 
 
 class Homepage(HomepageUI):
@@ -68,24 +68,10 @@ class Homepage(HomepageUI):
         self.weekly_report_widget.content_table.cellClicked.connect(self.view_detail_weekly_report)
         # 周度报告评论点击更多
         self.weekly_report_widget.more_button.clicked.connect(self.view_more_weekly_report)
-        #
-        # # 获取月季报告
-        # self.get_latest_monthly_report()
-        # # 月季报告的内容表格点击事件
-        # self.monthly_report_widget.content_table.cellClicked.connect(self.view_detail_monthly_report)
-        # # 周度报告评论点击更多
-        # self.monthly_report_widget.more_button.clicked.connect(self.view_more_monthly_report)
-        #
-        # # 获取年度报告
-        # self.get_latest_annual_report()
-        # # 月季报告的内容表格点击事件
-        # self.annual_report_widget.content_table.cellClicked.connect(self.view_annual_monthly_report)
-        # # 周度报告评论点击更多
-        # self.annual_report_widget.more_button.clicked.connect(self.view_more_annual_report)
 
     def get_exchange_lib_variety(self):
         """ 获取以交易所分组的品种 """
-        url = SERVER_API + "exchange/variety-all/"
+        url = SERVER_API + "exchange/variety-all/?is_real=2"
         network_manager = getattr(qApp, "_network")
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.add_left_menus)
@@ -101,7 +87,12 @@ class Homepage(HomepageUI):
             for exchange, exchange_varieties in data["varieties"].items():
                 variety_menus = {"id": exchange, "name": self.EXCHANGE_LIB.get(exchange, ''), "children": []}
                 for variety_item in exchange_varieties:
-                    variety_menus["children"].append({"id": variety_item["variety_en"], "name": variety_item["variety_name"]})
+                    if variety_item["variety_en"] in SHIELD_VARIETY:
+                        continue
+                    if variety_item["variety_en"] in RENAME_VARIETY.keys():
+                        variety_item["variety_name"] = RENAME_VARIETY.get(variety_item["variety_en"])
+                    variety_menus["children"].append(
+                        {"id": variety_item["variety_en"], "name": variety_item["variety_name"]})
                 varieties["children"].append(variety_menus)
         reply.deleteLater()
         all_menus = HOMEPAGE_MENUS.copy()
@@ -122,9 +113,7 @@ class Homepage(HomepageUI):
 
     def left_children_menu_selected(self, menu_id, menu_text):
         """ 点击左侧的子菜单 """
-        print(menu_id, menu_text)
         # 处理菜单能在本页面完成的在本页面,如不能在本页面完成的,传出信号到主窗口去跳转
-
         self.SkipPage.emit(menu_id, menu_text)
 
     def horizontal_scroll_value_changed(self, value):
@@ -202,12 +191,12 @@ class Homepage(HomepageUI):
         ad_type = ad_data["ad_type"]
         if ad_type == "file":
             file_url = STATIC_URL + ad_data["filepath"]
-            p = PDFContentPopup(file=file_url, title=ad_data["title"])
+            p = PDFContentPopup(file_url, ad_data["title"], self)
             p.exec_()
         elif ad_type == "web":
             webbrowser.open_new_tab(ad_data["web_url"])
         elif ad_type == "content":
-            p = TextPopup(message=ad_data["content"])
+            p = TextPopup(message=ad_data["content"], parent=self)
             p.setWindowTitle(ad_data["title"])
             p.exec_()
         else:
@@ -237,7 +226,7 @@ class Homepage(HomepageUI):
             # 将数据进行展示
             self.instant_message_widget.set_contents(
                 content_values=data["short_messages"], content_keys=["content", "time_str"],
-                data_keys=["create_time"], resize_cols=[1], column_text_color={1: QColor(100,100,100)},
+                data_keys=["create_time"], resize_cols=[1], column_text_color={1: QColor(100, 100, 100)},
                 zero_text_color=[], center_alignment_columns=[]
             )
         reply.deleteLater()
@@ -248,18 +237,18 @@ class Homepage(HomepageUI):
             item = self.instant_message_widget.content_table.item(row, col)
             create_time = item.data(Qt.UserRole).get("create_time", "未知时间")
             create_time = create_time.replace("T", " ")[:16]
-            text = "<div style='text-indent:30px;line-height:25px;font-size:13px;'>" \
-                    "<span style='font-size:15px;font-weight:bold;color:rgb(233,20,20);'>{}</span>" \
-                    "{}</div>".format(create_time, item.text())
+            text = "<div style='text-indent:30px;line-height:28px;'>" \
+                   "<span style='font-size:16px;font-weight:bold;color:rgb(233,20,20);'>{}</span>" \
+                   "</div>" \
+                   "<div style='text-indent:30px;line-height:28px;'>{}</div>".format(create_time, item.text())
             p = TextPopup(text, self)
             p.setWindowTitle("即时资讯")
-            p.resize(550, 180)
             p.exec_()
 
     def get_latest_spot_price(self):
         """ 获取最新现货报价 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-spotprice/?count=7"
+        url = SERVER_API + "latest-spotprice/?count=30"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_spot_price_reply)
 
@@ -272,7 +261,8 @@ class Homepage(HomepageUI):
             data = json.loads(reply.readAll().data().decode("utf-8"))
             # 将数据进行展示
             self.spot_price_widget.set_contents(
-                content_values=data["sport_prices"], content_keys=["variety_zh", "spot_price", "price_increase", "date"],
+                content_values=data["sport_prices"],
+                content_keys=["variety_zh", "price", "increase", "date"],
                 data_keys=[], resize_cols=[3], column_text_color={3: QColor(100, 100, 100)},
                 zero_text_color=[2], center_alignment_columns=[1, 2]
             )
@@ -286,7 +276,7 @@ class Homepage(HomepageUI):
     def get_latest_daily_report(self):
         """ 获取最新日报信息 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-report/?report_type=daily&count=30"
+        url = SERVER_API + "latest-report/?report_type=1&count=30"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_daily_report_reply)
 
@@ -300,7 +290,7 @@ class Homepage(HomepageUI):
             # 将数据进行展示
             self.daily_report_widget.set_contents(
                 content_values=data["reports"],
-                content_keys=["title", "date"],
+                content_keys=["title", "file_date"],
                 data_keys=["filepath"], resize_cols=[1], column_text_color={1: QColor(100, 100, 100)},
                 zero_text_color=[], center_alignment_columns=[]
             )
@@ -312,7 +302,7 @@ class Homepage(HomepageUI):
             item = self.daily_report_widget.content_table.item(row, col)
             if item and isinstance(item, QTableWidgetItem):
                 title = item.text()
-                file_url = STATIC_URL + item.data(Qt.UserRole).get("filepath", 'no-found.pdf')
+                file_url = STATIC_URL + item.data(Qt.UserRole).get("filepath", 'not-found.pdf')
                 p = PDFContentPopup(file=file_url, title=title)
                 p.exec_()
 
@@ -339,7 +329,7 @@ class Homepage(HomepageUI):
     def get_latest_weekly_report(self):
         """ 获取最新周报信息 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "latest-report/?report_type=weekly&count=30"
+        url = SERVER_API + "latest-report/?report_type=2&count=30"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.latest_weekly_report_reply)
 
@@ -353,7 +343,7 @@ class Homepage(HomepageUI):
             # 将数据进行展示
             self.weekly_report_widget.set_contents(
                 content_values=data["reports"],
-                content_keys=["title", "date"],
+                content_keys=["title", "file_date"],
                 data_keys=["filepath"], resize_cols=[1], column_text_color={1: QColor(100, 100, 100)},
                 zero_text_color=[], center_alignment_columns=[]
             )
@@ -431,4 +421,3 @@ class Homepage(HomepageUI):
             file_url = STATIC_URL + item.data(Qt.UserRole).get("filepath", 'no-found.pdf')
             p = PDFContentPopup(file=file_url, title=title)
             p.exec_()
-

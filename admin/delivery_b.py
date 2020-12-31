@@ -9,10 +9,9 @@ from PyQt5.QtWidgets import qApp, QWidget, QHBoxLayout, QVBoxLayout, QListWidget
 from PyQt5.QtCore import Qt, QMargins, QPoint, pyqtSignal, QUrl
 from PyQt5.QtGui import QCursor
 from PyQt5.QtNetwork import QNetworkRequest
-from widgets import LoadedPage
 from utils.client import get_user_token
-
-from settings import SERVER_ADDR, USER_AGENT, SERVER_API
+from widgets import LoadedPage
+from settings import USER_AGENT, SERVER_API
 
 
 """仓库管理"""
@@ -572,7 +571,6 @@ class DeliveryInfoAdmin(QWidget):
         self.menu_list.addItems(["仓库编号", "仓库管理", "品种交割信息"])
         self.menu_list.clicked.connect(self.clicked_left_menu)
         layout.addWidget(self.menu_list, alignment=Qt.AlignLeft)
-
         self.right_frame = LoadedPage(self)
         self.right_frame.remove_borders()
         layout.addWidget(self.right_frame)

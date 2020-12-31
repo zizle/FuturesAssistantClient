@@ -154,7 +154,7 @@ class UserListUI(QWidget):
         self.show_user_table = QTableWidget(self)
         self.show_user_table.setFrameShape(QAbstractItemView.NoFrame)
         self.show_user_table.verticalHeader().hide()
-        self.show_user_table.setColumnCount(12)
+        self.show_user_table.setColumnCount(13)
         self.show_user_table.setColumnWidth(3, 150)
         self.show_user_table.setColumnWidth(4, 120)
         self.show_user_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -166,7 +166,7 @@ class UserListUI(QWidget):
         self.show_user_table.horizontalHeader().setSectionResizeMode(11, QHeaderView.ResizeToContents)
         self.show_user_table.setHorizontalHeaderLabels(
             ["ID", "用户名", "手机", "用户号", "邮箱", "角色", "状态", "登录权限", "模块权限", "品种权限",
-             "备注", ""]
+             "备注", "", ""]
         )
         self.show_user_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeToContents)
         main_layout.addWidget(self.show_user_table)

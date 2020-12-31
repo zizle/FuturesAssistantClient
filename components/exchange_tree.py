@@ -9,7 +9,7 @@
 
 from PyQt5.QtWidgets import QTreeWidget, QTreeWidgetItem
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 
 
 class ExchangeLibTree(QTreeWidget):
@@ -31,42 +31,45 @@ class ExchangeLibTree(QTreeWidget):
             {
                 "id": "cffex", "name": "中国金融期货交易所", "logo": "media/icons/cffex_logo.png",
                 "children": [
-                    {"id": "daily", "name": "日交易数据", "logo": "media/icons/daily.png"},
-                    {"id": "rank", "name": "日交易排名", "logo": "media/icons/rank.png"},
+                    {"id": "daily", "name": "日交易数据", "logo": "media/icons/point.png"},
+                    {"id": "rank", "name": "持仓排名", "logo": "media/icons/point.png"},
                 ]
             },
             {
                 "id": "shfe", "name": "上海期货交易所", "logo": "media/icons/shfe_logo.png",
                 "children": [
-                    {"id": "daily", "name": "日交易数据", "logo": "media/icons/daily.png"},
-                    {"id": "rank", "name": "日交易排名", "logo": "media/icons/rank.png"},
-                    {"id": "receipt", "name": "每日仓单", "logo": "media/icons/receipt.png"},
+                    {"id": "daily", "name": "日交易数据", "logo": "media/icons/point.png"},
+                    {"id": "rank", "name": "持仓排名", "logo": "media/icons/point.png"},
+                    # {"id": "receipt", "name": "每日仓单", "logo": "media/icons/receipt.png"},
                 ]
             },
             {
                 "id": "czce", "name": "郑州商品交易所", "logo": "media/icons/czce_logo.png",
                 "children": [
-                        {"id": "daily", "name": "日交易数据", "logo": "media/icons/daily.png"},
-                        {"id": "rank", "name": "日交易排名", "logo": "media/icons/rank.png"},
-                        {"id": "receipt", "name": "每日仓单", "logo": "media/icons/receipt.png"},
+                        {"id": "daily", "name": "日交易数据", "logo": "media/icons/point.png"},
+                        {"id": "rank", "name": "持仓排名", "logo": "media/icons/point.png"},
+                        # {"id": "receipt", "name": "每日仓单", "logo": "media/icons/receipt.png"},
                     ]
              },
             {
                 "id": "dce", "name": "大连商品交易所", "logo": "media/icons/dce_logo.png",
                 "children": [
-                    {"id": "daily", "name": "日交易数据", "logo": "media/icons/daily.png"},
-                    {"id": "rank", "name": "日交易排名", "logo": "media/icons/rank.png"},
-                    {"id": "receipt", "name": "每日仓单", "logo": "media/icons/receipt.png"},
+                    {"id": "daily", "name": "日交易数据", "logo": "media/icons/point.png"},
+                    {"id": "rank", "name": "持仓排名", "logo": "media/icons/point.png"},
+                    # {"id": "receipt", "name": "每日仓单", "logo": "media/icons/receipt.png"},
                 ]
              },
         ]
-
+        bold_font = QFont()
+        bold_font.setBold(True)
         for item in lib:
             tree_item = QTreeWidgetItem(self)
             tree_item.setText(0, item["name"])
             setattr(tree_item, "id", item["id"])
             # tree_item.setTextAlignment(0, Qt.AlignRight | Qt.AlignVCenter)
             tree_item.setIcon(0, QIcon(item["logo"]))
+            tree_item.setFont(0, bold_font)
+            self.addTopLevelItem(tree_item)
             for child_item in item["children"]:
                 child = QTreeWidgetItem(tree_item)
                 child.setText(0, child_item["name"])
@@ -75,11 +78,13 @@ class ExchangeLibTree(QTreeWidget):
                 # child.setTextAlignment(0, Qt.AlignRight | Qt.AlignVCenter)
                 tree_item.addChild(child)
         self.setObjectName("exchangeTree")
-        self.setStyleSheet("#exchangeTree{font-size:14px;border:none;border-right: 1px solid rgba(50,50,50,100)}"
-                           "#exchangeTree::item:hover{background-color:rgba(0,255,0,50)}"
-                           "#exchangeTree::item:selected{background-color:rgba(255,0,0,100)}"
+        # "#exchangeTree::item:selected{background-color:rgba(255,0,0,100)}"
+        self.setStyleSheet("#exchangeTree{border:none;border-right: 1px solid rgba(50,50,50,100)}"
+                           "#exchangeTree::item:hover{color:rgb(0,164,172);}"
                            "#exchangeTree::item{height:28px;}"
                            )
+        self.setCursor(Qt.PointingHandCursor)
+        self.setIndentation(0)
 
     def mouseDoubleClickEvent(self, event):
         event.accept()

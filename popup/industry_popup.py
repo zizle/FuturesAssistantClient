@@ -3,9 +3,7 @@
 # @Time  : 2020-09-03 20:30
 # @Author: zizle
 """ 行业数据的弹窗U组件 """
-import os
 import json
-import sqlite3
 from datetime import datetime, timedelta
 import pandas as pd
 from PyQt5.QtWidgets import (qApp, QDesktopWidget, QDialog, QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QLabel,
@@ -17,10 +15,14 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtWebChannel import QWebChannel
 from widgets.path_edit import FolderPathLineEdit
-from widgets.cover import CoverWidget
+from widgets.loading import LoadingCover
 from channels.chart import ChartOptionChannel
 from utils.client import get_client_uuid, get_user_token
+from .message import InformationPopup
 from settings import BASE_DIR, SERVER_API, logger
+from widgets import OperateButton
+
+""" 配置更新文件夹 """
 
 
 class UpdateFolderPopup(QDialog):
@@ -114,6 +116,132 @@ class UpdateFolderPopup(QDialog):
         else:
             self.successful_signal.emit("调整配置成功!")
         reply.deleteLater()
+
+
+""" 显示数据表内容支持修改 """
+
+
+class SheetWidgetPopup(QDialog):
+    def __init__(self, sheet_id, *args, **kwargs):
+        super(SheetWidgetPopup, self).__init__(*args, **kwargs)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.header_keys = None
+        self.sheet_id = sheet_id
+        layout = QVBoxLayout()
+        self.declare_label = QLabel(
+            '双击要修改的数据单元格后,写入新的数据,再点击对应行最后的确认按钮(√)进行修改,一次只能修改一行数据(编号日期不支持修改)。', self)
+        layout.addWidget(self.declare_label, alignment=Qt.AlignTop | Qt.AlignLeft)
+        self.value_table = QTableWidget(self)
+        self.value_table.horizontalHeader().hide()
+        self.value_table.verticalHeader().hide()
+        layout.addWidget(self.value_table)
+
+        self.loading_cover = LoadingCover(self)  # 在此实现才能遮住之前的控件
+        self.resize(1080, 600)
+        self.loading_cover.resize(self.width(), self.height())
+        self.loading_cover.hide()
+
+        self.setLayout(layout)
+
+        self.declare_label.setObjectName('declareLabel')
+        self.setStyleSheet(
+            '#declareLabel{color:rgb(233,66,66);font-size:12px}'
+        )
+
+        self.get_current_sheet_values()
+
+    def resizeEvent(self, event):
+        super(SheetWidgetPopup, self).resizeEvent(event)
+        self.loading_cover.resize(self.width(), self.height())
+
+    def get_current_sheet_values(self):
+        """ 获取当前表的数据 """
+        self.loading_cover.show()
+        url = SERVER_API + 'sheet/{}/'.format(self.sheet_id)
+        network_manager = getattr(qApp, '_network')
+        reply = network_manager.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.sheet_values_reply)
+
+    def sheet_values_reply(self):
+        """ 得到数据表 """
+        reply = self.sender()
+        if reply.error():
+            logger.error('获取具体表数据错误了{}'.format(reply.error()))
+        else:
+            data = json.loads(reply.readAll().data().decode('utf8'))
+            self.show_value_to_table(data['sheet_values'])
+        reply.deleteLater()
+        self.loading_cover.hide()
+
+    def show_value_to_table(self, sheet_values):
+        """ 将数据显示到表格中 """
+        if not sheet_values:
+            return
+        first_row = sheet_values[0]
+        value_keys = list(first_row.keys())
+        if self.header_keys is not None:
+            del self.header_keys
+            self.header_keys = None
+        self.header_keys = value_keys.copy()
+        self.value_table.setColumnCount(len(value_keys) + 1)
+        self.value_table.horizontalHeader().setSectionResizeMode(len(value_keys), QHeaderView.ResizeToContents)
+        self.value_table.setRowCount(len(sheet_values))
+        for row, row_item in enumerate(sheet_values):
+            for col, col_key in enumerate(value_keys):
+                if col == 0:
+                    value = '%05d' % row_item[col_key]
+                    if row == 0:
+                        value = '编号'
+                else:
+                    value = str(row_item[col_key])
+                item = QTableWidgetItem(value)
+                if col in [0, 1]:  # 前两列不可编辑
+                    item.setFlags(Qt.ItemIsEditable)
+                item.setTextAlignment(Qt.AlignCenter)
+                self.value_table.setItem(row, col, item)
+                if col == len(value_keys) - 1:
+                    # 修改按钮
+                    button = OperateButton('media/icons/confirm_btn.png', 'media/icons/confirm_btn.png', self)
+                    setattr(button, 'row_index', row)
+                    button.clicked.connect(self.modify_sheet_row_value)
+                    self.value_table.setCellWidget(row, col + 1, button)
+
+    def modify_sheet_row_value(self):
+        """ 修改一行数据 """
+        button = self.sender()
+        current_row = getattr(button, 'row_index')
+        row_values = self.get_row_values(current_row)
+        if not row_values:
+            return
+        # 发起请求修改数据
+        url = SERVER_API + 'sheet/{}/record/{}/'.format(self.sheet_id, row_values['id'])
+        request = QNetworkRequest(QUrl(url))
+        request.setRawHeader('Authorization'.encode('utf8'), get_user_token().encode('utf8'))
+        network_manager = getattr(qApp, '_network')
+        reply = network_manager.put(request, json.dumps(row_values).encode('utf8'))
+        reply.finished.connect(self.modify_row_value_reply)
+
+    def modify_row_value_reply(self):
+        """ 修改一行数据返回 """
+        reply = self.sender()
+        if reply.error():
+            p = InformationPopup('修改失败:{}'.format(reply.error()), self)
+        else:
+            data = json.loads(reply.readAll().data().decode('utf8'))
+            p = InformationPopup(data['message'], self)
+        p.exec_()
+        reply.deleteLater()
+
+    def get_row_values(self, current_row):
+        """ 获取行数据 """
+        row_values = {}
+        for col, col_key in enumerate(self.header_keys):
+            item = self.value_table.item(current_row, col)
+            if current_row == 0 and col_key == 'id':
+                row_values[col_key] = 1
+            else:
+                row_values[col_key] = int(item.text()) if col == 0 else item.text()
+        return row_values
 
 
 """ 图形配置选项 """
@@ -530,8 +658,7 @@ class DisposeChartPopup(QDialog):
         self.setLayout(main_layout)
 
         # 遮罩层
-        self.cover_widget = CoverWidget("正在加载数据 ")
-        self.cover_widget.setParent(self)
+        self.cover_widget = LoadingCover(self)
         self.cover_widget.resize(self.width(), self.height())
 
         self._get_sheet_values()
@@ -547,8 +674,8 @@ class DisposeChartPopup(QDialog):
         self.option_widget.season_drawer.clicked.connect(self.preview_chart_with_option)       # 季节图形
 
     def resizeEvent(self, event):
-        if not self.cover_widget.isHidden():
-            self.cover_widget.resize(self.width(), self.height())
+        super(DisposeChartPopup, self).resizeEvent(event)
+        self.cover_widget.resize(self.width(), self.height())
 
     def _get_sheet_values(self):
         """ 获取数据表的源数据 """
@@ -564,7 +691,7 @@ class DisposeChartPopup(QDialog):
         else:
             data = reply.readAll().data()
             data = json.loads(data.decode("utf-8"))
-            self.cover_widget.set_text(text="正在处理数据 ")
+            self.cover_widget.show(text="正在处理数据 ")
             # 使用pandas处理数据到弹窗相应参数中
             self.handler_sheet_values(data["sheet_values"])
 
@@ -697,6 +824,16 @@ class DisposeChartPopup(QDialog):
 
         return base_option
 
+    @staticmethod
+    def replace_zero_to_line(data_str):
+        """ 替换0为-"""
+        try:
+            value = float(data_str)
+        except Exception:
+            return '-'
+        else:
+            return '-' if value == 0 else data_str
+
     def get_chart_source_json(self, chart_type, base_option, source_dataframe):
         """ 处理出绘图的最终数据 """
         # 取得数据的头
@@ -718,7 +855,11 @@ class DisposeChartPopup(QDialog):
             column_index = series_item["column_index"]
             contain_zero = series_item["contain_zero"]
             if not contain_zero:  # 数据不含0,去0处理
-                values_df = values_df[values_df[column_index] != "0"]
+                # 数据去0的话替换为'-' 使其在echarts中不会被作出图形点(在echarts配置中直接连接空数据)
+                values_df[column_index] = values_df[column_index].apply(self.replace_zero_to_line)
+                # 以下的去0方式较单一,0.00就无法去除,且数据会被裁剪
+                # values_df = values_df[values_df[column_index] != "0"]
+                # values_df = values_df[values_df[column_index] != "0.0"]  # 去除计算出来是0.0的数据
         values_df = values_df.sort_values(by="column_0")  # 最后进行数据从小到大的时间排序
         # table_show_df.reset_index(inplace=True)  # 重置索引,让排序生效(赋予row正确的值。可不操作,转为json后,索引无用处了)
         #

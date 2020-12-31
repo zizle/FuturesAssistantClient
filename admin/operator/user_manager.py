@@ -10,6 +10,7 @@ from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QBrush, QColor
 from settings import SERVER_API, logger, SYSTEM_MENUS
 from utils.client import get_user_token
+from popup.message import InformationPopup
 from .user_manager_ui import UserManagerUI, UserClientAuthUI, UserModuleAuthUI, UserVarietyAuthUI
 
 
@@ -148,6 +149,36 @@ class UserManager(UserManagerUI):
                 setattr(variety_button, "row_index", row)
                 variety_button.clicked.connect(self.to_variety_authority)
                 self.user_list_widget.show_user_table.setCellWidget(row, 9, variety_button)
+
+            item12 = QPushButton("密码重置", self)
+            setattr(item12, "row_index", row)
+            item12.clicked.connect(self.reset_user_password)
+            self.user_list_widget.show_user_table.setCellWidget(row, 12, item12)
+
+    def reset_user_password(self):
+        """ 重置用户密码 """
+        reset_button = self.sender()
+        row_index = getattr(reset_button, "row_index")
+        reset_user = self.user_list_widget.show_user_table.item(row_index, 0).text()
+        url = SERVER_API + "reset-password/"
+        request = QNetworkRequest(QUrl(url))
+        request.setRawHeader("Authorization".encode("utf-8"), get_user_token().encode("utf-8"))
+        network_manger = getattr(qApp, "_network")
+        reply = network_manger.post(request, json.dumps({"modify_user": reset_user}).encode("utf-8"))
+        reply.finished.connect(self.reset_password_reply)
+
+    def reset_password_reply(self):
+        """ 密码重置返回 """
+        reply = self.sender()
+        if reply.error():
+            message = "重置密码失败!"
+        else:
+            data = json.loads(reply.readAll().data().decode("utf-8"))
+            user_info = data["user"]
+            message = "用户:{}\n密码已重置为:{}".format(user_info["user_code"], user_info["password"])
+        reply.deleteLater()
+        p = InformationPopup(message, self)
+        p.exec_()
 
     def user_table_cell_changed(self, row, col):
         """ 用户显示表的内容改变 """

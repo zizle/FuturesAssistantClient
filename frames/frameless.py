@@ -8,37 +8,41 @@ import os
 import re
 import json
 import pickle
+import sys
+from subprocess import Popen
 from PyQt5.QtWidgets import qApp, QLabel
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtCore import Qt, QUrl, QSettings, QTimer
-from frames.passport import UserPassport
-from frames.user_center import UserCenter
+
 from settings import SERVER_API, ADMINISTRATOR, BASE_DIR, ONLINE_COUNT_INTERVAL, PLATE_FORM, SYS_BIT, logger
-from utils.client import get_user_token, is_module_verify
+from utils.client import get_user_token, is_module_verify, remove_user_logged, get_client_uuid, set_client_uuid_with_ini
 from .frameless_ui import FrameLessWindowUI
 
 from admin.operator.user_manager import UserManager
 from admin.operator.client_manager import ClientManage
 from admin.operator.variety import VarietyAdmin
-from admin.product.short_message import ShortMessageAdmin
 from admin.industry.user_data import UserDataMaintain
 from admin.industry.exchange_spider import ExchangeSpider
 from admin.industry.spot_price import SpotPriceAdmin
 from admin.operator.user_extension import UserExtensionPage
 from admin.receipt_parser import ReceiptParser
-from admin.homepage.report_file import ReportFileAdmin
 from admin.homepage.advertisement import HomepageAdAdmin
+from admin.product.message_service import MessageServiceAdmin
 from frames.homepage_extend import DailyReport, WeeklyReport, MonthlyReport, AnnualReport
 from frames.homepage import Homepage
-from frames.product.short_message import ShortMessage
+from frames.product.message_service import ShortMessage
 from frames.product import ProductPage
+from frames.calculate.calculate_plat import CalculatePlat
 from frames.industry.variety_data import VarietyData
 from frames.industry.exchange_query import ExchangeQuery
-from frames.industry.net_position import NetPosition
+from frames.industry.net_position import NetPositionWidget
 from frames.about_us import CheckVersion
+from frames.passport import UserPassport
+from frames.user_center import UserCenter
 from frames.delivery import DeliveryPage
 from popup.update import NewVersionPopup
 from popup.message import ExitAppPopup, InformationPopup
+from popup.password import EditPasswordPopup
 
 
 class ClientMainApp(FrameLessWindowUI):
@@ -99,16 +103,42 @@ class ClientMainApp(FrameLessWindowUI):
         data = reply.readAll().data()
         u_data = json.loads(data.decode("utf-8"))
         if u_data["update_needed"]:
-            p = NewVersionPopup(self)
+            # 写入待更新信息
+            for_update_file = os.path.join(BASE_DIR, "classini/for_update_{}.json".format(SYS_BIT))
+            f_data = {
+                "VERSION": u_data["last_version"],
+                "SERVER": u_data["file_server"],
+                "FILES": u_data["update_files"]
+            }
+            with open(for_update_file, "w", encoding="utf-8") as f:
+                json.dump(f_data, f, indent=4, ensure_ascii=False)
+            message = u_data["update_detail"]
+            p = NewVersionPopup(message, self)
             p.to_update.connect(self.to_update_page)
-            p.show()
+            if u_data.get("update_force"):  # 强制更新
+                p.set_force()
+            p.exec_()
         else:
             pass
         reply.deleteLater()
 
     def to_update_page(self):
-        """ 前往版本更新页面 """
-        self.set_system_page("0_0_1")
+        """ 退出当前程序，启动更新更新 """
+        # script_file = os.path.join(BASE_DIR, "AutoUpdate.exe")
+        script_file = os.path.join(BASE_DIR, "Update.exe")
+        is_close = True
+        if os.path.exists(script_file):
+            try:
+                Popen(script_file, shell=False)
+            except OSError as e:
+                self.run_message.setText(str(e))
+                is_close = False
+        else:
+            p = InformationPopup("更新程序丢失...", self)
+            p.exec_()
+            is_close = False
+        if is_close:
+            sys.exit()
 
     def application_state_changed(self, state):
         """ 应用程序状态发生变化 """
@@ -152,6 +182,7 @@ class ClientMainApp(FrameLessWindowUI):
         is_user_logged = getattr(username_button, 'is_logged')
         if is_user_logged:
             center_widget = UserCenter()
+            center_widget.reset_password_signal.connect(self.user_logout_proxy)
         else:
             center_widget = UserPassport()
             center_widget.username_signal.connect(self.user_login_successfully)
@@ -174,10 +205,9 @@ class ClientMainApp(FrameLessWindowUI):
         configs_path = os.path.join(BASE_DIR, "dawn/client.ini")
         app_config = QSettings(configs_path, QSettings.IniFormat)
         is_auto_login = app_config.value("USER/AUTOLOGIN")
-        client_uuid = app_config.value("TOKEN/UUID") if app_config.value("TOKEN/UUID") else ''
         if is_auto_login:  # 使用TOKEN自动登录
             user_token = app_config.value("USER/BEARER") if app_config.value("USER/BEARER") else ''
-            url = SERVER_API + "user/token-login/?client=" + client_uuid
+            url = SERVER_API + "user/token-login/?client=" + get_client_uuid()
             request = QNetworkRequest(QUrl(url))
             token = "Bearer " + user_token
             request.setRawHeader("Authorization".encode("utf-8"), token.encode("utf-8"))
@@ -198,6 +228,8 @@ class ClientMainApp(FrameLessWindowUI):
             self.center_widget.setCentralWidget(center_widget)
         else:
             data = json.loads(data.decode("utf-8"))
+            # 写入客户端号
+            set_client_uuid_with_ini(data["machine_uuid"])
             self.user_login_successfully(data["show_username"])
         reply.deleteLater()
 
@@ -218,10 +250,11 @@ class ClientMainApp(FrameLessWindowUI):
             self.set_default_homepage()
         # 刷新权限
         self.refresh_authorization()
+        # 去除自动登录
+        remove_user_logged()
 
     def refresh_authorization(self):
         """ 刷新当前用户的权限 """
-        print("刷新权限")
         is_logged = self.navigation_bar.get_user_login_status()
         # 用户未登录,权限为[],直接写入
         if not is_logged:
@@ -258,6 +291,16 @@ class ClientMainApp(FrameLessWindowUI):
         elif module_id == "0_0_2":
             self.refresh_authorization()  # 刷新权限
             p = InformationPopup("权限刷新成功!", self)
+            p.exec_()
+            return
+        elif module_id == "0_0_3":
+            is_logged = self.navigation_bar.get_user_login_status()
+            if not is_logged:
+                p = InformationPopup("您还未登录,不能进行这个操作!", self)
+                p.exec_()
+                return
+            p = EditPasswordPopup(self)
+            p.re_login.connect(self.user_logout_proxy)  # 修改成功退出登录
             p.exec_()
             return
         else:
@@ -363,44 +406,43 @@ class ClientMainApp(FrameLessWindowUI):
     #
     #     self.center_widget.setCentralWidget(center_widget)
 
-    @staticmethod
-    def get_module_page(module_id, module_text):
+    def get_module_page(self, module_id, module_text):
         """ 通过权限验证,进入功能页面 """
         if module_id == "1":             # 产品服务
-            page = ProductPage()
+            page = ProductPage(self)
         elif module_id == "2_0":         # 产业数据库
             page = VarietyData()
         elif module_id == "2_1":         # 交易所数据
-            page = ExchangeQuery()
+            page = ExchangeQuery(self)
         elif module_id == "2_2":         # 品种净持仓
-            page = NetPosition()
+            page = NetPositionWidget(self)
         elif module_id == "3":           # 交割服务
             page = DeliveryPage()
+        elif module_id == "4":           # 计算平台
+            page = CalculatePlat()
         elif module_id == "-9_0_0":      # 后台管理-广告设置
-            page = HomepageAdAdmin()
-        elif module_id == "-9_0_1":
-            page = ReportFileAdmin()     # 后台管理-常规报告
+            page = HomepageAdAdmin(self)
         elif module_id == "-9_1_0":
-            page = VarietyAdmin()        # 后台管理-品种管理
+            page = VarietyAdmin(self)        # 后台管理-品种管理
         elif module_id == "-9_1_1":      # 后台管理-用户管理
-            page = UserManager()
+            page = UserManager(self)
         elif module_id == "-9_1_2":
-            page = ClientManage()
+            page = ClientManage(self)
         elif module_id == "-9_1_3":      # 后台管理-研究员微信ID
-            page = UserExtensionPage()
+            page = UserExtensionPage(self)
         elif module_id == "-9_2_0":
-            page = ShortMessageAdmin()   # 短信通管理
+            page = MessageServiceAdmin(self)      # 后台管理资讯服务
         elif module_id == "-9_3_0":      # 后台管理-产业数据库
-            page = UserDataMaintain()
+            page = UserDataMaintain(self)
         elif module_id == "-9_3_1":
-            page = ExchangeSpider()
+            page = ExchangeSpider(self)
         elif module_id == "-9_3_2":
-            page = SpotPriceAdmin()     # 后台管理-现货价格数据提取
+            page = SpotPriceAdmin(self)     # 后台管理-现货价格数据提取
         elif module_id == "-9_4_0":
             from admin.delivery_b import DeliveryInfoAdmin
-            page = DeliveryInfoAdmin()  # 后台管理-交割服务-仓库管理
+            page = DeliveryInfoAdmin(self)  # 后台管理-交割服务-仓库管理
         elif module_id == '-9_4_1':
-            page = ReceiptParser()      # 后台管理-交割服务-仓单数据提取
+            page = ReceiptParser(self)      # 后台管理-交割服务-仓单数据提取
         else:
             page = QLabel(
                 "「" + module_text + "」暂未开放···\n更多资讯请访问【首页】查看.",

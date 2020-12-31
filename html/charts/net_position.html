@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>K线</title>
+    <script src="js/jquery-1.7.2.min.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/qwebchannel.js"></script>
+    <script src="js/public.js"></script>
+</head>
+<style>
+html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
+#chartBox{width: 80%; height:100%;background-color: rgb(252,252,252);margin: 0 auto}
+</style>
+<body>
+    <div id="chartBox"></div>
+</body>
+<script>
+// 实例化echarts option的函数
+function generateChartOption(sourceData, baseOption){
+    let chartTitle = baseOption["title"];
+    return {
+        color: COLORS,
+        grid: {
+            bottom: 10,
+            containLabel: true
+        },
+        title:{
+            text: chartTitle,
+            textStyle: {fontSize: 22}
+        },
+        xAxis:{
+            type: 'category',
+            data: sourceData.map(item=>item.date),
+            axisLabel: {
+                rotate: 90,
+                fontSize: 11,
+                color: '#333333'
+            },
+            axisLine: {
+                lineStyle: {
+                    color: '#4e6ef2'
+                }
+            },
+            axisTick:{
+                show: true,
+                lineStyle: {
+                    color: '#4e6ef2'
+                }
+            }
+        },
+        yAxis: [
+            {
+                type: "value",
+                scale: true,
+                name: "多空量",
+                // nameLocation: 'top',
+                position:'left'
+            },
+            {
+                type: "value",
+                name: "净多单",
+                // nameLocation: 'top',
+                position:'right',
+                splitLine:{
+                    show: false
+                }
+            },
+        ],
+        tooltip:{
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross',
+            }
+        },
+        toolbox:{
+            feature:{
+                dataZoom:{},
+                dataView:{},
+            }
+        },
+        series: [
+            {
+                type: "line",
+                name: "多单量",
+                yAxisIndex: 0,
+                connectNulls: true,
+                lineStyle:{
+                    width: 3
+                },
+                symbol:'none',
+                data: sourceData.map(item=>{if (item.long_position === 0){return '-'}else{return item.long_position}})
+            },{
+                type: "line",
+                name: '空单量',
+                yAxisIndex: 0,
+                connectNulls: true,
+                symbol:'none',
+                lineStyle:{
+                    width: 3
+                },
+                data: sourceData.map(item=>{if (item.short_position === 0){return '-'}else{return item.short_position}})
+            },
+            {
+                type: "bar",
+                name: '净多单',
+                yAxisIndex: 1,
+                data: sourceData.map(item=>{ return item.net_position})
+            },
+        ],
+        legend:[
+            {
+                type: 'plain',
+                right: 0,
+                top: 30,
+                itemHeight: 2,
+                orient: 'vertical',
+                data: [
+                    {name: '多单量', icon: 'rect'},
+                ],
+            },
+            {
+                type: 'plain',
+                itemHeight: 2,
+                right: 0,
+                top: 50,
+                orient: 'vertical',
+                data: [
+                    {name: '空单量', icon: 'rect'},
+                ],
+            },
+            {
+                type: 'plain',
+                itemHeight: 12,
+                right: 0,
+                top: 70,
+                orient: 'vertical',
+                data: [
+                    {name: '净多单', icon: 'roundRect'},
+                ],
+            },
+        ]
+    };
+}
+// 主入口函数
+$(function () {
+    let chartObj = echarts.init(document.getElementById('chartBox'));
+    // 与UI界面通讯的实例
+    new QWebChannel(qt.webChannelTransport, function(channel)
+        {
+            let pageContact = channel.objects.pageContactChannel;
+            // 传入绘图数据
+            pageContact.chartSource.connect(function (sourceData, baseOption) {
+                let option = generateChartOption(JSON.parse(sourceData), JSON.parse(baseOption));
+                chartObj.clear();
+                chartObj.setOption(option, true)
+            });
+            // 传入重置大小
+            pageContact.chartResize.connect(function (cWidth, cHeight) {
+                chartObj.resize({width: cWidth * 0.8, height: cHeight});
+            });
+            // 清除图形
+            // pageContact.clearChart.connect(function () {
+            //     chartObj.clear();
+            // })
+        }
+    );
+})
+</script>
+</html>

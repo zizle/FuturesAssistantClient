@@ -52,7 +52,7 @@ class SHFESpider(QObject):
             return
         data = reply.readAll().data()
         data = json.loads(data.decode('utf-8'))
-        save_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/daily/{}.json'.format(self.date.strftime("%Y-%m-%d")))
+        save_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/daily/{}.json'.format(self.date.strftime("%Y%m%d")))
         with open(save_path, "w", encoding="utf-8") as json_file:
             json.dump(data, json_file, indent=4, ensure_ascii=False)
         reply.deleteLater()
@@ -80,7 +80,7 @@ class SHFESpider(QObject):
             return
         data = reply.readAll().data()
         data = json.loads(data.decode('utf-8'))
-        save_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/rank/{}.json'.format(self.date.strftime("%Y-%m-%d")))
+        save_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/rank/{}.json'.format(self.date.strftime("%Y%m%d")))
         with open(save_path, "w", encoding="utf-8") as json_file:
             json.dump(data, json_file, indent=4, ensure_ascii=False)
         reply.deleteLater()
@@ -127,7 +127,7 @@ class SHFEParser(QObject):
         """ 解析保存的json文件信息 """
         if self.date is None:
             raise DateValueError("请先使用`set_date`设置`CZCEParser`日期.")
-        file_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/daily/{}.json'.format(self.date.strftime("%Y-%m-%d")))
+        file_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/daily/{}.json'.format(self.date.strftime("%Y%m%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现上期所{}的日交易行情文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
             return DataFrame()
@@ -135,23 +135,18 @@ class SHFEParser(QObject):
             source_content = json.load(reader)
         # 解析content转为DataFrame
         json_df = DataFrame(source_content['o_curinstrument'])
-
         # 选取PRODUCTID非总计、DELIVERYMONTH非小计的行
-        json_df = json_df[~json_df['PRODUCTID'].str.contains('总计|小计|合计')]  # 选取品种不含有小计和总计合计的行
+        json_df = json_df[~json_df['PRODUCTID'].str.contains('总计|小计|合计|_tas|efp')]  # 选取品种不含有小计和总计合计_tas的行
         json_df = json_df[~json_df['DELIVERYMONTH'].str.contains('总计|小计|合计')]  # 选取合约不含有小计和总计合计的行
         # 处理空格
         json_df["PRODUCTID"] = json_df["PRODUCTID"].apply(lambda x: x.split("_")[0].upper())
         # json_df["PRODUCTGROUPID"] = json_df["PRODUCTGROUPID"].str.strip().str.upper()
         json_df["PRODUCTNAME"] = json_df["PRODUCTNAME"].str.strip()
         json_df["DELIVERYMONTH"] = json_df["DELIVERYMONTH"].str.strip()
-        # 提取有用的列
-        # json_df = json_df[["PRODUCTGROUPID", "DELIVERYMONTH", "PRESETTLEMENTPRICE", "OPENPRICE", "HIGHESTPRICE", "LOWESTPRICE", "CLOSEPRICE",
-        #                    "SETTLEMENTPRICE", "ZD1_CHG", "ZD2_CHG", "VOLUME", "OPENINTEREST", "OPENINTERESTCHG"]]
-
         json_df = json_df.reindex(columns=["DATE", "PRODUCTID", "DELIVERYMONTH", "PRESETTLEMENTPRICE", "OPENPRICE", "HIGHESTPRICE", "LOWESTPRICE", "CLOSEPRICE",
                                            "SETTLEMENTPRICE", "ZD1_CHG", "ZD2_CHG", "VOLUME", "OPENINTEREST", "OPENINTERESTCHG"])
-        str_date = self.date.strftime("%Y%m%d")
-        json_df["DATE"] = [str_date for _ in range(json_df.shape[0])]
+        int_date = int(self.date.timestamp())
+        json_df["DATE"] = [int_date for _ in range(json_df.shape[0])]
         # 修改列头，返回
         json_df.columns = ["date", "variety_en", "contract", "pre_settlement", "open_price", "highest", "lowest", "close_price",
                            "settlement", "zd_1", "zd_2", "trade_volume", "empty_volume", "increase_volume"]
@@ -189,15 +184,15 @@ class SHFEParser(QObject):
         """ 解析日持仓排名json文件 """
         if self.date is None:
             raise DateValueError("请先使用`set_date`设置`CZCEParser`日期.")
-        file_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/rank/{}.json'.format(self.date.strftime("%Y-%m-%d")))
+        file_path = os.path.join(LOCAL_SPIDER_SRC, 'shfe/rank/{}.json'.format(self.date.strftime("%Y%m%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现上期所所{}的日持仓排名文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
             return DataFrame()
         with open(file_path, "r", encoding="utf-8") as reader:
             source_content = json.load(reader)
         json_df = DataFrame(source_content["o_cursor"])
-        # 取排名在(-1,0,1~20的数据[-1:期货公司总计,0:非期货公司总计,999品种合约总计]
-        json_df = json_df[json_df['RANK'] <= 20]
+        # 取排名在(1~20的数据[-1:期货公司总计,0:非期货公司总计,999品种合约总计]
+        json_df = json_df[(json_df["RANK"] >= 1) & (json_df['RANK'] <= 20)]
         # 去除字符串空格
         json_df["INSTRUMENTID"] = json_df["INSTRUMENTID"].str.strip().str.upper().str.replace("ALL", '')
         json_df["PARTICIPANTABBR1"] = json_df["PARTICIPANTABBR1"].str.strip()
@@ -208,8 +203,8 @@ class SHFEParser(QObject):
         json_df = json_df.fillna(0)
         # 新增品种代码列和DATE列
         json_df["VARIETYEN"] = json_df["INSTRUMENTID"].apply(split_number_en).apply(lambda x: x[0].upper())
-        str_date = self.date.strftime("%Y%m%d")
-        json_df["DATE"] = [str_date for _ in range(json_df.shape[0])]
+        int_date = int(self.date.timestamp())
+        json_df["DATE"] = [int_date for _ in range(json_df.shape[0])]
         # 重新设置索引
         json_df = json_df.reindex(columns=["DATE", "VARIETYEN", "INSTRUMENTID", "RANK", "PARTICIPANTABBR1", "CJ1", "CJ1_CHG", "PARTICIPANTABBR2", "CJ2", "CJ2_CHG","PARTICIPANTABBR3", "CJ3", "CJ3_CHG"])
         json_df.columns = ["date", "variety_en", "contract", "rank",
@@ -220,6 +215,19 @@ class SHFEParser(QObject):
         # for i in json_df.itertuples():
         #     print(i)
         # print(json_df.shape)
+        # 处理数据类型
+        if not json_df.empty:
+            # 转换数据类型
+            json_df["rank"] = json_df["rank"].astype("int")
+            json_df["trade_company"] = json_df["trade_company"].apply(lambda x: '-' if x == 0 else x)
+            json_df["trade"] = json_df["trade"].astype("int")
+            json_df["trade_increase"] = json_df["trade_increase"].astype("int")
+            json_df["long_position_company"] = json_df["long_position_company"].apply(lambda x: '-' if x == 0 else x)
+            json_df["long_position"] = json_df["long_position"].astype("int")
+            json_df["long_position_increase"] = json_df["long_position_increase"].astype("int")
+            json_df["short_position_company"] = json_df["short_position_company"].apply(lambda x: '-' if x == 0 else x)
+            json_df["short_position"] = json_df["short_position"].astype("int")
+            json_df["short_position_increase"] = json_df["short_position_increase"].astype("int")
         return json_df
 
     def save_rank_server(self, source_df):

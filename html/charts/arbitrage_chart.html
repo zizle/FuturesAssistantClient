@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>K线</title>
+    <script src="js/jquery-1.7.2.min.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/qwebchannel.js"></script>
+    <script src="js/public.js"></script>
+</head>
+<style>
+html,body{margin:0;padding:0;}
+#chartBox{width:80%;height:100%;background-color:rgb(252,252,252);margin: 0 auto}
+</style>
+<body>
+    <div id="chartBox"></div>
+</body>
+<script>
+// 生成series和图例的函数
+function getSeriesLegend(sourceData) {
+    let seriesArray = [];
+    let legend = {"type": "scroll", "bottom": 16, "height": 20, "data":[]};
+
+    for(let i = 0; i < len; i++) {
+        let optData = seriesData[i];
+        let seriesOption = {
+            type: "line",
+            name: "1",
+            yAxisIndex: 0,
+            connectNulls: true,
+            data: sourceData.map(item=>{return parseFloat(item[optData.column_index])})
+        };
+        seriesArray.push(seriesOption);
+        legend.data.push(sheetHeaders[optData.column_index]);
+    }
+    return {
+        seriesData: seriesArray,
+        legendData: legend
+    }
+}
+
+// 生成水印
+function generateGraphic(watermark){
+    if(watermark === '' || watermark === undefined){return null}
+    else{
+        return {
+            type: 'group',
+            rotation: Math.PI / 4,
+            bounding: 'raw',
+            right: 80,
+            bottom: 80,
+            z: -100,
+            children: [
+                {
+                    type: 'rect',
+                    left: 'center',
+                    top: 'center',
+                    z:-100,
+                    shape:{width: 400, height: 35},
+                    style:{fill: 'rgba(0,0,0,0.4)'}
+                },
+                {
+                    type: 'text',
+                    left: 'center',
+                    top: 'center',
+                    z: -100,
+                    style: {
+                        fill: 'rgba(255,255,255,0.9)',
+                        text: watermark,
+                        font: 'bold 22px Microsoft YaHei'
+                    }
+                }
+            ]
+        }
+    }
+}
+
+// 实例化echarts option的函数
+function generateChartOption(sourceData, baseOption){
+    let chartTitle = baseOption["title"];
+    return {
+        color: COLORS,
+        grid: {
+            top: 60,
+            bottom: 10,
+            left:'5%',
+            right: '5%',
+            containLabel: true
+        },
+        title:{
+            text: chartTitle,
+            textStyle: {fontSize: 22}
+        },
+        xAxis:{
+            type: 'category',
+            data: sourceData.map(item=>item.date),
+            axisLabel: {
+                rotate: 90,
+                fontSize: 11
+            },
+            axisTick: {
+                length: 2
+            }
+        },
+        yAxis: [
+            {
+                type: "value",
+                name: "价差",
+                position:'left',
+                // offset: 80,
+                axisLine: {
+                    show: false
+                },
+                axisTick:{
+                    show: false
+                }
+                // min: baseOption["axis3"][0],
+                // max: baseOption["axis3"][1],
+                // interval: (baseOption["axis3"][1] - baseOption["axis3"][0]) / baseOption["axis3"][2]
+            },
+        ],
+        tooltip:{
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross',
+            }
+        },
+        series: [
+            {
+                type: "line",
+                name: "价差",
+                yAxisIndex: 0,
+                connectNulls: true,
+                lineStyle:{
+                    width: 3
+                },
+                symbol:'none',
+                data: sourceData.map(item=>{return Math.round(parseFloat(item.closePrice1 - item.closePrice2), 2)})
+            },
+        ],
+        legend:{
+            type:'plain',
+            right:0,
+            top: 30,
+            icon:'rect',
+            itemHeight: 3,
+            itemWidth: 30,
+            orient: 'vertical',
+            data:[
+                {name: '价差'},
+            ]
+        },
+    };
+}
+
+// 季节图形series
+function getSeasonSeries(sourceData) {
+    let series = [];
+    let legendData = []
+    $.each(sourceData, function (lineName, lineData) {
+        legendData.push({name: lineName});
+        series.push({
+            type: 'line',
+            name: lineName,
+            yAxisIndex: 0,
+            connectNulls: true,
+            lineStyle:{width:3},
+            symbol: 'none',
+            data: sourceData[lineName].map(item=>{return [item.date.substring(4), Math.round(parseFloat(item.closePrice1 - item.closePrice2), 2)]})
+        })
+    })
+    return [series, legendData]
+}
+
+// 季节图形的Option
+function getSeasonChartOption(sourceData, baseOption){
+    let chartTitle = baseOption["title"];
+    let xAxis = baseOption['x_axis'];
+    let seriesLegend = getSeasonSeries(sourceData)
+    let gridBottom = Math.ceil(seriesLegend[1].length / 5) * 20
+    // 根据图例的个数计算出grid的bottom距离
+    return {
+        color:COLORS,
+        grid: {
+            containLabel: true,
+            left:'5%',
+            right: '5%',
+            bottom:gridBottom,
+        },
+        title:{
+            text: chartTitle,
+            textStyle: {fontSize: 22}
+        },
+        xAxis:{
+            type: 'category',
+            data: xAxis,
+            axisLabel: {
+                rotate: 45,
+                fontSize: 11
+            },
+            axisTick: {
+                length: 2
+            }
+        },
+        yAxis: {
+            type: 'value',
+            name: '价差',
+            scale:true,
+            axisLine: {
+                show: false
+            },
+            axisTick:{
+                show: false
+            }
+        },
+        tooltip:{
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross',
+            },
+            confine:true,
+        },
+        series: seriesLegend[0],
+        legend:{
+            type:'plain',
+            data:seriesLegend[1],
+            icon:'rect',
+            top:'bottom',
+            left:'5%',
+            right:'5%',
+            itemHeight: 3,
+            itemWidth: 30,
+        }
+    }
+}
+
+// 主入口函数
+$(function () {
+    let chartObj = echarts.init(document.getElementById('chartBox'));
+    // 与UI界面通讯的实例
+    new QWebChannel(qt.webChannelTransport, function(channel)
+        {
+            let pageContact = channel.objects.pageContactChannel;
+            pageContact.chartSource.connect(function (sourceData, baseOption, chartType) {
+                let option = {};
+                if (chartType === 'line'){
+                    option = generateChartOption(JSON.parse(sourceData), JSON.parse(baseOption));
+                }else if (chartType === 'season'){
+                    option = getSeasonChartOption(JSON.parse(sourceData), JSON.parse(baseOption))
+                }
+                chartObj.setOption(option, true)
+            });
+            // 传入重置大小
+            pageContact.chartResize.connect(function (cWidth, cHeight) {
+                chartObj.resize({width: cWidth * 0.8, height: cHeight});
+            });
+        }
+    );
+})
+</script>
+</html>

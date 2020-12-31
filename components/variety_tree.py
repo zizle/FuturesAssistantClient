@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import qApp
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtCore import QUrl
 from widgets.folded_box import ScrollFoldedBox
-from settings import SERVER_API, logger
+from settings import SERVER_API, logger, SHIELD_VARIETY, RENAME_VARIETY
 
 
 class VarietyTree(ScrollFoldedBox):
@@ -32,7 +32,7 @@ class VarietyTree(ScrollFoldedBox):
     def _get_all_variety(self):
         """ 获取所有品种 """
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "variety/all/"
+        url = SERVER_API + "variety/all/?is_real=2"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.all_variety_reply)
 
@@ -45,7 +45,6 @@ class VarietyTree(ScrollFoldedBox):
             data = reply.readAll().data()
             data = json.loads(data.decode('utf-8'))
             self._fill_variety_tree(data['varieties'])
-
         reply.deleteLater()
 
     def _fill_variety_tree(self, varieties):
@@ -54,9 +53,12 @@ class VarietyTree(ScrollFoldedBox):
             head = self.addHead(group_name)
             body = self.addBody(head=head)
             for sub_item in group_item:
+                if sub_item["variety_en"] in SHIELD_VARIETY:
+                    continue
+                if sub_item["variety_en"] in RENAME_VARIETY.keys():
+                    sub_item["variety_name"] = RENAME_VARIETY.get(sub_item["variety_en"])
                 body.addButton(id=sub_item["id"], name=sub_item['variety_name'], name_en=sub_item['variety_en'])
         self.container.layout().addStretch()
-
         self.setBodyHorizationItemCount()   # 手动调用填充内容
 
     def resizeEvent(self, event):

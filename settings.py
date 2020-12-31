@@ -5,24 +5,20 @@ import sys
 import time
 import logging
 from PyQt5.QtCore import QSettings
-WINDOW_TITLE = '分析决策系统管理端'  # 1.4.5
-SYS_BIT = "32" if sys.maxsize < 2 ** 32 else "64"
-PLATE_FORM = "WIN10"
-# SERVER_ADDR = "http://210.13.218.130:9002/"
-SERVER_ADDR = "http://127.0.0.1:5000/"
-# 与后端对应的静态文件路径
-STATIC_PREFIX = SERVER_ADDR + 'ads/'
 
-# SERVER_API = "http://127.0.0.1:8000/api/"
-SERVER_API = "http://210.13.218.130:9004/api/"
+SYS_BIT = "32" if sys.maxsize < 2 ** 32 else "64"
+PLATE_FORM = "WIN7"
+ADMINISTRATOR = True
+WINDOW_TITLE = '分析决策系统(研究员)' if ADMINISTRATOR else '分析决策系统客户端'
+
+SERVER_API = "http://127.0.0.1:8000/api/"
+# SERVER_API = "http://210.13.218.130:9004/api/"
 
 STATIC_URL = SERVER_API[:-4] + 'static/'
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 LOCAL_SPIDER_SRC = os.path.join(BASE_DIR, "sources/")  # 爬取保存文件的本地文件夹
-
-ADMINISTRATOR = True
 
 ONLINE_COUNT_INTERVAL = 120000  # 毫秒
 
@@ -41,33 +37,35 @@ IMAGE_SLIDER_RATE = 3000
 # 标题栏高度
 TITLE_BAR_HEIGHT = 27
 # 菜单栏高度
-NAVIGATION_BAR_HEIGHT = 20
+NAVIGATION_BAR_HEIGHT = 25
 # 首页表格行高
-HOMEPAGE_TABLE_ROW_HEIGHT = 32  # 由于字体需要必须大于24
+HOMEPAGE_TABLE_ROW_HEIGHT = 28  # 由于字体需要必须大于24
 
 # 支持多级(但模块权限仅遍历3级)
 SYSTEM_MENUS = [
     {"id": "0", "name": "首页", "logo": "", "children": None},
     {"id": "1", "name": "产品服务", "logo": "", "children": None},
     {"id": "3", "name": "交割服务", "logo": "", "children": None},
+    {"id": "4", "name": "计算平台", "logo": "", "children": None},
     {"id": "2", "name": "行业数据", "logo": "", "children": [
         {"id": "2_0", "name": "品种数据库", "logo": "", "children": None},
         {"id": "2_1", "name": "交易所数据", "logo": "", "children": None},
-        {"id": "2_2", "name": "品种净持仓", "logo": "", "children": None},
+        {"id": "2_2", "name": "品种数据分析", "logo": "", "children": None},
     ]},
     {"id": "-9", "name": "后台管理", "logo": "", "children": [
         {"id": "-9_1", "name": "运营管理", "logo": "", "children": [
             {"id": "-9_1_0", "name": "品种管理", "logo": "", "children": None},
             {"id": "-9_1_1", "name": "用户管理", "logo": "", "children": None},
-            {"id": "-9_1_2", "name": "客户端管理", "logo": "", "children": None},
-            {"id": "-9_1_3", "name": "用户拓展信息", "logo": "", "children": None},
+            {"id": "-9_1_2", "name": "客户端管理", "logo": "", "children": None}
         ]},
         {"id": "-9_0", "name": "首页管理", "logo": "", "children": [
             {"id": "-9_0_0", "name": "广告设置", "logo": "", "children": None},
-            {"id": "-9_0_1", "name": "常规报告", "logo": "", "children": None},
         ]},
         {"id": "-9_2", "name": "产品服务", "logo": "", "children": [
-            {"id": "-9_2_0", "name": "短信通", "logo": "", "children": None},
+            {"id": "-9_2_0", "name": "资讯服务", "logo": "", "children": None},
+            {"id": "-9_2_1", "name": "顾问服务", "logo": "", "children": None},
+            {"id": "-9_2_2", "name": "策略服务", "logo": "", "children": None},
+            {"id": "-9_2_3", "name": "品种服务", "logo": "", "children": None},
         ]},
         {"id": "-9_4", "name": "交割服务", "logo": "", "children": [
             {"id": "-9_4_0", "name": "仓库信息管理", "logo": "", "children": None},
@@ -82,6 +80,7 @@ SYSTEM_MENUS = [
     {"id": "0_0", "name": "关于系统", "logo": "", "children": [
         {"id": "0_0_1", "name": "版本检查", "logo": "", "children": None},
         {"id": "0_0_2", "name": "权限刷新", "logo": "", "children": None},
+        {"id": "0_0_3", "name": "密码修改", "logo": "", "children": None},
     ]},
 ]
 
@@ -132,3 +131,7 @@ def config_logger_handler():
 
 logger = logging.getLogger('errorlog')
 logger.addHandler(config_logger_handler())
+
+# 屏蔽或重命名的品种(品种数据库)
+SHIELD_VARIETY = ['CY', 'WR', 'NR']
+RENAME_VARIETY = {"CF": '棉花(纱)'}

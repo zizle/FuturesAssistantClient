@@ -27,7 +27,10 @@ def get_variety_en(name):
 
 
 def str_to_int(ustring):
-    return int(ustring.replace(',', ''))
+    if ustring == "-":
+        return 0
+    else:
+        return int(ustring.replace(',', ''))
 
 
 class DateValueError(Exception):
@@ -74,7 +77,7 @@ class DCESpider(QObject):
             reply.deleteLater()
             self.spider_finished.emit("失败:" + str(reply.error()), True)
             return
-        save_path = os.path.join(LOCAL_SPIDER_SRC, 'dce/daily/{}.xls'.format(self.date.strftime("%Y-%m-%d")))
+        save_path = os.path.join(LOCAL_SPIDER_SRC, 'dce/daily/{}.xls'.format(self.date.strftime("%Y%m%d")))
         file_data = reply.readAll()
         file_obj = QFile(save_path)
         is_open = file_obj.open(QFile.WriteOnly)
@@ -115,7 +118,7 @@ class DCESpider(QObject):
             reply.deleteLater()
             self.spider_finished.emit("失败:" + str(reply.error()), True)
             return
-        save_path = os.path.join(LOCAL_SPIDER_SRC, 'dce/rank/{}.zip'.format(self.date.strftime("%Y-%m-%d")))
+        save_path = os.path.join(LOCAL_SPIDER_SRC, 'dce/rank/{}.zip'.format(self.date.strftime("%Y%m%d")))
         file_data = reply.readAll()
         file_obj = QFile(save_path)
         is_open = file_obj.open(QFile.WriteOnly)
@@ -176,7 +179,7 @@ class DCEParser(QObject):
         """ 解析文件数据为DataFrame """
         if self.date is None:
             raise DateValueError("请先使用`set_date`设置`DCEParser`日期.")
-        file_path = os.path.join(LOCAL_SPIDER_SRC, 'dce/daily/{}.xls'.format(self.date.strftime("%Y-%m-%d")))
+        file_path = os.path.join(LOCAL_SPIDER_SRC, 'dce/daily/{}.xls'.format(self.date.strftime("%Y%m%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现大商所{}的日交易行情文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
             return DataFrame()
@@ -193,8 +196,8 @@ class DCEParser(QObject):
         # 修改商品名称为英文
         xls_df["商品名称"] = xls_df["商品名称"].apply(get_variety_en)
         # 加入日期
-        str_date = self.date.strftime("%Y%m%d")
-        xls_df["日期"] = [str_date for _ in range(xls_df.shape[0])]
+        int_date = int(self.date.timestamp())
+        xls_df["日期"] = [int_date for _ in range(xls_df.shape[0])]
         # 重置列头并重命名
         xls_df = xls_df.reindex(columns=["日期", "商品名称", "交割月份", "前结算价", "开盘价", "最高价", "最低价", "收盘价",
                                          "结算价", "涨跌", "涨跌1", "成交量", "持仓量", "持仓量变化", "成交额"])
@@ -232,12 +235,12 @@ class DCEParser(QObject):
     def parser_rank_source_file(self):
         if self.date is None:
             raise DateValueError("请先使用`set_date`设置`DCEParser`日期.")
-        file_path = os.path.join(LOCAL_SPIDER_SRC, 'dce/rank/{}.zip'.format(self.date.strftime("%Y-%m-%d")))
+        file_path = os.path.join(LOCAL_SPIDER_SRC, 'dce/rank/{}.zip'.format(self.date.strftime("%Y%m%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现大商所{}的日持仓排名源文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
             return DataFrame()
         # 解压文件的缓存目录
-        cache_folder = os.path.join(LOCAL_SPIDER_SRC, 'dce/rank/cache/{}/'.format(self.date.strftime('%Y-%m-%d')))
+        cache_folder = os.path.join(LOCAL_SPIDER_SRC, 'dce/rank/cache/{}/'.format(self.date.strftime('%Y%m%d')))
         # 解压文件到文件夹
         zip_file = zipfile.ZipFile(file_path)
         zip_list = zip_file.namelist()
@@ -246,7 +249,22 @@ class DCEParser(QObject):
             zip_file.extract(filename, cache_folder)  # 循环解压文件到指定目录
         zip_file.close()
         # 取解压后的文件夹下的文件，逐个读取内容解析得到最终的数据集
-        return self._parser_variety_rank(cache_folder)
+        value_df = self._parser_variety_rank(cache_folder)
+        if not value_df.empty:
+            # 填充空值(合并后产生空值)
+            print("改变数据类型")
+            value_df = value_df.fillna('-')
+            # 将数据需要为int列转为int
+            value_df["rank"] = value_df["rank"].apply(str_to_int)
+            value_df["trade"] = value_df["trade"].apply(str_to_int)
+            value_df["trade_increase"] = value_df["trade_increase"].apply(str_to_int)
+            value_df["long_position"] = value_df["long_position"].apply(str_to_int)
+            value_df["long_position_increase"] = value_df["long_position_increase"].apply(str_to_int)
+            value_df["short_position"] = value_df["short_position"].apply(str_to_int)
+            value_df["short_position_increase"] = value_df["short_position_increase"].apply(str_to_int)
+            # 日期转为整形时间戳
+            value_df['date'] = value_df['date'].apply(lambda x: int(datetime.strptime(x, '%Y%m%d').timestamp()))
+        return value_df
 
     def save_rank_server(self, source_df):
         """ 保存日持仓排名到服务器 """
@@ -271,8 +289,7 @@ class DCEParser(QObject):
             data = json.loads(data.decode("utf-8"))
             self.parser_finished.emit(data["message"], True)
 
-    @staticmethod
-    def _parser_variety_rank(cache_folder):
+    def _parser_variety_rank(self, cache_folder):
         """ 读取文件夹内文件解析 """
         all_data_df = DataFrame(columns=["date", "variety_en", "contract", "rank",
                                          "trade_company", "trade", "trade_increase",
@@ -283,77 +300,200 @@ class DCEParser(QObject):
         for contract_filename in filename_list:
             contract_file_path = os.path.join(cache_folder, contract_filename)
             message_list = contract_filename.split('_')
-            c_date = message_list[0]                                  # 得到日期
-            contract = message_list[1].upper()                        # 得到合约
+            c_date = message_list[0]  # 得到日期
+            contract = message_list[1].upper()  # 得到合约
             variety_en = split_number_en(message_list[1])[0].upper()  # 得到合约代码
-            contract_df = read_table(contract_file_path)
-            extract_indexes = list()
-            start_index, end_index = None, None
+            if self.date.strftime("%Y%m%d") < '20160101':  # 解析20160101之前的数据,使用gbk解码
+                contract_df = read_table(contract_file_path, encoding="gbk")
+            else:  # 解析20160101之后的数据,使用utf8解码
+                contract_df = read_table(contract_file_path, sep=' ')
+            # 初始化3个容器和对应的置入信号
+            # 1 成交量容器
+            trade_values = []
+            trade_append = False
+            # 2 买单量容器
+            long_position_values = []
+            long_position_append = False
+            # 卖单量容器
+            short_position_values = []
+            short_position_append = False
             for df_row in contract_df.itertuples():
-                if df_row[1] == "名次":
-                    start_index = df_row[0]
-                if df_row[1] == "总计":
-                    end_index = df_row[0] - 1
-                if start_index is not None and end_index is not None:
-                    extract_indexes.append([start_index, end_index])
-                    start_index, end_index = None, None
-            contract_result_df = DataFrame()
-            for split_index in extract_indexes:
-                target_df = contract_df.loc[split_index[0]:split_index[1]]
-                first_row = target_df.iloc[0]
-                first_row = first_row.fillna("nana")  # 填充NAN的值为nana方便删除这些列
-                target_df.columns = first_row.values.tolist()  # 将第一行作为表头
-                target_df = target_df.reset_index()  # 重置索引
-                target_df = target_df.drop(labels=0)  # 删除第一行
-                if target_df.columns.values.tolist() == ['index', '名次', 'nana', '会员简称', '持买单量', '增减',
-                                                         'nana', 'nana', 'nana', 'nana', 'nana']:
-                    target_df.columns = ['index2', '名次', 'nana', '会员简称2', '持买单量', 'nana',
-                                         '增减2', 'nana', 'nana', 'nana', 'nana']
-                elif target_df.columns.values.tolist() == ['index', '名次', 'nana', '会员简称', '持卖单量', '增减',
-                                                           'nana', 'nana', 'nana', 'nana', 'nana']:
-                    target_df.columns = ['index3', '名次', 'nana', '会员简称3', '持卖单量', 'nana',
-                                         '增减3', 'nana', 'nana', 'nana', 'nana']
-                # 删除为nana的列
-                target_df = target_df.drop("nana", axis=1)  # 删除为nana的列
-                if contract_result_df.empty:
-                    contract_result_df = target_df
-                else:
-                    contract_result_df = merge(contract_result_df, target_df, on="名次")
-            # 提取需要的列，再重命名列头
-            contract_result_df["日期"] = [c_date for _ in range(contract_result_df.shape[0])]
-            contract_result_df["品种"] = [variety_en for _ in range(contract_result_df.shape[0])]
-            contract_result_df["合约"] = [contract for _ in range(contract_result_df.shape[0])]
-            # 重置列名取需要的值
-            contract_result_df = contract_result_df.reindex(columns=["日期", "品种", "合约", "名次",
-                                                                     "会员简称", "成交量", "增减",
-                                                                     "会员简称2", "持买单量", "增减2",
-                                                                     "会员简称3", "持卖单量", "增减3"])
-            contract_result_df.columns = ["date", "variety_en", "contract", "rank",
-                                          "trade_company", "trade", "trade_increase",
-                                          "long_position_company", "long_position", "long_position_increase",
-                                          "short_position_company", "short_position", "short_position_increase"]
-            # 填充缺失值
-            contract_result_df[
-                ["trade_company", "long_position_company", "short_position_company"]
-            ] = contract_result_df[
-                ["trade_company", "long_position_company", "short_position_company"]
-            ].fillna('')
-            contract_result_df = contract_result_df.fillna('0')
-            # 修改数据类型
-            contract_result_df["rank"] = contract_result_df["rank"].apply(str_to_int)
-            contract_result_df["trade"] = contract_result_df["trade"].apply(str_to_int)
-            contract_result_df["trade_increase"] = contract_result_df["trade_increase"].apply(str_to_int)
-            contract_result_df["long_position"] = contract_result_df["long_position"].apply(str_to_int)
-            contract_result_df["long_position_increase"] = contract_result_df["long_position_increase"].apply(
-                str_to_int)
-            contract_result_df["short_position"] = contract_result_df["short_position"].apply(str_to_int)
-            contract_result_df["short_position_increase"] = contract_result_df["short_position_increase"].apply(
-                str_to_int)
-            # 取1<=名次<=20的数据
-            contract_result_df = contract_result_df[
-                (1 <= contract_result_df["rank"]) & (contract_result_df["rank"] <= 20)]
+                row_list = df_row[1].split()
+                if row_list[0] in ["总计", "会员类别", "期货公司会员",
+                                   "非期货公司会员"]:  # 去除总计行否则后面添加报错， 20131126以后多了"会员类别", "期货公司会员", "非期货公司会员"数据
+                    continue
+                # 相应的数据放入对应的容器中
+                if row_list == ['名次', '会员简称', '成交量', '增减']:
+                    # 打开成交量容器
+                    trade_append = True
+                    long_position_append = False
+                    short_position_append = False
+                    continue
+                if row_list == ['名次', '会员简称', '持买单量', '增减']:
+                    # 打开买单量容器
+                    trade_append = False
+                    long_position_append = True
+                    short_position_append = False
+                    continue
+                if row_list == ['名次', '会员简称', '持卖单量', '增减']:
+                    # 打开卖单量容器
+                    trade_append = False
+                    long_position_append = False
+                    short_position_append = True
+                    continue
+                if trade_append and 1 <= int(row_list[0]) <= 20:
+                    trade_values.append(
+                        {
+                            "date": c_date,
+                            "contract": contract,
+                            "variety_en": variety_en,
+                            "rank": row_list[0],
+                            "trade_company": row_list[1],
+                            "trade": row_list[2],
+                            "trade_increase": row_list[3]
+                        }
+                    )
+                if long_position_append and 1 <= int(row_list[0]) <= 20:
+                    long_position_values.append(
+                        {
+                            "date": c_date,
+                            "contract": contract,
+                            "variety_en": variety_en,
+                            "rank": row_list[0],
+                            "long_position_company": row_list[1],
+                            "long_position": row_list[2],
+                            "long_position_increase": row_list[3]
+
+                        }
+                    )
+                if short_position_append and 1 <= int(row_list[0]) <= 20:
+                    short_position_values.append(
+                        {
+                            "date": c_date,
+                            "contract": contract,
+                            "variety_en": variety_en,
+                            "rank": row_list[0],
+                            "short_position_company": row_list[1],
+                            "short_position": row_list[2],
+                            "short_position_increase": row_list[3]
+                        }
+                    )
+            # 得到3个数据集
+            # print("成交量数据集")
+            # for t in trade_values:
+            #     print(t)
+            # print("买单量数据集")
+            # for l in long_position_values:
+            #     print(l)
+            # print("卖单量数据集")
+            # for s in short_position_values:
+            #     print(s)
+            # 将数据集转为DataFrame
+            columns_list = ["date", "contract", "variety_en", "rank"]
+            trade_df = DataFrame(trade_values, columns=columns_list + ["trade_company", "trade", "trade_increase"])
+            long_position_df = DataFrame(long_position_values,
+                                         columns=columns_list + ["long_position_company", "long_position",
+                                                                 "long_position_increase"])
+            short_position_df = DataFrame(short_position_values,
+                                          columns=columns_list + ["short_position_company", "short_position",
+                                                                  "short_position_increase"])
+            # 横向合并
+            contract_result_df = merge(
+                trade_df, long_position_df,
+                on=["date", "contract", "variety_en", "rank"],
+                how="outer"
+            )
+            contract_result_df = merge(
+                contract_result_df,
+                short_position_df,
+                on=["date", "contract", "variety_en", "rank"],
+                how="outer"
+            )
+
+            # 将数据纵向合并到总DataFrame
             all_data_df = concat([all_data_df, contract_result_df])
         return all_data_df
+
+        # all_data_df = DataFrame(columns=["date", "variety_en", "contract", "rank",
+        #                                  "trade_company", "trade", "trade_increase",
+        #                                  "long_position_company", "long_position", "long_position_increase",
+        #                                  "short_position_company", "short_position", "short_position_increase"])
+        #
+        # filename_list = os.listdir(cache_folder)
+        # for contract_filename in filename_list:
+        #     contract_file_path = os.path.join(cache_folder, contract_filename)
+        #     message_list = contract_filename.split('_')
+        #     c_date = message_list[0]                                  # 得到日期
+        #     contract = message_list[1].upper()                        # 得到合约
+        #     variety_en = split_number_en(message_list[1])[0].upper()  # 得到合约代码
+        #     contract_df = read_table(contract_file_path)
+        #     extract_indexes = list()
+        #     start_index, end_index = None, None
+        #     for df_row in contract_df.itertuples():
+        #         if df_row[1] == "名次":
+        #             start_index = df_row[0]
+        #         if df_row[1] == "总计":
+        #             end_index = df_row[0] - 1
+        #         if start_index is not None and end_index is not None:
+        #             extract_indexes.append([start_index, end_index])
+        #             start_index, end_index = None, None
+        #     contract_result_df = DataFrame()
+        #     for split_index in extract_indexes:
+        #         target_df = contract_df.loc[split_index[0]:split_index[1]]
+        #         first_row = target_df.iloc[0]
+        #         first_row = first_row.fillna("nana")  # 填充NAN的值为nana方便删除这些列
+        #         target_df.columns = first_row.values.tolist()  # 将第一行作为表头
+        #         target_df = target_df.reset_index()  # 重置索引
+        #         target_df = target_df.drop(labels=0)  # 删除第一行
+        #         if target_df.columns.values.tolist() == ['index', '名次', 'nana', '会员简称', '持买单量', '增减',
+        #                                                  'nana', 'nana', 'nana', 'nana', 'nana']:
+        #             target_df.columns = ['index2', '名次', 'nana', '会员简称2', '持买单量', 'nana',
+        #                                  '增减2', 'nana', 'nana', 'nana', 'nana']
+        #         elif target_df.columns.values.tolist() == ['index', '名次', 'nana', '会员简称', '持卖单量', '增减',
+        #                                                    'nana', 'nana', 'nana', 'nana', 'nana']:
+        #             target_df.columns = ['index3', '名次', 'nana', '会员简称3', '持卖单量', 'nana',
+        #                                  '增减3', 'nana', 'nana', 'nana', 'nana']
+        #         # 删除为nana的列
+        #         target_df = target_df.drop("nana", axis=1)  # 删除为nana的列
+        #         if contract_result_df.empty:
+        #             contract_result_df = target_df
+        #         else:
+        #             contract_result_df = merge(contract_result_df, target_df, on="名次")
+        #     # 提取需要的列，再重命名列头
+        #     contract_result_df["日期"] = [c_date for _ in range(contract_result_df.shape[0])]
+        #     contract_result_df["品种"] = [variety_en for _ in range(contract_result_df.shape[0])]
+        #     contract_result_df["合约"] = [contract for _ in range(contract_result_df.shape[0])]
+        #     # 重置列名取需要的值
+        #     contract_result_df = contract_result_df.reindex(columns=["日期", "品种", "合约", "名次",
+        #                                                              "会员简称", "成交量", "增减",
+        #                                                              "会员简称2", "持买单量", "增减2",
+        #                                                              "会员简称3", "持卖单量", "增减3"])
+        #     contract_result_df.columns = ["date", "variety_en", "contract", "rank",
+        #                                   "trade_company", "trade", "trade_increase",
+        #                                   "long_position_company", "long_position", "long_position_increase",
+        #                                   "short_position_company", "short_position", "short_position_increase"]
+        #     # 填充缺失值
+        #     contract_result_df[
+        #         ["trade_company", "long_position_company", "short_position_company"]
+        #     ] = contract_result_df[
+        #         ["trade_company", "long_position_company", "short_position_company"]
+        #     ].fillna('')
+        #     contract_result_df = contract_result_df.fillna('0')
+        #     # 修改数据类型
+        #     contract_result_df["rank"] = contract_result_df["rank"].apply(str_to_int)
+        #     contract_result_df["trade"] = contract_result_df["trade"].apply(str_to_int)
+        #     contract_result_df["trade_increase"] = contract_result_df["trade_increase"].apply(str_to_int)
+        #     contract_result_df["long_position"] = contract_result_df["long_position"].apply(str_to_int)
+        #     contract_result_df["long_position_increase"] = contract_result_df["long_position_increase"].apply(
+        #         str_to_int)
+        #     contract_result_df["short_position"] = contract_result_df["short_position"].apply(str_to_int)
+        #     contract_result_df["short_position_increase"] = contract_result_df["short_position_increase"].apply(
+        #         str_to_int)
+        #     # 取1<=名次<=20的数据
+        #     contract_result_df = contract_result_df[
+        #         (1 <= contract_result_df["rank"]) & (contract_result_df["rank"] <= 20)]
+        #     all_data_df = concat([all_data_df, contract_result_df])
+        # return all_data_df
 
     def parser_receipt_source_file(self):
         """ 解析仓单日报源文件 """

@@ -22,6 +22,25 @@ def get_client_uuid():
     return result_list[1]
 
 
+def get_client_uuid_with_ini():
+    config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
+    config = QSettings(config_filepath, QSettings.IniFormat)
+    client_uuid = config.value("TOKEN/UUID") if config.value("TOKEN/UUID") else 'Unknown'
+    return client_uuid
+
+
+def set_client_uuid_with_ini(client_uuid):
+    config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
+    config = QSettings(config_filepath, QSettings.IniFormat)
+    config.setValue("TOKEN/UUID", client_uuid)
+
+
+def remove_user_logged():
+    config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
+    config = QSettings(config_filepath, QSettings.IniFormat)
+    config.remove("USER/AUTOLOGIN")
+
+
 def get_user_token():
     params_path = os.path.join(BASE_DIR, "dawn/client.ini")
     app_params = QSettings(params_path, QSettings.IniFormat)
@@ -66,3 +85,53 @@ def is_module_verify(module_id, module_name):
             return False, "您还未登录,请登录后再进行操作!"
         return auth_module(module_id, module_name, modules)
 
+
+def set_previous_variety(module_name, variety_name, variety_en, flag):
+    """ 设置用户最近使用的品种 """
+    # {'top':[{variety_en:'',variety_name:''},{}], 'bottom': []}
+    previous_filepath = os.path.join(BASE_DIR, "dawn/{}.dat".format(module_name))
+    if not os.path.exists(previous_filepath):
+        with open(previous_filepath, "wb") as f:
+            pickle.dump({'top': [{}, {}], 'bottom': [{}, {}]}, f)
+            f.close()
+    # 先读取,后写入
+    with open(previous_filepath, "rb") as fp:
+        old_variety = pickle.load(fp)
+        fp.close()
+    if flag == 'top':
+        top_v = old_variety['top']
+        top_v[0], top_v[1] = top_v[1], top_v[0]  # 交换位置
+        # 写入第一个
+        top_v[0] = {'variety_en': variety_en, 'variety_name': variety_name}
+    if flag == 'bottom':
+        bottom_v = old_variety['bottom']
+        bottom_v[0], bottom_v[1] = bottom_v[1], bottom_v[0]  # 交换位置
+        bottom_v[0] = {'variety_en': variety_en, 'variety_name': variety_name}
+    with open(previous_filepath, "wb") as fp:
+        # 写入文件
+        pickle.dump(old_variety, fp)
+
+
+def get_previous_variety(module_name):
+    """ 获取用户最近使用的品种 """
+    previous_filepath = os.path.join(BASE_DIR, "dawn/{}.dat".format(module_name))
+    if not os.path.exists(previous_filepath):
+        return {'top': [{}, {}], 'bottom': [{}, {}]}
+    with open(previous_filepath, "rb") as fp:
+        variety = pickle.load(fp)
+    return variety
+
+
+def set_weekly_exclude_variety(exclude: str):
+    """设置(周度持仓变化)排除的品种 """
+    config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
+    config = QSettings(config_filepath, QSettings.IniFormat)
+    config.setValue("USER/VEXCLUDE", exclude)
+
+
+def get_weekly_exclude_variety():
+    """ 获取(周度持仓变化)用户排除的品种 """
+    config_filepath = os.path.join(BASE_DIR, "dawn/client.ini")
+    config = QSettings(config_filepath, QSettings.IniFormat)
+    exclude_variety = config.value('USER/VEXCLUDE')
+    return exclude_variety if exclude_variety else ''

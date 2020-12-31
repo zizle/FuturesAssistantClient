@@ -9,16 +9,17 @@ import time
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from PyQt5.QtWidgets import qApp, QListWidgetItem, QTableWidgetItem, QHeaderView
+from PyQt5.QtWidgets import qApp, QListWidgetItem, QTableWidgetItem, QHeaderView, QMenu
 from PyQt5.QtCore import Qt, QUrl, QThread, pyqtSignal
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
-from PyQt5.QtGui import QBrush, QColor, QIcon
-from settings import SERVER_API, logger, BASE_DIR
+from PyQt5.QtGui import QBrush, QColor, QCursor, QIcon
+from settings import SERVER_API, logger
 from utils.client import get_user_token, get_client_uuid
-from popup.industry_popup import UpdateFolderPopup, DisposeChartPopup
-from popup.sheet_charts import SheetChartsPopup, DeciphermentPopup, ChartPopup
+from popup.industry_popup import UpdateFolderPopup, DisposeChartPopup, SheetWidgetPopup
+from popup.sheet_charts import SheetChartsPopup, DeciphermentPopup, ChartPopup, EditChartOptionPopup
 from popup.message import InformationPopup, WarningPopup
-from .user_data_ui import UserDataMaintainUI, SheetChartUI, OperateButton
+from widgets import OperateButton
+from .user_data_ui import UserDataMaintainUI, SheetChartUI
 
 pd.set_option('mode.chained_assignment', None)  # pandas不提示警告
 
@@ -134,13 +135,17 @@ class UserDataMaintain(UserDataMaintainUI):
 
         self.source_config_widget.new_config_button.clicked.connect(self.config_update_folder)  # 调整配置更新文件夹
         self.source_config_widget.group_combobox.currentTextChanged.connect(self.show_groups_folder_list)  # 显示品种组的更新文件夹
+
         self.variety_sheet_widget.group_combobox.currentIndexChanged.connect(self.get_show_variety_sheets)  # 获取品种的数据表
         self.variety_sheet_widget.sheet_table.cellDoubleClicked.connect(self.popup_option_chart)  # 双击弹窗设置数据图
-        self.variety_sheet_widget.sheet_table.cellChanged.connect(self.sheet_table_cell_changed)  # 数据表格变化
-        self.variety_sheet_widget.only_me_check.stateChanged.connect(self.get_show_variety_sheets)# 重新获取品种的数据表
+        # 数据表单元格变化(在添加数据表行数据取消关联才不会崩溃)
+        self.variety_sheet_widget.sheet_table.cellChanged.connect(self.sheet_table_cell_changed)
+        self.variety_sheet_widget.only_me_check.stateChanged.connect(self.get_show_variety_sheets)  # 重新获取品种的数据表
+        self.variety_sheet_widget.sheet_table.right_mouse_clicked.connect(self.sheet_table_right_mouse)  # 右键点击数据表
 
         self.sheet_chart_widget.swap_tab.tabBarClicked.connect(self.swap_to_render_variety_charts)  # 切换渲染品种下的图形
-        self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)    # 图形表单元格变化
+        # 图形表单元格变化(在添加数据之前取消关联才不会崩溃)
+        self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)
         self.sheet_chart_widget.only_me_check.stateChanged.connect(self.chart_page_variety_changed)  # 重新请求图形界面的图形
 
     def _get_user_variety(self):
@@ -254,6 +259,7 @@ class UserDataMaintain(UserDataMaintainUI):
         for i in range(self.source_config_widget.group_combobox.count()):
             group_dict[self.source_config_widget.group_combobox.itemData(i)] = self.source_config_widget.group_combobox.itemText(i)
         """
+
     def get_update_folders_reply(self):
         """ 获取更新文件夹返回 """
         reply = self.sender()
@@ -431,23 +437,23 @@ class UserDataMaintain(UserDataMaintainUI):
         """ 显示当前条件下的品种表 """
         # 关闭表格单元格变化的信号
         self.variety_sheet_widget.sheet_table.cellChanged.disconnect()
+
         self.variety_sheet_widget.sheet_table.clear()
+        self.variety_sheet_widget.sheet_table.setColumnCount(11)
+        self.variety_sheet_widget.sheet_table.setHorizontalHeaderLabels(
+            ["编号", "创建日期", "创建人", "名称", "更新时间", "更新人", "增量", "图形", "上移", "可见", "删除"]
+        )
         if self.variety_sheet_widget.only_me_check.checkState():
-            self.variety_sheet_widget.sheet_table.setColumnCount(11)
-            self.variety_sheet_widget.sheet_table.setHorizontalHeaderLabels(
-                ["编号", "创建日期", "创建人", "名称", "更新时间", "更新人", "增量", "图形", "上移", "删除","可见"]
-            )
+            self.variety_sheet_widget.sheet_table.setColumnHidden(9, False)  # 显示可见列
         else:
-            self.variety_sheet_widget.sheet_table.setColumnCount(10)
-            self.variety_sheet_widget.sheet_table.setHorizontalHeaderLabels(
-                ["编号", "创建日期", "创建人", "名称", "更新时间", "更新人", "增量", "图形", "上移", "删除"]
-            )
+            self.variety_sheet_widget.sheet_table.setColumnHidden(9, True)  # 隐藏可见列
+
         self.variety_sheet_widget.sheet_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.variety_sheet_widget.sheet_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         self.variety_sheet_widget.sheet_table.setRowCount(len(sheets))
 
         for row, row_item in enumerate(sheets):
-            item0 = QTableWidgetItem(str(row_item["id"]))
+            item0 = QTableWidgetItem("%04d" % row_item["id"])
             item0.setTextAlignment(Qt.AlignCenter)
             self.variety_sheet_widget.sheet_table.setItem(row, 0, item0)
 
@@ -485,18 +491,19 @@ class UserDataMaintain(UserDataMaintainUI):
             if row > 0:
                 item8_button = OperateButton("media/icons/swap.png", "media/icons/swap_hover.png", self)
                 setattr(item8_button, "row_index", row)
-                item8_button.clicked.connect(self.sheet_to_top_show)
+                item8_button.clicked.connect(self.swap_sheet_suffix)
                 self.variety_sheet_widget.sheet_table.setCellWidget(row, 8, item8_button)
 
-            item9_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
-            setattr(item9_button, "row_index", row)
-            item9_button.clicked.connect(self.delete_sheet_table)
-            self.variety_sheet_widget.sheet_table.setCellWidget(row, 9, item9_button)
+            check = Qt.Checked if row_item["is_private"] else Qt.Unchecked
+            item9 = QTableWidgetItem("私有")
+            item9.setCheckState(check)
+            self.variety_sheet_widget.sheet_table.setItem(row, 9, item9)
 
-            check, text = (Qt.Checked, "自己") if row_item["is_private"] else (Qt.Unchecked, "公开")
-            item10 = QTableWidgetItem(text)
-            item10.setCheckState(check)
-            self.variety_sheet_widget.sheet_table.setItem(row, 10, item10)
+            item10_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
+            setattr(item10_button, "row_index", row)
+            item10_button.clicked.connect(self.delete_sheet_table)
+            self.variety_sheet_widget.sheet_table.setCellWidget(row, 10, item10_button)
+
         # 还原表格单元格内容发生变化的信号
         self.variety_sheet_widget.sheet_table.cellChanged.connect(self.sheet_table_cell_changed)
 
@@ -546,16 +553,10 @@ class UserDataMaintain(UserDataMaintainUI):
 
     def sheet_table_cell_changed(self, row, col):
         """ 数据表的内容发生了变化 """
-        # 关闭信号防止文字改变也发送一次信号
-        self.variety_sheet_widget.sheet_table.cellChanged.disconnect()
-        if col == 10:  # 发起修改私有化数据表的请求
+        if col == 9:  # 发起修改私有化数据表的请求
             sheet_id = self.variety_sheet_widget.sheet_table.item(row, 0).text()
             is_private = 1 if self.variety_sheet_widget.sheet_table.item(row, col).checkState() else 0
-            text = "自己" if is_private else "公开"
-            self.variety_sheet_widget.sheet_table.item(row, col).setText(text)
             self.request_sheet_private(sheet_id, is_private)
-        # 再次恢复信号
-        self.variety_sheet_widget.sheet_table.cellChanged.connect(self.sheet_table_cell_changed)
 
     def request_sheet_private(self, sheet_id, is_private):
         """ 发请求sheet表私有化状态的改变 """
@@ -568,8 +569,13 @@ class UserDataMaintain(UserDataMaintainUI):
         reply.finished.connect(self.modify_sheet_private_reply)
 
     def modify_sheet_private_reply(self):
-        """ 修改sheet表返回 """
+        """ 修改sheet表私有状态返回 """
         reply = self.sender()
+        if reply.error():
+            p = InformationPopup('修改状态失败了!', self)
+        else:
+            p = InformationPopup('修改成功!', self)
+        p.exec_()
         reply.deleteLater()
 
     def show_sheet_charts_values(self):
@@ -582,8 +588,8 @@ class UserDataMaintain(UserDataMaintainUI):
         popup.setWindowTitle(sheet_name)
         popup.exec_()
 
-    def sheet_to_top_show(self):
-        """ 将数据记录置顶 """
+    def swap_sheet_suffix(self):
+        """ 交换两行记录 """
         # 取得上行的数据id和当前行的数据id
         row_index = getattr(self.sender(), "row_index")
         swap_id = self.variety_sheet_widget.sheet_table.item(row_index, 0).text()
@@ -596,9 +602,9 @@ class UserDataMaintain(UserDataMaintainUI):
         network_manager = getattr(qApp, "_network")
         url = SERVER_API + "sheet/suffix-swap/"
         reply = network_manager.put(QNetworkRequest(QUrl(url)), json.dumps(body_data).encode("utf-8"))
-        reply.finished.connect(self.swap_suffix_reply)
+        reply.finished.connect(self.swap_sheet_suffix_reply)
 
-    def swap_suffix_reply(self):
+    def swap_sheet_suffix_reply(self):
         """ 交换后缀返回(指定) """
         reply = self.sender()
         if reply.error():
@@ -616,6 +622,10 @@ class UserDataMaintain(UserDataMaintainUI):
 
     def swap_variety_sheet_table_row(self, current_row, up_row):
         """ 数据表交换行数据行 """
+        # 断开数据变化信号
+        self.variety_sheet_widget.sheet_table.cellChanged.disconnect()
+
+        # 交换数据行
         for col_index in range(7):
             current_item = self.variety_sheet_widget.sheet_table.item(current_row, col_index)
             up_row_item = self.variety_sheet_widget.sheet_table.item(up_row, col_index)
@@ -624,13 +634,44 @@ class UserDataMaintain(UserDataMaintainUI):
             up_row_item.setText(current_text)
             if col_index == 6:
                 if int(up_text) > 0:
-                    current_item.setForeground(QBrush(QColor(233,66,66)))
+                    current_item.setForeground(QBrush(QColor(233, 66, 66)))
                 else:
                     current_item.setForeground(QBrush(QColor(0, 0, 0)))
                 if int(current_text) > 0:
-                    up_row_item.setForeground(QBrush(QColor(233,66,66)))
+                    up_row_item.setForeground(QBrush(QColor(233, 66, 66)))
                 else:
                     up_row_item.setForeground(QBrush(QColor(0, 0, 0)))
+        # 交换第9列的私有情况
+        c_state_item = self.variety_sheet_widget.sheet_table.item(current_row, 9)
+        c_checked = c_state_item.checkState()
+        u_state_item = self.variety_sheet_widget.sheet_table.item(up_row, 9)
+        u_checked = u_state_item.checkState()
+        c_state_item.setCheckState(u_checked)
+        u_state_item.setCheckState(c_checked)
+
+        # 重新关联信号
+        self.variety_sheet_widget.sheet_table.cellChanged.connect(self.sheet_table_cell_changed)
+
+    def sheet_table_right_mouse(self):
+        r_menu = QMenu(self)
+        edit_action = r_menu.addAction('修改数据')
+        edit_action.setIcon(QIcon(QIcon('media/icons/edit.png')))
+        edit_action.triggered.connect(self.edit_sheet_values_popup)
+        r_menu.exec_(QCursor.pos())
+
+    def edit_sheet_values_popup(self):
+        current_row = self.variety_sheet_widget.sheet_table.currentRow()
+        if current_row < 0:
+            return
+        # 弹窗显示数据表实际内容,并提供修改
+        sheet_id = self.variety_sheet_widget.sheet_table.item(current_row, 0).text()
+        sheet_title = self.variety_sheet_widget.sheet_table.item(current_row, 3).text()
+        sheet_popup = SheetWidgetPopup(sheet_id, self)
+        sheet_popup.setWindowTitle(sheet_title)
+        sheet_popup.setWindowIcon(QIcon('media/icons/edit_hover.png'))
+        sheet_popup.exec_()
+
+    """ 数据图形显示 """
 
     def chart_page_variety_changed(self):
         """ 图形显示页品种变化 """
@@ -657,27 +698,23 @@ class UserDataMaintain(UserDataMaintainUI):
         reply.deleteLater()
 
     def show_variety_charts(self, charts_list):
-        """ 显示所有已配置的品种表 """
-        self.sheet_chart_widget.chart_table.cellChanged.disconnect()  # 关闭单元格变化的信号
+        """ 显示所有已配置的品种下的图形 """
         self.sheet_chart_widget.chart_table.clear()
-
-        if self.sheet_chart_widget.only_me_check.checkState():
-            self.sheet_chart_widget.chart_table.setColumnCount(11)
-            self.sheet_chart_widget.chart_table.setHorizontalHeaderLabels([
-                "编号", "创建者", "创建日期", "标题", "解读", '图形', '上移', '主页', '品种', '删除', '可见'
-            ])
-        else:
-            self.sheet_chart_widget.chart_table.setColumnCount(10)
-            self.sheet_chart_widget.chart_table.setHorizontalHeaderLabels([
-                "编号", "创建者", "创建日期", "标题", "解读", '图形', '上移', '主页', '品种', '删除'
-            ])
-
+        self.sheet_chart_widget.chart_table.setColumnCount(12)
+        self.sheet_chart_widget.chart_table.setHorizontalHeaderLabels([
+            "编号", "创建者", "创建日期", "标题", "解读", '图形', '上移', '主页', '品种', '可见', '配置', '删除'
+        ])
         self.sheet_chart_widget.chart_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.sheet_chart_widget.chart_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        if self.sheet_chart_widget.only_me_check.checkState():
+            self.sheet_chart_widget.chart_table.setColumnHidden(9, False)  # 显示可见列
+        else:
+            self.sheet_chart_widget.chart_table.setColumnHidden(9, True)  # 隐藏可见列
 
         self.sheet_chart_widget.chart_table.setRowCount(len(charts_list))
+        self.sheet_chart_widget.chart_table.cellChanged.disconnect()  # 关闭单元格变化的信号(防止设置勾选时发送请求)
         for row, row_item in enumerate(charts_list):
-            item0 = QTableWidgetItem(str(row_item["id"]))
+            item0 = QTableWidgetItem("%04d" % row_item["id"])
             item0.setTextAlignment(Qt.AlignCenter)
             self.sheet_chart_widget.chart_table.setItem(row, 0, item0)
 
@@ -708,11 +745,10 @@ class UserDataMaintain(UserDataMaintainUI):
                 setattr(item6_button, "row_index", row)
                 item6_button.clicked.connect(self.swap_chart_suffix)
                 self.sheet_chart_widget.chart_table.setCellWidget(row, 6, item6_button)
-
             # 主页
             item7 = QTableWidgetItem()
             if row_item["is_principal"] == "0":
-                text = "隐藏"
+                text = "显示"
                 checked = Qt.Unchecked
             elif row_item["is_principal"] == "1":
                 text = "审核"
@@ -723,27 +759,44 @@ class UserDataMaintain(UserDataMaintainUI):
             item7.setText(text)
             item7.setCheckState(checked)
             self.sheet_chart_widget.chart_table.setItem(row, 7, item7)
+
             # 品种页
             item8 = QTableWidgetItem()
-            checked, text = (Qt.Checked, "开启") if row_item["is_petit"] else (Qt.Unchecked, "隐藏")
-            item8.setText(text)
+            checked = Qt.Checked if row_item["is_petit"] else Qt.Unchecked
+            item8.setText("开启")
             item8.setCheckState(checked)
             self.sheet_chart_widget.chart_table.setItem(row, 8, item8)
+
+            # 仅私有可见
+            item9 = QTableWidgetItem("私有")
+            checked = Qt.Checked if row_item["is_private"] else Qt.Unchecked
+            item9.setCheckState(checked)
+            self.sheet_chart_widget.chart_table.setItem(row, 9, item9)
+
+            # 参数
+            item10_button = OperateButton("media/icons/chartOption.png", "media/icons/chartOption_hover.png", self)
+            setattr(item10_button, "row_index", row)
+            item10_button.clicked.connect(self.modify_chart_option)
+            self.sheet_chart_widget.chart_table.setCellWidget(row, 10, item10_button)
+
             # 删除
-            item9_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
-            setattr(item9_button, "row_index", row)
-            item9_button.clicked.connect(self.user_delete_chart)
-            self.sheet_chart_widget.chart_table.setCellWidget(row, 9, item9_button)
+            item11_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
+            setattr(item11_button, "row_index", row)
+            item11_button.clicked.connect(self.user_delete_chart)
+            self.sheet_chart_widget.chart_table.setCellWidget(row, 11, item11_button)
 
-            # 仅自己可见
-            item10 = QTableWidgetItem()
-            checked, text = (Qt.Checked, "自己") if row_item["is_private"] else (Qt.Unchecked, "公开")
-            item10.setCheckState(checked)
-            item10.setText(text)
-            self.sheet_chart_widget.chart_table.setItem(row, 10, item10)
-
-        # 重新连接单元格变化的信号
+        # 连接单元格变化的信号
         self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)  # 图形表单元格变化
+
+    def modify_chart_option(self):
+        """ 调整图形配置 """
+        sender_button = self.sender()
+        row = getattr(sender_button, "row_index")
+        title = self.sheet_chart_widget.chart_table.item(row, 3).text()
+        chart_id = self.sheet_chart_widget.chart_table.item(row, 0).text()
+        popup = EditChartOptionPopup(chart_id, self)
+        popup.setWindowTitle("配置调整-{}".format(title))
+        popup.exec_()
 
     def user_delete_chart(self):
         """ 用户删除图形"""
@@ -760,8 +813,7 @@ class UserDataMaintain(UserDataMaintainUI):
         chart_id = data["chart_id"]
         url = SERVER_API + "chart/{}/".format(chart_id)
         request = QNetworkRequest(QUrl(url))
-        user_token = get_user_token()
-        request.setRawHeader("Authorization".encode('utf-8'), user_token.encode("utf-8"))
+        request.setRawHeader("Authorization".encode('utf-8'), get_user_token().encode("utf-8"))
         network_manager = getattr(qApp, "_network")
         reply = network_manager.deleteResource(request)
         reply.finished.connect(self.delete_chart_reply)
@@ -791,7 +843,6 @@ class UserDataMaintain(UserDataMaintainUI):
         chart_name = self.sheet_chart_widget.chart_table.item(current_row, 3).text()
         popup = ChartPopup(chart_id, self)
         popup.setWindowTitle(chart_name)
-        popup.setWindowIcon(QIcon("media/icons/chart.png"))
         popup.show()
 
     def swap_chart_suffix(self):
@@ -827,12 +878,29 @@ class UserDataMaintain(UserDataMaintainUI):
 
     def swap_variety_chart_table_row(self, current_row, up_row):
         """ 图形表交换行数据行 """
+        # 断开单元格的变化信号
+        self.sheet_chart_widget.chart_table.cellChanged.disconnect()  # 图形表单元格变化
+
         for col_index in range(4):
             current_item = self.sheet_chart_widget.chart_table.item(current_row, col_index)
             up_row_item = self.sheet_chart_widget.chart_table.item(up_row, col_index)
             current_text, up_text = current_item.text(), up_row_item.text()
             current_item.setText(up_text)
             up_row_item.setText(current_text)
+
+        # 修改主页7,品种8及可见9的勾选情况
+        for state_col in [7, 8, 9]:
+            c_state_item = self.sheet_chart_widget.chart_table.item(current_row, state_col)
+            u_state_item = self.sheet_chart_widget.chart_table.item(up_row, state_col)
+            c_state, u_state = c_state_item.checkState(), u_state_item.checkState()
+            c_text, u_text = c_state_item.text(), u_state_item.text()
+            c_state_item.setCheckState(u_state)
+            c_state_item.setText(u_text)
+            u_state_item.setCheckState(c_state)
+            u_state_item.setText(c_text)
+
+        # 重新连接单元格的变化信号
+        self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)
 
     def load_variety_charts_render(self):
         """ 加载品种的所有图形 """
@@ -849,33 +917,33 @@ class UserDataMaintain(UserDataMaintainUI):
 
     def chart_table_cell_changed(self, row, col):
         """ 数据图形单元格变化 """
-        # 断开信号(防止两列的变化都发送一次请求)
-        self.sheet_chart_widget.chart_table.cellChanged.disconnect()  # 图形表单元格变化
-        if col in [7, 8, 10]:
-            chart_id = self.sheet_chart_widget.chart_table.item(row, 0).text()
-            is_principal = self.sheet_chart_widget.chart_table.item(row, 7).checkState()
+        chart_id = self.sheet_chart_widget.chart_table.item(row, 0).text()
+        is_principal = None
+        is_petit = None
+        is_private = None
+        if col == 7:  # 主页显示与否
+            is_principal = 1 if self.sheet_chart_widget.chart_table.item(row, 7).checkState() else 0
+        elif col == 8:  # 品种页显示与否
             is_petit = 1 if self.sheet_chart_widget.chart_table.item(row, 8).checkState() else 0
-            is_private = 1 if self.sheet_chart_widget.chart_table.item(row, 10).checkState() else 0
+        elif col == 9:  # 公开与否
+            is_private = 1 if self.sheet_chart_widget.chart_table.item(row, 9).checkState() else 0
+        else:
+            pass
+        if col in [7, 8, 9]:  # 发起数据请求
             self.change_chart_display_position(chart_id, is_principal, is_petit, is_private)
-            if is_principal == 1:
-                text = "审核"
-            elif is_principal == 2:
-                text = "开启"
-            else:
-                text = "隐藏"
-            self.sheet_chart_widget.chart_table.item(row, 7).setText(text)
-            text = "开启" if is_petit else "隐藏"
-            self.sheet_chart_widget.chart_table.item(row, 8).setText(text)
-            text = "自己" if is_private else "公开"
-            self.sheet_chart_widget.chart_table.item(row, 10).setText(text)
-        # 再次链接信号
-        self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)  # 图形表单元格变化
 
     def change_chart_display_position(self, chart_id, is_principal, is_petit, is_private):
         """ 修改图形的显示位置 """
+        if is_principal is not None and is_petit is None and is_private is None:
+            url = SERVER_API + 'chart/{}/display/?is_principal={}'.format(chart_id, is_principal)
+        elif is_petit is not None and is_principal is None and is_private is None:
+            url = SERVER_API + 'chart/{}/display/?is_petit={}'.format(chart_id, is_petit)
+        elif is_private is not None and is_principal is None and is_petit is None:
+            url = SERVER_API + 'chart/{}/display/?is_private={}'.format(chart_id, is_private)
+        else:
+            return
         user_token = get_user_token()
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + 'chart/{}/display/?is_principal={}&is_petit={}&is_private={}'.format(chart_id, is_principal, is_petit, is_private)
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader("Authorization".encode("utf-8"), user_token.encode("utf-8"))
         reply = network_manager.put(request, None)

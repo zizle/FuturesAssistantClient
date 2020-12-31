@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QP
                              QAbstractItemView, QGraphicsDropShadowEffect)
 from PyQt5.QtCore import Qt, QRect, QMargins, QSize, QUrl, QThread, pyqtSignal
 from PyQt5.QtGui import QPainter, QPixmap, QIcon, QImage, QBrush, QColor
-from PyQt5.QtNetwork import QNetworkRequest
+from PyQt5.QtNetwork import QNetworkRequest, QNetworkAccessManager
 from widgets.sliding_stacked import SlidingStackedWidget
 from settings import STATIC_URL, HOMEPAGE_TABLE_ROW_HEIGHT, HOMEPAGE_MENUS
 
@@ -108,7 +108,7 @@ class AdImageThread(QThread):
         self.image_url = image_url
 
     def run(self):
-        network_manager = getattr(qApp, "_network")
+        network_manager = QNetworkAccessManager()  # 当前是子线程,设置parent会引发警告,使用主线程的manager也会引发警告,重新实例化
         reply = network_manager.get(QNetworkRequest(QUrl(self.image_url)))
         reply.finished.connect(self.image_reply)
         self.exec_()
@@ -121,6 +121,7 @@ class AdImageThread(QThread):
             image = QImage.fromData(reply.readAll().data())
             self.get_back_image.emit(image)
         reply.deleteLater()
+        reply.manager().deleteLater()  # 当前是子线程,无法为manger设置parent,手动删除
         self.quit()
 
 
@@ -175,6 +176,7 @@ class ControlButton(QPushButton):
 class ModuleWidgetTable(QTableWidget):
     def __init__(self, *args, **kwargs):
         super(ModuleWidgetTable, self).__init__(*args)
+        self.setMouseTracking(True)
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
         self.setFrameShape(QFrame.NoFrame)
@@ -183,11 +185,12 @@ class ModuleWidgetTable(QTableWidget):
         self.setSelectionMode(QAbstractItemView.NoSelection)
         self.setShowGrid(False)
         self.setWordWrap(False)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setCursor(Qt.PointingHandCursor)
         self.setObjectName("contentTable")
-        self.setStyleSheet(
-            "#contentTable::item:hover{color:rgb(248,121,27);}"
-        )
+        # self.setStyleSheet(
+        #     "#contentTable::item:hover{color:rgb(248,121,27);}"
+        # )
 
         # 保存显示的内容信息和参数
         self.content_values = []
@@ -197,6 +200,41 @@ class ModuleWidgetTable(QTableWidget):
         self.column_text_color = {}
         self.zero_text_color = []
         self.center_alignment_columns = []
+
+        # 鼠标移动整行颜色变化
+        self.mouse_last_row = -1
+        self.itemEntered.connect(self.mouse_enter_item)
+
+    def mouse_enter_item(self, item):
+        current_row = self.row(item)
+        # 改变当前行的颜色
+        for col in range(self.columnCount()):
+            self.item(current_row, col).setForeground(QBrush(QColor(248, 121, 27)))
+        # 恢复离开行的颜色
+        self.recover_row_color()
+        self.mouse_last_row = current_row
+
+    def recover_row_color(self):
+        if self.mouse_last_row >= 0:
+            for col in range(self.columnCount()):
+                self.item(self.mouse_last_row, col).setForeground(QBrush(QColor(0, 0, 0)))
+                # 如果原来有设置颜色的恢复原来的颜色
+                if col in self.column_text_color.keys():
+                    self.item(self.mouse_last_row, col).setForeground(QBrush(self.column_text_color.get(col)))
+                if col in self.zero_text_color:
+                    num = self.item(self.mouse_last_row, col).text()
+                    if float(num) > 0:
+                        self.item(self.mouse_last_row, col).setForeground(QBrush(QColor(203, 0, 0)))
+                    elif float(num) < 0:
+                        self.item(self.mouse_last_row, col).setForeground(QBrush(QColor(0, 124, 0)))
+                    else:  # 已经设置为黑色了
+                        pass
+
+    def leaveEvent(self, *args, **kwargs):
+        """ 鼠标离开事件 """
+        # 将最后记录行颜色变为原来的样子,且修改记录行为-1
+        self.recover_row_color()
+        self.mouse_last_row = -1
 
     def set_contents(
             self, content_values, content_keys, data_keys, resize_cols, column_text_color: dict,
@@ -230,9 +268,9 @@ class ModuleWidgetTable(QTableWidget):
                 if col in self.column_text_color.keys():
                     item.setForeground(QBrush(self.column_text_color.get(col)))
                 if col in self.zero_text_color:
-                    if int(row_item[col_key]) > 0:  # 将内容转数字与0比较大小设置颜色
+                    if float(row_item[col_key]) > 0:  # 将内容转数字与0比较大小设置颜色
                         color = QColor(203, 0, 0)
-                    elif int(row_item[col_key]) < 0:
+                    elif float(row_item[col_key]) < 0:
                         color = QColor(0, 124, 0)
                     else:
                         color = QColor(0, 0, 0)
@@ -358,6 +396,7 @@ class HomepageUI(QWidget):
 
         # 左侧的菜单列表控件
         self.left_menu = QListWidget(self)
+        self.left_menu.setFocusPolicy(Qt.NoFocus)
         # 固定宽度
         self.left_menu.setFixedWidth(42)
         layout.addWidget(self.left_menu)
@@ -448,31 +487,10 @@ class HomepageUI(QWidget):
 
         layout.addLayout(content_layout)
         self.setLayout(layout)
-        # self.setWidget(self.container)
-        # self.setWidgetResizable(True)
-        # self.horizontalScrollBar().setStyleSheet(HORIZONTAL_SCROLL_STYLE)
-        # self.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
         self.left_menu.setObjectName("LeftMenuList")
         self.setStyleSheet(
             "#LeftMenuList{border:none;color:rgb(254,254,254);font-size:14px;"
-            "background-color:rgb(233,26,46);outline:none;}"
+            "background-color:rgb(233,26,46);}"
             "#LeftMenuList::item{padding:5px 0 5px 0px}"
-            "#LeftMenuList::item:selected{background-color:rgb(255,255,255);color:rgb(0,0,0);out-line:none}"
+            "#LeftMenuList::item:selected{background-color:rgb(255,255,255);color:rgb(0,0,0);}"
         )
-
-
-class HomepageUI1(QWidget):
-    """ 首页UI """
-
-    def __init__(self, *args, **kwargs):
-        super(HomepageUI1, self).__init__(*args, **kwargs)
-        layout = QVBoxLayout()
-        label = QLabel("期货分析助手", self)
-        label.setAlignment(Qt.AlignCenter)
-        label.setStyleSheet("color:rgb(250,20,10);font-size:30px")
-        layout.addWidget(label)
-        self.setLayout(layout)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.drawPixmap(self.rect(), QPixmap("media/home_bg.png"), QRect())

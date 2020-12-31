@@ -5,13 +5,14 @@
 
 """ 遮罩层 """
 
-from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QGraphicsOpacityEffect
+from PyQt5.QtWidgets import qApp,QWidget, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QDialog, QVBoxLayout
 from PyQt5.QtCore import QTimer, Qt, QMargins
 
 
 class CoverWidget(QWidget):
     def __init__(self, text, *args, **kwargs):
         super(CoverWidget, self).__init__(*args, **kwargs)
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.text = text
         self.text_animation_timer = QTimer(self)
         self.text_animation_timer.timeout.connect(self.animation_text)

@@ -3,7 +3,8 @@
 # @Time  : 2020-08-21 12:50
 # @Author: zizle
 
-
+REPORT_TYPE = {1: '收盘日评', 2: '周度报告', 3: '月度报告', 4: '年度报告', 5: '专题报告', 6: '调研报告',
+               7: '技术解盘', 0: '其他'}
 # 所有品种对应的中文名
 VARIETY_ZH = {
     'A': '黄大豆1号',
@@ -75,6 +76,12 @@ VARIETY_ZH = {
 
 # 中文对应品种交易代码(使用场景:提取现货数据;提取每日仓单)
 VARIETY_EN = {
+    'IF': 'IF',
+    'IC': 'IC',
+    'IH': 'IH',
+    '沪深300': 'IF',
+    '中证500': 'IC',
+    '上证50': 'IH',
     '铜': 'CU',
     '短纤': 'PF',
     '铝': 'AL',
@@ -85,6 +92,7 @@ VARIETY_EN = {
     '铁矿石': 'I',
     '热轧卷板': 'HC',
     '螺纹钢': 'RB',
+    '螺纹': 'RB',
     '螺纹钢仓库': 'RB',
     '螺纹钢厂库': 'RB',
     '线材': 'WR',
@@ -92,9 +100,11 @@ VARIETY_EN = {
     '不锈钢仓库': 'SS',
     '硅铁': 'SF',
     '硅锰': 'SM',
+    '锰硅': 'SM',
     '焦煤': 'JM',
     '焦炭': 'J',
     '动力煤': 'ZC',
+    '郑煤': 'ZC',
     '黄金': 'AU',
     '白银': 'AG',
     '大豆': 'A',
@@ -115,13 +125,16 @@ VARIETY_EN = {
     '聚乙烯': 'L',
     '鸡蛋': 'JD',
     '菜粕': 'RM',
+    '菜籽粕': 'RM',
     '菜油': 'OI',
+    '菜籽油': 'OI',
     '玉米': 'C',
     '淀粉': 'CS',
     'LLDPE': 'L',
     'PP': 'PP',
     'PVC': 'V',
     '苯乙烯': 'EB',
+    '低硫燃料油仓库': 'LU',
     '全乳胶': 'RU',
     '天然橡胶': 'RU',
     '20号胶': 'NR',
@@ -142,6 +155,7 @@ VARIETY_EN = {
     '石油沥青厂库': 'BU',
     '纤维板': 'FB',
     '液化气': 'PG',
+    'LPG': 'PG',
     '燃料油': 'FU',
     '液化石油气': 'PG',
     '原油': 'SC',
@@ -160,9 +174,24 @@ HORIZONTAL_SCROLL_STYLE = "QScrollBar:horizontal{background:transparent;height:1
 
 VERTICAL_SCROLL_STYLE = "QScrollBar:vertical{background: transparent; width:10px;margin: 0px;}" \
             "QScrollBar:vertical:hover{background:rgba(0,0,0,30);border-radius:5px}" \
-            "QScrollBar::handle:vertical{background: rgba(0,0,0,50);width:10px;border-radius:5px;border:none}" \
+            "QScrollBar::handle:vertical{background: rgba(0,0,0,50);width:10px;min-height:50px;border-radius:5px;border:none}" \
             "QScrollBar::handle:vertical:hover{background:rgba(0,0,0,100)}" \
             "QScrollBar::add-page:vertical{width:10px;background:transparent;}" \
             "QScrollBar::sub-page:vertical{width:10px;background:transparent;}" \
             "QScrollBar::sub-line:vertical{height:0px}" \
             "QScrollBar::add-line:vertical{height:0px}"
+
+HORIZONTAL_HEADER_STYLE = "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1," \
+            "stop:0 #49aa54, stop: 0.48 #49cc54,stop: 0.52 #49cc54, stop:1 #49aa54);" \
+            "border:1px solid rgb(201,202,202);border-left:none;" \
+            "min-height:25px;min-width:40px;font-weight:bold;font-size:13px};"
+
+BLUE_STYLE_HORIZONTAL_STYLE = "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1," \
+            "stop:0 #66bbd5, stop: 0.48 #66bbd5,stop: 0.52 #66bbd5, stop:1 #66bbd5);" \
+            "border:1px solid rgb(60,60,60);border-left:none;" \
+            "min-height:25px;min-width:40px;font-weight:bold};"
+
+HORIZONTAL_STYLE_NO_GRID = "QHeaderView::section{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1," \
+            "stop:0 #66bbd5, stop: 0.48 #66bbd5,stop: 0.52 #66bbd5, stop:1 #66bbd5);" \
+            "border:1px solid rgb(60,60,60);border-left:none;border-right:none;" \
+            "min-height:25px;min-width:40px;font-weight:bold};"

@@ -25,12 +25,9 @@ class FoldedBodyButton(QPushButton):
         self.setStyleSheet("""
         #button{
             border:none;
-            padding: 5px 0;
-            margin-top:3px;
-            margin-bottom:3px;
-            font-size: 13px;
+            padding: 3px 0;
+            margin: 3px;
             min-width: 70px;
-            max-width: 70px;
         }
         #button:hover{
             color:rgb(200,120,200);
@@ -142,7 +139,7 @@ class FoldedBody(QWidget):
 
     def resetHorizationItemCount(self, body_width):
         # 得到控件的大小，计算一列能容下的数量，向下取整
-        horizontal_count = floor(body_width / 75)  # 根据button的宽度 + 间距5  来计算
+        horizontal_count = floor(body_width / 76)  # 根据button的宽度 + 间距6  来计算
         # 设置填入buttons
         row_index = 0
         col_index = 0
