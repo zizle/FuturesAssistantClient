@@ -20,7 +20,7 @@ from .loading import LoadingCover
 from .tree_widget import TreeWidget
 from .grid_widget import GridWidget
 from .line import HorizontalSepLine, VerticalSepLine
-
+from .rich_edit import RichTextEdit
 
 
 # 承载模块内容的窗口

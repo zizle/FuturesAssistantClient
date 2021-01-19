@@ -13,13 +13,12 @@ class MessageServiceAdmin(ProductServiceAdmin):
         {"id": 1, "name": "短信通"},
         {"id": 2, "name": "报告管理"},
         {"id": 3, "name": "市场路演"},
-        {"id": 4, "name": "技术解盘"},
+        # {"id": 4, "name": "技术解盘"},
     ]
 
     def selected_menu(self, item):
         """ 选择菜单 """
         menu_id = item.data(Qt.UserRole)
-        print(menu_id)
         if menu_id == 1:
             page = ShortMsgAdmin(self)
         elif menu_id == 2:

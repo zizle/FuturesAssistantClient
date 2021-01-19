@@ -9,6 +9,7 @@ from PyQt5.QtCore import Qt, QMargins
 from PyQt5.QtGui import QFont, QIcon
 from widgets import TreeWidget
 from .message_service import ShortMessage, RegularReport, SpecialReport, ResearchReport, TechnicalDisk
+from .consultant import PersonTrain, Organization, Examine
 
 
 class ProductPage(QWidget):
@@ -95,6 +96,15 @@ class ProductPage(QWidget):
             page = ResearchReport(self)
         elif menu_id == "1_6":
             page = TechnicalDisk(self)
+        elif menu_id == '2_1':
+            try:
+                page = PersonTrain(self)
+            except Exception as e:
+                print(e)
+        elif menu_id == '2_2':
+            page = Organization(self)
+        elif menu_id == '2_3':
+            page = Examine(self)
         else:
             page = QLabel("「" + menu_text + "」正在研发中···\n更多资讯请访问【首页】查看.")
             page.setStyleSheet('font-size:16px;font-weight:bold;color:rgb(230,50,50)')
