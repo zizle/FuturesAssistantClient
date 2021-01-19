@@ -41,7 +41,7 @@ def remove_user_logged():
     config.remove("USER/AUTOLOGIN")
 
 
-def get_user_token():
+def get_user_token(raw=False):
     params_path = os.path.join(BASE_DIR, "dawn/client.ini")
     app_params = QSettings(params_path, QSettings.IniFormat)
     jwt_token = app_params.value("USER/BEARER")
@@ -49,7 +49,7 @@ def get_user_token():
         token = "Bearer " + jwt_token
     else:
         token = "Bearer "
-    return token
+    return token if not raw else jwt_token
 
 
 def auth_module(module_id, module_name, modules):
