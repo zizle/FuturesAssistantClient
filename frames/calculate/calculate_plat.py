@@ -5,7 +5,7 @@
 from PyQt5.QtWidgets import QTreeWidgetItem, QLabel
 from PyQt5.QtGui import QIcon, QFont
 from .calculate_plat_ui import CalculatePlatUi
-from .variety_calculate import VarietyCalculate
+from .variety_calculate import FinanceCalculate, FarmCalculate, ChemicalCalculate, MetalCalculate
 from .variety_arbitrage import VarietyArbitrage
 from .duration_arbitrage import DurationArbitrage
 from .spot_arbitrage import SpotArbitrage
@@ -21,11 +21,16 @@ class CalculatePlat(CalculatePlatUi):
                 {"id": "1_2", "name": "跨期套利", "icon": "media/icons/point.png"},
                 {"id": "1_3", "name": "期现套利", "icon": "media/icons/point.png"},
             ]},
+            {"id": 2, "name": "品种计算", "icon": "media/icons/arbitrage.png", "children": [
+                {"id": "2_1", "name": "金融股指", "icon": "media/icons/point.png"},
+                {"id": "2_2", "name": "农副产品", "icon": "media/icons/point.png"},
+                {"id": "2_3", "name": "能源化工", "icon": "media/icons/point.png"},
+                {"id": "2_4", "name": "金属产业", "icon": "media/icons/point.png"},
+            ]},
             # {"id": 2, "name": "套保计算", "children": None},
             # {"id": 3, "name": "交割计算", "children": None},
 
             {"id": 4, "name": "其他计算", "icon": "media/icons/arbitrage_others.png", "children": [
-                {"id": '4_1', "name": "品种计算", "icon": "media/icons/point.png", "children": None},
                 {"id": '4_2', "name": "相关性计算", "icon": "media/icons/point.png", "children": None},
             ]},
         ]
@@ -62,8 +67,15 @@ class CalculatePlat(CalculatePlatUi):
             page = DurationArbitrage(self)
         elif menu_id == "1_3":  # 期现套利
             page = SpotArbitrage(self)
-        elif menu_id == "4_1":
-            page = VarietyCalculate(self)
+        elif menu_id == '2_1':
+            page = FinanceCalculate(self)
+        elif menu_id == '2_2':
+            page = FarmCalculate(self)
+        elif menu_id == '2_3':
+            page = ChemicalCalculate(self)
+        elif menu_id == '2_4':
+            page = MetalCalculate(self)
+
         elif menu_id == '4_2':
             page = CorrelationWidget(self)
         else:

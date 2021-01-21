@@ -29,6 +29,8 @@ from admin.receipt_parser import ReceiptParser
 from admin.homepage.advertisement import HomepageAdAdmin
 from admin.product.message_service import MessageServiceAdmin
 from admin.product.consultant_service import ConsultantServiceAdmin
+from admin.product.strategy_service import StrategyServiceAdmin
+from admin.product.variety_service import VarietyServiceAdmin
 from frames.homepage_extend import DailyReport, WeeklyReport, MonthlyReport, AnnualReport
 from frames.homepage import Homepage
 from frames.product.message_service import ShortMessage
@@ -435,6 +437,10 @@ class ClientMainApp(FrameLessWindowUI):
             page = MessageServiceAdmin(self)      # 后台管理资讯服务
         elif module_id == "-9_2_1":
             page = ConsultantServiceAdmin(self)      # 后台管理顾问服务
+        elif module_id == "-9_2_2":
+            page = StrategyServiceAdmin(self)      # 后台管理策略服务
+        elif module_id == '-9_2_3':
+            page = VarietyServiceAdmin(self)       # 后台管理品种服务
         elif module_id == "-9_3_0":      # 后台管理-产业数据库
             page = UserDataMaintain(self)
         elif module_id == "-9_3_1":

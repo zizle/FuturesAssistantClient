@@ -15,6 +15,9 @@ from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from utils.client import get_client_uuid
 from settings import ADMINISTRATOR, SERVER_API, STATIC_URL, BASE_DIR, logger
 
+from apis.variety import VarietyAPI
+from gglobal import variety
+
 from .frameless import ClientMainApp
 
 """ 欢迎页 """
@@ -31,6 +34,17 @@ class WelcomePage(QSplashScreen):
         self._add_client_to_server()                         # 添加客户端到服务器
 
         self.initial_auth_file()                             # 权限验证文件初始化
+
+        self.variety_api = VarietyAPI(self)
+        self.variety_api.varieties_sorted.connect(self.sys_variety_reply)
+
+        self.get_sys_variety()                               # 获取系统品种
+
+    def get_sys_variety(self):
+        self.variety_api.get_variety_en_sorted()
+
+    def sys_variety_reply(self, data):
+        variety.set_variety(data['varieties'])
 
     def _bind_global_network_manager(self):
         """ 绑定全局网络管理器 """

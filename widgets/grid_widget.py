@@ -22,7 +22,7 @@ class GridWidget(QWidget):
         layout = QGridLayout()
         layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         layout.setContentsMargins(QMargins(0, 0, 0, 0))
-        layout.setSpacing(3)
+        layout.setSpacing(5)
         self.setLayout(layout)
         self.widgets_list = None
         self.widget_width = None
@@ -36,7 +36,7 @@ class GridWidget(QWidget):
         if not self.widgets_list or not self.widget_width:
             return
         row_index = col_index = 0
-        col_count = self.parent().width() // (self.widget_width + 6)
+        col_count = self.parent().width() // (self.widget_width + 10)
         for widget in self.widgets_list:
             widget.setParent(self)
             if col_index >= col_count:
