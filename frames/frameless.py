@@ -24,6 +24,7 @@ from admin.operator.variety import VarietyAdmin
 from admin.industry.user_data import UserDataMaintain
 from admin.industry.exchange_spider import ExchangeSpider
 from admin.industry.spot_price import SpotPriceAdmin
+from admin.industry.exchange_rate import ExchangeRateAdmin
 from admin.operator.user_extension import UserExtensionPage
 from admin.receipt_parser import ReceiptParser
 from admin.homepage.advertisement import HomepageAdAdmin
@@ -447,6 +448,8 @@ class ClientMainApp(FrameLessWindowUI):
             page = ExchangeSpider(self)
         elif module_id == "-9_3_2":
             page = SpotPriceAdmin(self)     # 后台管理-现货价格数据提取
+        elif module_id == "-9_3_3":
+            page = ExchangeRateAdmin(self)     # 后台管理-汇率数据获取
         elif module_id == "-9_4_0":
             from admin.delivery_b import DeliveryInfoAdmin
             page = DeliveryInfoAdmin(self)  # 后台管理-交割服务-仓库管理

@@ -11,8 +11,8 @@ PLATE_FORM = "WIN7"
 ADMINISTRATOR = True
 WINDOW_TITLE = '分析决策系统(研究员)' if ADMINISTRATOR else '分析决策系统客户端'
 
-SERVER_API = "http://127.0.0.1:8000/api/"
-# SERVER_API = "http://210.13.218.130:9004/api/"
+# SERVER_API = "http://127.0.0.1:8000/api/"
+SERVER_API = "http://210.13.218.130:9004/api/"
 
 STATIC_URL = SERVER_API[:-4] + 'static/'
 
@@ -75,6 +75,7 @@ SYSTEM_MENUS = [
             {"id": "-9_3_0", "name": "品种数据库", "logo": "", "children": None},
             {"id": "-9_3_1", "name": "交易所数据", "logo": "", "children": None},
             {"id": "-9_3_2", "name": "现货报价数据", "logo": "", "children": None},
+            {"id": "-9_3_3", "name": "汇率数据", "logo": "", "children": None},
         ]},
     ]},
     {"id": "0_0", "name": "关于系统", "logo": "", "children": [
