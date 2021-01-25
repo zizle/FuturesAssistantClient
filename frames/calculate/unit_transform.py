@@ -6,11 +6,9 @@
 # 单位换算。
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit
-from PyQt5.QtCore import QMargins, QRegExp, Qt
+from PyQt5.QtCore import QMargins, QRegExp, Qt, pyqtSignal
 from widgets import OptionWidget
 from gglobal import rate
-
-RATE_DATA = rate.get_all_exchange_rate()
 
 
 class NameLabel(QLabel):
@@ -27,14 +25,17 @@ class EqualLabel(QLabel):
 
 
 class InputEdit(QLineEdit):
+    focus_out = pyqtSignal(bool)
+
     def __init__(self, *args, **kwargs):
         super(InputEdit, self).__init__(*args, **kwargs)
         self.setValidator(QRegExpValidator(QRegExp(r"^(-?\d+)(\.\d+)?$"), self))
         self.setFixedWidth(100)
         self.setStyleSheet('border:none;border-bottom: 1px solid #aaaaaa;height:30px;color:#ff6433')
+        self.editingFinished.connect(self.edit_finished)
 
     def value(self, p=False):
-        if not self.text():
+        if not self.text().strip():
             return 0
         if p:
             return float(self.text()) / 100
@@ -44,13 +45,27 @@ class InputEdit(QLineEdit):
     def set_value(self, v, count=2):
         self.setText(str(round(v, count)))
 
+    def focusOutEvent(self, event):
+        super(InputEdit, self).focusOutEvent(event)
+        self.focus_out.emit(True)
+
+    def edit_finished(self):
+        self.focus_out.emit(True)
+
 
 class Farm(QWidget):
+    RATE_DATA = rate.get_all_exchange_rate()
+
     def __init__(self, *args, **kwargs):
         super(Farm, self).__init__(*args, **kwargs)
+        self.USD_CNY_RATE = self.RATE_DATA.get('USD/CNY', None)
+        if self.USD_CNY_RATE:
+            self.USD_CNY_RATE = float(self.USD_CNY_RATE)
+
         main_layout = QVBoxLayout()
 
         layout1 = QHBoxLayout()
+        self.widget1 = QWidget(self)
         self.input11 = InputEdit('1', self)
         self.unit11 = QLabel('美元/蒲式耳', self)
         self.equal11 = EqualLabel(self)
@@ -70,23 +85,110 @@ class Farm(QWidget):
         layout1.addStretch()
 
         main_layout.addWidget(NameLabel('大豆价格换算', self))
-        main_layout.addLayout(layout1)
-        try:
-            self.init_calculate1()
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
+        self.widget1.setLayout(layout1)
+        main_layout.addWidget(self.widget1)
+        self.init_calculate1()
+        self.input11.focus_out.connect(self.input11_finished)
+        self.input12.focus_out.connect(self.input12_finished)
+        self.input13.focus_out.connect(self.input13_finished)
+
+        """ 豆粕价格换算 """
+        layout2 = QHBoxLayout()
+        self.widget2 = QWidget(self)
+        self.input21 = InputEdit('1', self)
+        self.unit21 = QLabel('美元/短吨', self)
+        self.equal21 = EqualLabel(self)
+        self.input22 = InputEdit('1.1025', self)
+        self.unit22 = QLabel('美元/吨', self)
+        self.equal22 = EqualLabel(self)
+        self.input23 = InputEdit(self)
+        self.unit23 = QLabel('元/吨', self)
+        layout2.addWidget(self.input21)
+        layout2.addWidget(self.unit21)
+        layout2.addWidget(self.equal21)
+        layout2.addWidget(self.input22)
+        layout2.addWidget(self.unit22)
+        layout2.addWidget(self.equal22)
+        layout2.addWidget(self.input23)
+        layout2.addWidget(self.unit23)
+        layout2.addStretch()
+
+        main_layout.addWidget(NameLabel('豆粕价格换算', self))
+        self.widget2.setLayout(layout2)
+        main_layout.addWidget(self.widget2)
+        self.init_calculate2()
+        self.input21.focus_out.connect(self.input21_finished)
+        self.input22.focus_out.connect(self.input22_finished)
+        self.input23.focus_out.connect(self.input23_finished)
 
         main_layout.addStretch()
         self.setLayout(main_layout)
 
     def init_calculate1(self):
-        v = RATE_DATA.get('USD/CNY', None)
-        if v:
-            a = self.input11.value()
+        if self.USD_CNY_RATE:
             b = self.input12.value()
-            c = b * float(v)
+            c = b * float(self.USD_CNY_RATE)
             self.input13.set_value(c, count=4)
+
+    def input11_finished(self):
+        a = self.input11.value()
+        if not a:
+            return
+        b = a * 36.7437
+        c = b * float(self.USD_CNY_RATE)
+        self.input12.set_value(b, count=4)
+        self.input13.set_value(c, count=4)
+
+    def input12_finished(self):
+        b = self.input12.value()
+        if not b:
+            return
+        a = b / 36.7437
+        c = b * float(self.USD_CNY_RATE)
+        self.input11.set_value(a, count=4)
+        self.input13.set_value(c, count=4)
+
+    def input13_finished(self):
+        c = self.input13.value()
+        if not c:
+            return
+        b = c / self.USD_CNY_RATE
+        a = b / 36.7437
+        self.input11.set_value(a, count=4)
+        self.input12.set_value(b, count=4)
+
+    def init_calculate2(self):
+        if self.USD_CNY_RATE:
+            b = self.input22.value()
+            c = b * float(self.USD_CNY_RATE)
+            self.input23.set_value(c, count=4)
+
+    def input21_finished(self):
+        a = self.input21.value()
+        if not a:
+            return
+        b = a * 1.1025
+        c = b * float(self.USD_CNY_RATE)
+        self.input22.set_value(b, count=4)
+        self.input23.set_value(c, count=4)
+
+    def input22_finished(self):
+        b = self.input22.value()
+        if not b:
+            return
+        a = b / 1.1025
+        c = b * float(self.USD_CNY_RATE)
+        self.input21.set_value(a, count=4)
+        self.input23.set_value(c, count=4)
+
+    def input23_finished(self):
+        c = self.input23.value()
+        if not c:
+            return
+        b = c / self.USD_CNY_RATE
+        a = b / 1.1025
+        self.input21.set_value(a, count=4)
+        self.input22.set_value(b, count=4)
 
 
 class Metal(QWidget):
@@ -140,7 +242,6 @@ class UnitTransform(QWidget):
     def set_current_type(self):
         btn = self.sender()
         self.current_type = getattr(btn, 'type_name', None)
-
         self.show_current_widget()
 
     def show_current_widget(self):
