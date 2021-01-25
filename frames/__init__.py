@@ -15,6 +15,9 @@ from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from utils.client import get_client_uuid
 from settings import ADMINISTRATOR, SERVER_API, STATIC_URL, BASE_DIR, logger
 
+from apis.variety import VarietyAPI
+from gglobal import variety
+
 from .frameless import ClientMainApp
 
 """ 欢迎页 """
@@ -23,7 +26,7 @@ from .frameless import ClientMainApp
 class WelcomePage(QSplashScreen):
     def __init__(self, *args, **kwargs):
         super(WelcomePage, self).__init__(*args, *kwargs)
-        self.event_loop = QEventLoop(self)
+        # self.event_loop = QEventLoop(self)
         self._bind_global_network_manager()                  # 绑定全局网络管理器
 
         self._get_start_image()                              # 获取开启的图片
@@ -31,6 +34,17 @@ class WelcomePage(QSplashScreen):
         self._add_client_to_server()                         # 添加客户端到服务器
 
         self.initial_auth_file()                             # 权限验证文件初始化
+
+        self.variety_api = VarietyAPI(self)
+        self.variety_api.varieties_sorted.connect(self.sys_variety_reply)
+
+        self.get_sys_variety()                               # 获取系统品种
+
+    def get_sys_variety(self):
+        self.variety_api.get_variety_en_sorted()
+
+    def sys_variety_reply(self, data):
+        variety.set_variety(data['varieties'])
 
     def _bind_global_network_manager(self):
         """ 绑定全局网络管理器 """
@@ -57,7 +71,7 @@ class WelcomePage(QSplashScreen):
         r.setHeader(QNetworkRequest.ContentTypeHeader, QVariant('application/json'))
         reply = network_manager.post(r, json.dumps(client_info).encode('utf-8'))
         reply.finished.connect(self.add_client_reply)
-        self.event_loop.exec_()
+        # self.event_loop.exec_()
 
     def add_client_reply(self):
         """ 添加客户端的信息返回了 """
@@ -73,7 +87,7 @@ class WelcomePage(QSplashScreen):
         client_ini_path = os.path.join(BASE_DIR, "dawn/client.ini")
         token_config = QSettings(client_ini_path, QSettings.IniFormat)
         token_config.setValue("TOKEN/UUID", client_uuid)
-        self.event_loop.quit()
+        # self.event_loop.quit()
 
     def _get_start_image(self):
         """ 获取开启的页面图片 """
@@ -81,7 +95,7 @@ class WelcomePage(QSplashScreen):
         url = STATIC_URL + "start_image_bg.png"
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.start_image_reply)
-        self.event_loop.exec_()
+        # self.event_loop.exec_()
 
     def start_image_reply(self):
         """ 开启图片返回 """
@@ -100,7 +114,7 @@ class WelcomePage(QSplashScreen):
         font.setWeight(75)
         self.setFont(font)
         self.showMessage("欢迎使用分析决策系统\n程序正在启动中...", Qt.AlignCenter, Qt.blue)
-        self.event_loop.quit()
+        # self.event_loop.quit()
 
     @staticmethod
     def initial_auth_file():

@@ -3,3 +3,4 @@
 # @Time  : 2020-12-22 14:17
 # @Author: zizle
 from .message_service import ShortMsgAPI, ReportsAPI
+from .strategy_service import ExchangeStrategyAPI

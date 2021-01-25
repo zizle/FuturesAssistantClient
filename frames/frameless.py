@@ -24,11 +24,14 @@ from admin.operator.variety import VarietyAdmin
 from admin.industry.user_data import UserDataMaintain
 from admin.industry.exchange_spider import ExchangeSpider
 from admin.industry.spot_price import SpotPriceAdmin
+from admin.industry.exchange_rate import ExchangeRateAdmin
 from admin.operator.user_extension import UserExtensionPage
 from admin.receipt_parser import ReceiptParser
 from admin.homepage.advertisement import HomepageAdAdmin
 from admin.product.message_service import MessageServiceAdmin
 from admin.product.consultant_service import ConsultantServiceAdmin
+from admin.product.strategy_service import StrategyServiceAdmin
+from admin.product.variety_service import VarietyServiceAdmin
 from frames.homepage_extend import DailyReport, WeeklyReport, MonthlyReport, AnnualReport
 from frames.homepage import Homepage
 from frames.product.message_service import ShortMessage
@@ -435,12 +438,18 @@ class ClientMainApp(FrameLessWindowUI):
             page = MessageServiceAdmin(self)      # 后台管理资讯服务
         elif module_id == "-9_2_1":
             page = ConsultantServiceAdmin(self)      # 后台管理顾问服务
+        elif module_id == "-9_2_2":
+            page = StrategyServiceAdmin(self)      # 后台管理策略服务
+        elif module_id == '-9_2_3':
+            page = VarietyServiceAdmin(self)       # 后台管理品种服务
         elif module_id == "-9_3_0":      # 后台管理-产业数据库
             page = UserDataMaintain(self)
         elif module_id == "-9_3_1":
             page = ExchangeSpider(self)
         elif module_id == "-9_3_2":
             page = SpotPriceAdmin(self)     # 后台管理-现货价格数据提取
+        elif module_id == "-9_3_3":
+            page = ExchangeRateAdmin(self)     # 后台管理-汇率数据获取
         elif module_id == "-9_4_0":
             from admin.delivery_b import DeliveryInfoAdmin
             page = DeliveryInfoAdmin(self)  # 后台管理-交割服务-仓库管理

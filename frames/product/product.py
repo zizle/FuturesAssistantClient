@@ -10,6 +10,8 @@ from PyQt5.QtGui import QFont, QIcon
 from widgets import TreeWidget
 from .message_service import ShortMessage, RegularReport, SpecialReport, ResearchReport, TechnicalDisk
 from .consultant import PersonTrain, Organization, Examine
+from .strategy import ExchangeStrategy
+from .variety import IntroductionVariety
 
 
 class ProductPage(QWidget):
@@ -97,14 +99,15 @@ class ProductPage(QWidget):
         elif menu_id == "1_6":
             page = TechnicalDisk(self)
         elif menu_id == '2_1':
-            try:
-                page = PersonTrain(self)
-            except Exception as e:
-                print(e)
+            page = PersonTrain(self)
         elif menu_id == '2_2':
             page = Organization(self)
         elif menu_id == '2_3':
             page = Examine(self)
+        elif menu_id == '3_1':
+            page = ExchangeStrategy(self)
+        elif menu_id == '4_1':
+            page = IntroductionVariety(self)
         else:
             page = QLabel("「" + menu_text + "」正在研发中···\n更多资讯请访问【首页】查看.")
             page.setStyleSheet('font-size:16px;font-weight:bold;color:rgb(230,50,50)')

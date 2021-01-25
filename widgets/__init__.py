@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt
 from .avatar import CAvatar
 from .folded_box import ScrollFoldedBox
 from .paginator import Paginator
-from .pdf_shower import PDFContentPopup, PDFContentShower
+from .pdf_shower import PDFContentPopup, PDFContentShower, PDFContentWidget
 from .path_edit import ImagePathLineEdit, FilePathLineEdit
 from .process_bar import CircleProgressBar
 
