@@ -10,7 +10,7 @@ import chardet
 import requests
 from PyQt5.QtWidgets import qApp, QWidget, QLabel, QFrame, QScrollArea,QVBoxLayout, QDialog, QScrollBar, QDesktopWidget, QGraphicsDropShadowEffect
 from PyQt5.QtGui import QPixmap, QIcon, QImage, QPalette, QColor
-from PyQt5.QtCore import Qt, QMargins, QUrl
+from PyQt5.QtCore import Qt, QMargins, QUrl, pyqtSignal
 from PyQt5.QtNetwork import QNetworkRequest
 from popup.message import InformationPopup
 from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE
@@ -220,6 +220,7 @@ class PDFContentPopup(QDialog):
 
 # PDF文件内容直接显示
 class PDFContentWidget(QWidget):
+    file_loaded = pyqtSignal(bool)
 
     def __init__(self, title, file, *args, **kwargs):
         super(PDFContentWidget, self).__init__(*args, **kwargs)
@@ -310,6 +311,7 @@ class PDFContentWidget(QWidget):
             self.scroll_area.setWidget(error_label)
             self.scroll_area.setWidgetResizable(True)
             self.scroll_bar.hide()
+            self.file_loaded.emit(False)
             return
         else:
             content = reply.readAll().data()
@@ -350,6 +352,7 @@ class PDFContentWidget(QWidget):
         self.scroll_bar.setMaximum(self.scroll_area.verticalScrollBar().maximum())
         self.scroll_bar.setPageStep(self.scroll_area.verticalScrollBar().pageStep())
         self.scroll_bar.show()
+        self.file_loaded.emit(True)
 
     def clear(self):
         self.scroll_area.setWidget(QWidget(self))

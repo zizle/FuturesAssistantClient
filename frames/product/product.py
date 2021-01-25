@@ -81,6 +81,7 @@ class ProductPage(QWidget):
                 child.setText(0, children_item['menu_name'])
                 child.setIcon(0, QIcon(children_item['icon']))
                 top_item.addChild(child)
+        self.menu_tree.expandAll()
 
     def user_selected_menu(self, item):
         if not item.parent() and item.childCount():  # 点击父级展开
