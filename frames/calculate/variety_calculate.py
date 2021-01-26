@@ -70,13 +70,12 @@ class VarietyCalculate(QWidget):
         else:
             data = reply.readAll().data().decode("utf8")
             data = json.loads(data)
-            print(data)
             self.set_variety_widget(data['varieties'])
 
     def set_variety_widget(self, varieties):
         widgets_list = []
         for variety_item in varieties:
-            if variety_item['variety_en'] in self.exclude_variety():
+            if variety_item['variety_en'] not in self.include_variety():
                 continue
             button = VarietyButton(variety_item['variety_name'])  # 不要设置parent父控件
             setattr(button, 'variety_en', variety_item['variety_en'])
@@ -88,27 +87,34 @@ class VarietyCalculate(QWidget):
         btn = self.sender()
         variety_en = getattr(btn, 'variety_en')
         if not getattr(VCW, variety_en, None):
-            return
-        try:
-            c_widget = getattr(VCW, variety_en)()
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
+            c_widget = QLabel('该品种还没有计算公式!')
+            c_widget.setAlignment(Qt.AlignCenter)
+            c_widget.setStyleSheet('font-size:20px;color:#ff6433;font-weight:bold')
+        else:
+            print('有属性')
+            try:
+                c_widget = getattr(VCW, variety_en)()
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
         self.calculate_widget.setWidget(c_widget)
 
-    def exclude_variety(self):
+    def include_variety(self):
         return []
 
 
 class FinanceCalculate(VarietyCalculate):
     GROUP = 'finance'
 
-    def exclude_variety(self):
-        return ['GP', 'WB', 'HG']
+    def include_variety(self):
+        return ['GZ']
 
 
 class FarmCalculate(VarietyCalculate):
     GROUP = 'farm'
+
+    def include_variety(self):
+        return ['A', 'P', 'LH', 'PM', 'RS']
 
 
 class ChemicalCalculate(VarietyCalculate):
@@ -118,9 +124,10 @@ class ChemicalCalculate(VarietyCalculate):
 class MetalCalculate(VarietyCalculate):
     GROUP = 'metal'
 
+    def include_variety(self):
+        return ['AL', 'CU', 'HC', 'NI', 'PB', 'RB', 'SF', 'SM', 'SN', 'SS', 'J', 'I', 'ZN']
 
-#
-#
+
 # class TitleOptionWidget(QWidget):
 #     def __init__(self, *args, **kwargs):
 #         super(TitleOptionWidget, self).__init__(*args, **kwargs)

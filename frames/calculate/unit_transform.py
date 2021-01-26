@@ -192,12 +192,59 @@ class Farm(QWidget):
 
 
 class Metal(QWidget):
+    RATE_DATA = rate.get_all_exchange_rate()
+
     def __init__(self, *args, **kwargs):
         super(Metal, self).__init__(*args, **kwargs)
-        layout = QVBoxLayout()
+        self.USD_CNY_RATE = self.RATE_DATA.get('USD/CNY', None)
+        if self.USD_CNY_RATE:
+            self.USD_CNY_RATE = float(self.USD_CNY_RATE)
 
-        layout.addWidget(QLabel('金属产业'))
-        self.setLayout(layout)
+        main_layout = QVBoxLayout()
+
+        layout1 = QHBoxLayout()
+        self.widget1 = QWidget(self)
+        self.input11 = InputEdit('1', self)
+        self.unit11 = QLabel('美元/盎司', self)
+        self.equal11 = EqualLabel(self)
+        self.input12 = InputEdit('', self)
+        self.unit12 = QLabel('元/克', self)
+
+        layout1.addWidget(self.input11)
+        layout1.addWidget(self.unit11)
+        layout1.addWidget(self.equal11)
+        layout1.addWidget(self.input12)
+        layout1.addWidget(self.unit12)
+        layout1.addStretch()
+
+        main_layout.addWidget(NameLabel('黄金/白银价格换算', self))
+        self.widget1.setLayout(layout1)
+        self.init_calculate1()
+        main_layout.addWidget(self.widget1)
+        self.input11.focus_out.connect(self.input11_finished)
+        self.input12.focus_out.connect(self.input12_finished)
+
+        main_layout.addStretch()
+        self.setLayout(main_layout)
+
+    def init_calculate1(self):
+        a = self.input11.value()
+        b = a * self.USD_CNY_RATE / 31.1035
+        self.input12.set_value(b, count=4)
+
+    def input11_finished(self):
+        a = self.input11.value()
+        if not a:
+            return
+        b = a * self.USD_CNY_RATE / 31.1035
+        self.input12.set_value(b, count=4)
+
+    def input12_finished(self):
+        b = self.input12.value()
+        if not b:
+            return
+        a = b * 0.0311035 / self.USD_CNY_RATE
+        self.input11.set_value(a, count=4)
 
 
 class Chemical(QWidget):
