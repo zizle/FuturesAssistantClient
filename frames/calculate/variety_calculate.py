@@ -70,11 +70,14 @@ class VarietyCalculate(QWidget):
         else:
             data = reply.readAll().data().decode("utf8")
             data = json.loads(data)
+            print(data)
             self.set_variety_widget(data['varieties'])
 
     def set_variety_widget(self, varieties):
         widgets_list = []
         for variety_item in varieties:
+            if variety_item['variety_en'] in self.exclude_variety():
+                continue
             button = VarietyButton(variety_item['variety_name'])  # 不要设置parent父控件
             setattr(button, 'variety_en', variety_item['variety_en'])
             button.clicked.connect(self.selected_variety)
@@ -86,12 +89,22 @@ class VarietyCalculate(QWidget):
         variety_en = getattr(btn, 'variety_en')
         if not getattr(VCW, variety_en, None):
             return
-        c_widget = getattr(VCW, variety_en)()
+        try:
+            c_widget = getattr(VCW, variety_en)()
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
         self.calculate_widget.setWidget(c_widget)
+
+    def exclude_variety(self):
+        return []
 
 
 class FinanceCalculate(VarietyCalculate):
     GROUP = 'finance'
+
+    def exclude_variety(self):
+        return ['GP', 'WB', 'HG']
 
 
 class FarmCalculate(VarietyCalculate):

@@ -7,7 +7,7 @@
 from PyQt5.QtCore import QMargins
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QComboBox, QPushButton
 
-from widgets import OptionWidget, PDFContentWidget
+from widgets import OptionWidget, PDFContentWidget, LoadingCover
 
 from gglobal import variety
 from settings import STATIC_URL
@@ -40,6 +40,11 @@ class IntroductionVariety(QWidget):
         layout.addLayout(content_layout)
         self.setLayout(layout)
 
+        self.loading_cover = LoadingCover(self)
+        self.loading_cover.resize(self.parent().width() - 200, self.parent().height())
+        self.loading_cover.hide()
+        self.pdf_show.file_loaded.connect(self.loading_cover.hide)
+
         self.get_all_variety()
 
         self.view_button.clicked.connect(self.show_file)
@@ -62,6 +67,7 @@ class IntroductionVariety(QWidget):
     def show_file(self):
         current_v = self.variety_selector.currentData()
         if current_v:
+            self.loading_cover.show()
             current_v = self.reset_variety_en(current_v)
             filepath = STATIC_URL + 'VARIETY/Intro/{}.pdf'.format(current_v)
             self.pdf_show.set_file(filename='品种介绍', filepath=filepath)

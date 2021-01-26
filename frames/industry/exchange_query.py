@@ -472,6 +472,8 @@ class ExchangeQuery(QWidget):
                 # child.setTextAlignment(0, Qt.AlignRight | Qt.AlignVCenter)
                 tree_item.addChild(child)
 
+        self.tree_menu.expandAll()
+
     def left_menu_selected(self, tree_item):
         """ 选择左侧菜单 """
         if tree_item.childCount():

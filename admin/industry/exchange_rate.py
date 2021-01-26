@@ -15,7 +15,7 @@ from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 from popup.message import InformationPopup
 from widgets import OptionWidget
-from settings import USER_AGENTS
+from settings import USER_AGENTS, SERVER_API
 
 
 class ExchangeRateAdmin(QWidget):
@@ -30,6 +30,7 @@ class ExchangeRateAdmin(QWidget):
         self.search_date = QDateEdit(self)
         self.search_date.setDate(QDate.currentDate())
         self.search_date.setDisplayFormat('yyyy-MM-dd')
+        self.search_date.setCalendarPopup(True)
         self.query_button = QPushButton('查询', self)
         self.save_button = QPushButton('保存', self)
         option_layout.addWidget(self.search_date)
@@ -108,7 +109,6 @@ class ExchangeRateAdmin(QWidget):
                     'rate': item[1]
                 }
             )
-        print(final_data)
         self.current_data = final_data
         self.table.setRowCount(len(self.current_data))
         for row, row_item in enumerate(self.current_data):
@@ -124,6 +124,25 @@ class ExchangeRateAdmin(QWidget):
             p.exec_()
             return
         # 发起后端保存请求
+        self.send_rate_data()
+
+    def send_rate_data(self):
+        url = SERVER_API + 'datalib/exchange-rate/'
+        reply = self.network_manager.post(QNetworkRequest(QUrl(url)), json.dumps(self.current_data).encode('utf8'))
+        reply.finished.connect(self.send_data_reply)
+
+    def send_data_reply(self):
+        reply = self.sender()
+        if reply.error():
+            p = InformationPopup('保存数据错误!{}'.format(reply.error()))
+            p.exec_()
+        else:
+            p = InformationPopup('保存成功!')
+            p.exec_()
+            self.current_data.clear()
+            self.table.clearContents()
+            self.table.setRowCount(0)
+        reply.deleteLater()
 
 
 
