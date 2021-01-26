@@ -64,13 +64,10 @@ class ClientMainApp(FrameLessWindowUI):
         self.navigation_bar.logout_button.clicked.connect(self.user_logout_proxy)          # 用户退出
         self.navigation_bar.menu_clicked.connect(self.enter_module_page)
 
-        self.set_default_homepage()
-
         self._user_login_automatic()                                                      # 用户启动自动登录
 
         if not self.user_online_timer.isActive():                       # 开启在线时间统计
             self.user_online_timer.start(ONLINE_COUNT_INTERVAL)
-
         self._checking_new_version()
 
     def close(self):
@@ -172,7 +169,7 @@ class ClientMainApp(FrameLessWindowUI):
 
     def set_default_homepage(self):
         """ 设置默认的首页 """
-        homepage = Homepage()
+        homepage = Homepage(self)
         # 关联菜单信号
         homepage.SkipPage.connect(self.homepage_menu_selected)
         self.center_widget.setCentralWidget(homepage)
@@ -204,13 +201,17 @@ class ClientMainApp(FrameLessWindowUI):
         # 刷新当前用户权限
         self.refresh_authorization()
 
-    def _user_login_automatic(self):
-        """ 用户自动登录 """
+    def is_auto_logged(self):
         configs_path = os.path.join(BASE_DIR, "dawn/client.ini")
         app_config = QSettings(configs_path, QSettings.IniFormat)
         is_auto_login = app_config.value("USER/AUTOLOGIN")
+        user_token = app_config.value("USER/BEARER") if app_config.value("USER/BEARER") else ''
+        return is_auto_login, user_token
+
+    def _user_login_automatic(self):
+        """ 用户自动登录 """
+        is_auto_login, user_token = self.is_auto_logged()
         if is_auto_login:  # 使用TOKEN自动登录
-            user_token = app_config.value("USER/BEARER") if app_config.value("USER/BEARER") else ''
             url = SERVER_API + "user/token-login/?client=" + get_client_uuid()
             request = QNetworkRequest(QUrl(url))
             token = "Bearer " + user_token
@@ -218,17 +219,17 @@ class ClientMainApp(FrameLessWindowUI):
             network_manager = getattr(qApp, '_network')
             reply = network_manager.get(request)
             reply.finished.connect(self._user_login_automatic_reply)
+        else:
+            self.set_default_homepage()
 
     def _user_login_automatic_reply(self):
         """ 自动登录返回 """
         reply = self.sender()
         data = reply.readAll().data()
         if reply.error():
-            center_widget = QLabel(
-                "登录信息已经失效了···\n请重新登录后再进行使用,访问【首页】查看更多资讯。",
-                styleSheet='font-size:16px;font-weight:bold;color:rgb(230,50,50)',
-                alignment=Qt.AlignCenter
-            )
+            center_widget = QLabel("登录信息已经失效了···\n请重新登录后再进行使用,访问【首页】查看更多资讯。", self)
+            center_widget.setStyleSheet('font-size:16px;font-weight:bold;color:rgb(230,50,50)')
+            center_widget.setAlignment(Qt.AlignCenter)
             self.center_widget.setCentralWidget(center_widget)
         else:
             data = json.loads(data.decode("utf-8"))
@@ -236,6 +237,8 @@ class ClientMainApp(FrameLessWindowUI):
             set_client_uuid_with_ini(data["machine_uuid"])
             self.user_login_successfully(data["show_username"])
         reply.deleteLater()
+        # 设置默认首页
+        self.set_default_homepage()
 
     def user_logout_proxy(self):
         """ 用户主动点击退出

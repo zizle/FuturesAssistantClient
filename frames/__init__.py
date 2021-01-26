@@ -8,9 +8,10 @@ import os
 import json
 import sys
 import pickle
+import requests
 from PyQt5.QtWidgets import qApp, QSplashScreen
 from PyQt5.QtGui import QPixmap, QFont, QImage
-from PyQt5.QtCore import Qt, QSize, QUrl, QSettings, QEventLoop, QVariant
+from PyQt5.QtCore import Qt, QSize, QUrl, QSettings, QEventLoop, QVariant, QThread, pyqtSignal
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from utils.client import get_client_uuid
 from settings import ADMINISTRATOR, SERVER_API, STATIC_URL, BASE_DIR, logger
@@ -21,6 +22,35 @@ from gglobal import variety
 from .frameless import ClientMainApp
 
 """ 欢迎页 """
+
+
+class GetImages(QThread):
+    all_reply = pyqtSignal(bool)
+
+    def __init__(self, *args, **kwargs):
+        super(GetImages, self).__init__(*args, **kwargs)
+        self.images = []
+
+    def set_images(self, images):
+        self.images = images
+        # 创建缓存文件夹
+        folder = os.path.join(BASE_DIR, 'cache/ADVERTISEMENT/Image/')
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
+    def run(self):
+        # 遍历获取数据
+        for image_item in self.images:
+            # print(image_item)
+            try:
+                r = requests.get(url=STATIC_URL + image_item['image'])
+                # 写入数据
+                imagepath = os.path.join(BASE_DIR, 'cache/' + image_item['image'])
+                with open(imagepath, 'wb') as f:
+                    f.write(r.content)
+            except Exception as e:
+                logger.error('缓存广告图片文件失败!{}'.format(e))
+                continue
 
 
 class WelcomePage(QSplashScreen):
@@ -35,10 +65,43 @@ class WelcomePage(QSplashScreen):
 
         self.initial_auth_file()                             # 权限验证文件初始化
 
-        self.variety_api = VarietyAPI(self)
+        self.variety_api = VarietyAPI(self)                  # 获取系统的品种
         self.variety_api.varieties_sorted.connect(self.sys_variety_reply)
 
         self.get_sys_variety()                               # 获取系统品种
+
+        # 使用requests获取广告数据以及图片信息
+        self.event_loop = QEventLoop(self)
+        self.images_thread = GetImages()
+
+    def get_all_advertisement(self):
+        """ 获取当前系统的广告信息 """
+        url = SERVER_API + 'advertisement/'
+        network_manager = getattr(qApp, "_network")
+        reply = network_manager.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.get_advertisement_reply)
+        self.event_loop.exec_()
+
+    def get_advertisement_reply(self):
+        reply = self.sender()
+        if reply.error():
+            pass
+        else:
+            data = json.loads(reply.readAll().data().decode("utf-8"))
+            self.start_image_thread(data['advertisements'])
+        reply.deleteLater()
+        self.event_loop.quit()
+
+    def start_image_thread(self, advertisements):
+        """ 开启获取图片的线程 """
+        # 将数据存入缓存区文件夹,并开启线程访问数据
+        ad_file = os.path.join(BASE_DIR, 'cache/advertisement.dat')
+        with open(ad_file, 'wb') as adf:
+            pickle.dump(advertisements, adf)
+        # 开启线程请求数据
+        self.images_thread.set_images(advertisements)
+        self.images_thread.finished.connect(self.images_thread.deleteLater)
+        self.images_thread.start()
 
     def get_sys_variety(self):
         self.variety_api.get_variety_en_sorted()
@@ -118,6 +181,11 @@ class WelcomePage(QSplashScreen):
 
     @staticmethod
     def initial_auth_file():
+        """ 初始化权限文件 """
         auth_filepath = os.path.join(BASE_DIR, "dawn/auth.dat")
         with open(auth_filepath, "wb") as fp:
             pickle.dump({"role": "", "auth": []}, fp)
+
+    # 防止数据未返回点击后消失
+    def mousePressEvent(self, event) -> None:
+        pass
