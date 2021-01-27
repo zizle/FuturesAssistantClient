@@ -42,8 +42,11 @@ class InputEdit(QLineEdit):
         else:
             return float(self.text())
 
-    def set_value(self, v, count=2):
-        self.setText(str(round(v, count)))
+    def set_value(self, v, count=5):
+        if v == '':
+            self.setText('')
+        else:
+            self.setText(str(round(v, count)))
 
     def focusOutEvent(self, event):
         super(InputEdit, self).focusOutEvent(event)
@@ -121,6 +124,35 @@ class Farm(QWidget):
         self.input22.focus_out.connect(self.input22_finished)
         self.input23.focus_out.connect(self.input23_finished)
 
+        """ 豆油价格换算 """
+        layout3 = QHBoxLayout()
+        self.widget3 = QWidget(self)
+        self.input31 = InputEdit('1', self)
+        self.unit31 = QLabel('美元/短吨', self)
+        self.equal31 = EqualLabel(self)
+        self.input32 = InputEdit('1.1025', self)
+        self.unit32 = QLabel('美元/吨', self)
+        self.equal32 = EqualLabel(self)
+        self.input33 = InputEdit(self)
+        self.unit33 = QLabel('元/吨', self)
+        layout3.addWidget(self.input31)
+        layout3.addWidget(self.unit31)
+        layout3.addWidget(self.equal31)
+        layout3.addWidget(self.input32)
+        layout3.addWidget(self.unit32)
+        layout3.addWidget(self.equal32)
+        layout3.addWidget(self.input33)
+        layout3.addWidget(self.unit33)
+        layout3.addStretch()
+
+        main_layout.addWidget(NameLabel('豆油价格换算', self))
+        self.widget3.setLayout(layout3)
+        main_layout.addWidget(self.widget3)
+        self.init_calculate3()
+        self.input31.focus_out.connect(self.input31_finished)
+        self.input32.focus_out.connect(self.input32_finished)
+        self.input33.focus_out.connect(self.input33_finished)
+
         main_layout.addStretch()
         self.setLayout(main_layout)
 
@@ -189,6 +221,18 @@ class Farm(QWidget):
         a = b / 1.1025
         self.input21.set_value(a, count=4)
         self.input22.set_value(b, count=4)
+
+    def init_calculate3(self):
+        pass
+
+    def input31_finished(self):
+        pass
+
+    def input32_finished(self):
+        pass
+
+    def input33_finished(self):
+        pass
 
 
 class Metal(QWidget):
