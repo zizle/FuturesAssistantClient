@@ -8,7 +8,7 @@ import os
 import json
 
 from PyQt5.QtWidgets import qApp, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton, QGraphicsDropShadowEffect, \
-    QStackedWidget, QScrollArea, QLabel
+    QStackedWidget, QScrollArea, QLabel, QFrame
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkAccessManager
 from PyQt5.QtCore import Qt, QUrl, QMargins
@@ -49,6 +49,7 @@ class VarietyCalculate(QWidget):
 
         self.calculate_widget = QScrollArea(self)
         self.calculate_widget.setWidgetResizable(True)
+        self.calculate_widget.setFrameShape(QFrame.NoFrame)
         layout.addWidget(self.calculate_widget)
 
         self.network_manager = getattr(qApp, '_network', QNetworkAccessManager(self))
@@ -70,57 +71,70 @@ class VarietyCalculate(QWidget):
         else:
             data = reply.readAll().data().decode("utf8")
             data = json.loads(data)
-            print(data)
             self.set_variety_widget(data['varieties'])
 
     def set_variety_widget(self, varieties):
         widgets_list = []
         for variety_item in varieties:
-            if variety_item['variety_en'] in self.exclude_variety():
+            if variety_item['variety_en'] not in self.include_variety():
                 continue
             button = VarietyButton(variety_item['variety_name'])  # 不要设置parent父控件
             setattr(button, 'variety_en', variety_item['variety_en'])
             button.clicked.connect(self.selected_variety)
             widgets_list.append(button)
         self.variety_widget.set_widgets(66, widgets_list)
+        # 初始化计算控件
+        if len(widgets_list) > 0:
+            variety_en = getattr(widgets_list[0], 'variety_en', None)
+            if variety_en:
+                self.set_calculate_widget(variety_en)
+
+    def set_calculate_widget(self, variety_en):
+        if not getattr(VCW, variety_en, None):
+            c_widget = QLabel('该品种还没有计算公式!')
+            c_widget.setAlignment(Qt.AlignCenter)
+            c_widget.setStyleSheet('font-size:20px;color:#ff6433;font-weight:bold')
+        else:
+            c_widget = getattr(VCW, variety_en)()
+        self.calculate_widget.setWidget(c_widget)
 
     def selected_variety(self):
         btn = self.sender()
         variety_en = getattr(btn, 'variety_en')
-        if not getattr(VCW, variety_en, None):
-            return
-        try:
-            c_widget = getattr(VCW, variety_en)()
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-        self.calculate_widget.setWidget(c_widget)
+        self.set_calculate_widget(variety_en)
 
-    def exclude_variety(self):
+    def include_variety(self):
         return []
 
 
 class FinanceCalculate(VarietyCalculate):
     GROUP = 'finance'
 
-    def exclude_variety(self):
-        return ['GP', 'WB', 'HG']
+    def include_variety(self):
+        return ['GZ']
 
 
 class FarmCalculate(VarietyCalculate):
     GROUP = 'farm'
 
+    def include_variety(self):
+        return ['A', 'C', 'JD', 'P', 'LH', 'PM', 'RS']
+
 
 class ChemicalCalculate(VarietyCalculate):
     GROUP = 'chemical'
+
+    def include_variety(self):
+        return ['EB', 'EG', 'FU', 'PF', 'PG', 'SC', 'SP', 'L', 'MA', 'PP', 'RU', 'TA', 'V']
 
 
 class MetalCalculate(VarietyCalculate):
     GROUP = 'metal'
 
+    def include_variety(self):
+        return ['AL', 'CU', 'HC', 'NI', 'PB', 'RB', 'SF', 'SM', 'SN', 'SS', 'J', 'I', 'ZN']
 
-#
-#
+
 # class TitleOptionWidget(QWidget):
 #     def __init__(self, *args, **kwargs):
 #         super(TitleOptionWidget, self).__init__(*args, **kwargs)

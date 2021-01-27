@@ -19,6 +19,7 @@ font.setStyleStrategy(QFont.PreferAntialias)
 app.setFont(font)
 splash = WelcomePage()
 splash.show()
+splash.get_all_advertisement()  # 在此调用才能真正实现同步化
 app.processEvents()  # non-blocking
 main_app = ClientMainApp()
 main_app.show()

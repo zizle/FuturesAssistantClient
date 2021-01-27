@@ -2,6 +2,8 @@
 # @File  : homepage_b.py
 # @Time  : 2020-07-19 15:14
 # @Author: zizle
+import os
+import pickle
 import webbrowser
 import json
 from PyQt5.QtWidgets import qApp, QListWidgetItem, QTableWidgetItem
@@ -12,7 +14,7 @@ from widgets.pdf_shower import PDFContentPopup
 from popup.advertisement import TextPopup
 from popup.spot_price import SpotPricePopup
 from .homepage_ui import HomepageUI, ControlButton, PixMapLabel, LeftChildrenMenuWidget
-from settings import SERVER_API, STATIC_URL, HOMEPAGE_MENUS, SHIELD_VARIETY, RENAME_VARIETY
+from settings import BASE_DIR, SERVER_API, STATIC_URL, HOMEPAGE_MENUS, SHIELD_VARIETY, RENAME_VARIETY
 
 
 class Homepage(HomepageUI):
@@ -38,7 +40,8 @@ class Homepage(HomepageUI):
 
         """ 右侧广告及其他相关业务 """
         self.control_buttons = list()
-        self.get_all_advertisement()
+        # self.get_all_advertisement()  # 2021.01.26改为开启页获取信息并缓存图片，主页是本地直接访问加载
+        self.set_all_advertisement()
         # self.slide_stacked.autoStart(msec=4000)  # 自动开启得放置于填充图片之后,否则闪退
         self.slide_stacked.clicked_release.connect(self.image_widget_clicked)
         self.slide_stacked.currentChanged.connect(self.change_button_icon)  # 图片变化设置icon的背景
@@ -124,23 +127,32 @@ class Homepage(HomepageUI):
         """ 纵向滚动条滚动事件 """
         self.control_widget.move(self.CONTROL_LEFT_DISTANCE - self.horizontalScrollBar().value(), 0 - value)
 
-    def get_all_advertisement(self):
-        """ 获取所有的广告信息 """
-        url = SERVER_API + 'advertisement/'
-        network_manager = getattr(qApp, "_network")
-        reply = network_manager.get(QNetworkRequest(QUrl(url)))
-        reply.finished.connect(self.get_advertisement_reply)
-        self.event_loop.exec_()
+    def set_all_advertisement(self):
+        # 获取全部广告内容
+        adpath = os.path.join(BASE_DIR, 'cache/advertisement.dat')
+        if not os.path.exists(adpath):
+            return
+        with open(adpath, 'rb') as adf:
+            advertisement = pickle.load(adf)
+        self.show_advertisement(advertisement)
 
-    def get_advertisement_reply(self):
-        reply = self.sender()
-        if reply.error():
-            pass
-        else:
-            data = json.loads(reply.readAll().data().decode("utf-8"))
-            self.show_advertisement(data["advertisements"])
-            self.event_loop.quit()  # 没使用同步无法加载出控制的按钮
-        reply.deleteLater()
+    # def get_all_advertisement(self):
+    #     """ 获取所有的广告信息 """
+    #     url = SERVER_API + 'advertisement/'
+    #     network_manager = getattr(qApp, "_network")
+    #     reply = network_manager.get(QNetworkRequest(QUrl(url)))
+    #     reply.finished.connect(self.get_advertisement_reply)
+    #     self.event_loop.exec_()
+    #
+    # def get_advertisement_reply(self):
+    #     reply = self.sender()
+    #     if reply.error():
+    #         pass
+    #     else:
+    #         data = json.loads(reply.readAll().data().decode("utf-8"))
+    #         self.show_advertisement(data["advertisements"])
+    #         self.event_loop.quit()  # 没使用同步无法加载出控制的按钮
+    #     reply.deleteLater()
 
     def show_advertisement(self, advertisements):
         """ 显示所有的广告"""

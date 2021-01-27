@@ -3,6 +3,7 @@
 # @Time  : 2020-07-19 15:12
 # @Author: zizle
 import math
+import os
 from datetime import datetime
 from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QListWidget,
                              QStackedWidget, QGridLayout, QTableWidget, QFrame, QHeaderView, QTableWidgetItem,
@@ -11,7 +12,7 @@ from PyQt5.QtCore import Qt, QRect, QMargins, QSize, QUrl, QThread, pyqtSignal
 from PyQt5.QtGui import QPainter, QPixmap, QIcon, QImage, QBrush, QColor
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkAccessManager
 from widgets.sliding_stacked import SlidingStackedWidget
-from settings import STATIC_URL, HOMEPAGE_TABLE_ROW_HEIGHT, HOMEPAGE_MENUS
+from settings import BASE_DIR, STATIC_URL, HOMEPAGE_TABLE_ROW_HEIGHT, HOMEPAGE_MENUS
 
 
 class MenusContainerWidget(QWidget):
@@ -132,14 +133,16 @@ class PixMapLabel(QLabel):
         super(PixMapLabel, self).__init__(*args)
         self.ad_data = ad_data
         url = STATIC_URL + self.ad_data.get("image", '')
-        # 无法在本控件内直接使用异步访问图片(可能是由于上一级QEventLoop影响)
-        # 如果上一级不用QEventLoop则无法加载除控制的按钮
-        self.image_thread = AdImageThread(url)
-        self.image_thread.finished.connect(self.image_thread.deleteLater)
-        self.image_thread.get_back_image.connect(self.fill_image_pixmap)
-        self.image_thread.start()
+        # # 无法在本控件内直接使用异步访问图片(可能是由于上一级QEventLoop影响)
+        # # 如果上一级不用QEventLoop则无法加载除控制的按钮
+        # self.image_thread = AdImageThread(url)
+        # self.image_thread.finished.connect(self.image_thread.deleteLater)
+        # self.image_thread.get_back_image.connect(self.fill_image_pixmap)
+        # self.image_thread.start()
+        imagepath = os.path.join(BASE_DIR, 'cache/' + ad_data['image'])
+        self.fill_image_pixmap(image=imagepath)
 
-    def fill_image_pixmap(self, image: QImage):
+    def fill_image_pixmap(self, image: str):
         self.setPixmap(QPixmap(image))
         self.setScaledContents(True)
 

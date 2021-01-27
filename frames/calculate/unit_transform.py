@@ -5,7 +5,8 @@
 
 # 单位换算。
 from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QScrollArea, \
+    QFrame
 from PyQt5.QtCore import QMargins, QRegExp, Qt, pyqtSignal
 from widgets import OptionWidget
 from gglobal import rate
@@ -42,8 +43,11 @@ class InputEdit(QLineEdit):
         else:
             return float(self.text())
 
-    def set_value(self, v, count=2):
-        self.setText(str(round(v, count)))
+    def set_value(self, v, count=5):
+        if v == '':
+            self.setText('')
+        else:
+            self.setText(str(round(v, count)))
 
     def focusOutEvent(self, event):
         super(InputEdit, self).focusOutEvent(event)
@@ -51,6 +55,439 @@ class InputEdit(QLineEdit):
 
     def edit_finished(self):
         self.focus_out.emit(True)
+
+# 含汇率的单位转换
+class USDCNYWidget(QWidget):
+    RATE_DATA = rate.get_all_exchange_rate()
+
+    def __init__(self, *args, **kwargs):
+        super(USDCNYWidget, self).__init__(*args, **kwargs)
+        self.USD_CNY_RATE = self.RATE_DATA.get('USD/CNY', None)
+        if self.USD_CNY_RATE:
+            self.USD_CNY_RATE = float(self.USD_CNY_RATE)
+        self.reverse_param = 1
+        main_layout = QVBoxLayout()
+
+        layout = QHBoxLayout()
+        self.widget = QWidget(self)
+        self.input1 = InputEdit(self)
+        self.unit1 = QLabel(self)
+        self.equal2 = EqualLabel(self)
+        self.input2 = InputEdit(self)
+        self.unit2 = QLabel(self)
+        self.equal3 = EqualLabel(self)
+        self.input3 = InputEdit(self)
+        self.unit3 = QLabel(self)
+        layout.addWidget(self.input1)
+        layout.addWidget(self.unit1)
+        layout.addWidget(self.equal2)
+        layout.addWidget(self.input2)
+        layout.addWidget(self.unit2)
+        layout.addWidget(self.equal3)
+        layout.addWidget(self.input3)
+        layout.addWidget(self.unit3)
+        layout.addStretch()
+
+        self.name_label = NameLabel(self)
+        main_layout.addWidget(self.name_label)
+        self.widget.setLayout(layout)
+        main_layout.addWidget(self.widget)
+        self.input1.focus_out.connect(self.input1_finished)
+        self.input2.focus_out.connect(self.input2_finished)
+        self.input3.focus_out.connect(self.input3_finished)
+
+        self.setLayout(main_layout)
+
+    def set_name(self, name: str):
+        self.name_label.setText(name)
+
+    def set_reverse_param(self, value: float):
+        self.reverse_param = value
+        self.init_calculate()
+
+    def set_units(self, units: list):
+        self.unit1.setText(units[0])
+        self.unit2.setText(units[1])
+        self.unit3.setText(units[2])
+
+    def init_calculate(self):
+        self.input1.set_value(1)
+        self.input2.set_value(self.reverse_param)
+        if self.USD_CNY_RATE:
+            self.input3.set_value(self.reverse_param * self.USD_CNY_RATE)
+
+    def input1_finished(self):
+        a = self.input1.value()
+        if not a:
+            return
+        b = a * self.reverse_param
+        c = ''
+        if self.USD_CNY_RATE:
+            c = b * self.USD_CNY_RATE
+        self.input2.set_value(b)
+        self.input3.set_value(c)
+
+    def input2_finished(self):
+        b = self.input2.value()
+        if not b:
+            return
+        a = b / self.reverse_param
+        c = ''
+        if self.USD_CNY_RATE:
+            c = b * self.USD_CNY_RATE
+        self.input1.set_value(a)
+        self.input3.set_value(c)
+
+    def input3_finished(self):
+        c = self.input3.value()
+        if not c:
+            return
+        a, b = '', ''
+        if self.USD_CNY_RATE:
+            b = c / self.USD_CNY_RATE
+            a = b / self.reverse_param
+        self.input1.set_value(a)
+        self.input2.set_value(b)
+
+
+# 不含汇率的单位转换(3个)
+class UNITThreeWidget(QWidget):
+    def __init__(self, *args, **kwargs):
+        super(UNITThreeWidget, self).__init__(*args, **kwargs)
+        self.reverse_param1 = 1
+        self.reverse_param2 = 1
+        main_layout = QVBoxLayout()
+
+        layout = QHBoxLayout()
+        self.widget = QWidget(self)
+        self.input1 = InputEdit(self)
+        self.unit1 = QLabel(self)
+        self.equal2 = EqualLabel(self)
+        self.input2 = InputEdit(self)
+        self.unit2 = QLabel(self)
+        self.equal3 = EqualLabel(self)
+        self.input3 = InputEdit(self)
+        self.unit3 = QLabel(self)
+        layout.addWidget(self.input1)
+        layout.addWidget(self.unit1)
+        layout.addWidget(self.equal2)
+        layout.addWidget(self.input2)
+        layout.addWidget(self.unit2)
+        layout.addWidget(self.equal3)
+        layout.addWidget(self.input3)
+        layout.addWidget(self.unit3)
+        layout.addStretch()
+
+        self.name_label = NameLabel(self)
+        main_layout.addWidget(self.name_label)
+        self.widget.setLayout(layout)
+        main_layout.addWidget(self.widget)
+        self.input1.focus_out.connect(self.input1_finished)
+        self.input2.focus_out.connect(self.input2_finished)
+        self.input3.focus_out.connect(self.input3_finished)
+
+        self.setLayout(main_layout)
+
+    def set_name(self, name: str):
+        self.name_label.setText(name)
+
+    def set_reverse_params(self, values: list):
+        self.reverse_param1 = values[0]
+        self.reverse_param2 = values[1]
+        self.init_calculate()
+
+    def set_units(self, units: list):
+        self.unit1.setText(units[0])
+        self.unit2.setText(units[1])
+        self.unit3.setText(units[2])
+
+    def init_calculate(self):
+        self.input1.set_value(1)
+        self.input2.set_value(self.reverse_param1)
+        self.input3.set_value(self.reverse_param2)
+
+    def input1_finished(self):
+        a = self.input1.value()
+        if not a:
+            return
+        b = a * self.reverse_param1
+        c = a * self.reverse_param2
+        self.input2.set_value(b)
+        self.input3.set_value(c)
+
+    def input2_finished(self):
+        b = self.input2.value()
+        if not b:
+            return
+        a = b / self.reverse_param1
+        c = a * self.reverse_param2
+        self.input1.set_value(a)
+        self.input3.set_value(c)
+
+    def input3_finished(self):
+        c = self.input3.value()
+        if not c:
+            return
+        a = c / self.reverse_param2
+        b = a * self.reverse_param1
+        self.input1.set_value(a)
+        self.input2.set_value(b)
+
+
+# 不含汇率的单位转换(4个)
+class UNITFourWidget(QWidget):
+    def __init__(self, *args, **kwargs):
+        super(UNITFourWidget, self).__init__(*args, **kwargs)
+        self.reverse_param1 = 1
+        self.reverse_param2 = 1
+        self.reverse_param3 = 1
+        main_layout = QVBoxLayout()
+
+        layout = QHBoxLayout()
+        self.widget = QWidget(self)
+        self.input1 = InputEdit(self)
+        self.unit1 = QLabel(self)
+        self.equal2 = EqualLabel(self)
+        self.input2 = InputEdit(self)
+        self.unit2 = QLabel(self)
+        self.equal3 = EqualLabel(self)
+        self.input3 = InputEdit(self)
+        self.unit3 = QLabel(self)
+        self.equal4 = EqualLabel(self)
+        self.input4 = InputEdit(self)
+        self.unit4 = QLabel(self)
+        layout.addWidget(self.input1)
+        layout.addWidget(self.unit1)
+        layout.addWidget(self.equal2)
+        layout.addWidget(self.input2)
+        layout.addWidget(self.unit2)
+        layout.addWidget(self.equal3)
+        layout.addWidget(self.input3)
+        layout.addWidget(self.unit3)
+        layout.addWidget(self.equal4)
+        layout.addWidget(self.input4)
+        layout.addWidget(self.unit4)
+        layout.addStretch()
+
+        self.name_label = NameLabel(self)
+        main_layout.addWidget(self.name_label)
+        self.widget.setLayout(layout)
+        main_layout.addWidget(self.widget)
+        self.input1.focus_out.connect(self.input1_finished)
+        self.input2.focus_out.connect(self.input2_finished)
+        self.input3.focus_out.connect(self.input3_finished)
+        self.input4.focus_out.connect(self.input4_finished)
+
+        self.setLayout(main_layout)
+
+    def set_name(self, name: str):
+        self.name_label.setText(name)
+
+    def set_reverse_params(self, values: list):
+        self.reverse_param1 = values[0]
+        self.reverse_param2 = values[1]
+        self.reverse_param3 = values[2]
+        self.init_calculate()
+
+    def set_units(self, units: list):
+        self.unit1.setText(units[0])
+        self.unit2.setText(units[1])
+        self.unit3.setText(units[2])
+        self.unit3.setText(units[3])
+
+    def init_calculate(self):
+        self.input1.set_value(1)
+        self.input2.set_value(self.reverse_param1)
+        self.input3.set_value(self.reverse_param2)
+        self.input4.set_value(self.reverse_param3)
+
+    def input1_finished(self):
+        a = self.input1.value()
+        if not a:
+            return
+        b = a * self.reverse_param1
+        c = a * self.reverse_param2
+        d = a * self.reverse_param3
+        self.input2.set_value(b)
+        self.input3.set_value(c)
+        self.input4.set_value(d)
+
+    def input2_finished(self):
+        b = self.input2.value()
+        if not b:
+            return
+        a = b / self.reverse_param1
+        c = a * self.reverse_param2
+        d = a * self.reverse_param3
+        self.input1.set_value(a)
+        self.input3.set_value(c)
+        self.input4.set_value(d)
+
+    def input3_finished(self):
+        c = self.input3.value()
+        if not c:
+            return
+        a = c / self.reverse_param2
+        b = a * self.reverse_param1
+        d = a * self.reverse_param3
+        self.input1.set_value(a)
+        self.input2.set_value(b)
+        self.input4.set_value(d)
+
+    def input4_finished(self):
+        d = self.input4.value()
+        if not d:
+            return
+        a = d / self.reverse_param3
+        b = a * self.reverse_param1
+        c = a * self.reverse_param2
+        self.input1.set_value(a)
+        self.input2.set_value(b)
+        self.input3.set_value(c)
+
+
+# 不含汇率的单位转换(5个)
+class UNITFiveWidget(QWidget):
+    def __init__(self, *args, **kwargs):
+        super(UNITFiveWidget, self).__init__(*args, **kwargs)
+        self.reverse_param1 = 1
+        self.reverse_param2 = 1
+        self.reverse_param3 = 1
+        self.reverse_param4 = 1
+        main_layout = QVBoxLayout()
+
+        layout = QHBoxLayout()
+        self.widget = QWidget(self)
+        self.input1 = InputEdit(self)
+        self.unit1 = QLabel(self)
+        self.equal2 = EqualLabel(self)
+        self.input2 = InputEdit(self)
+        self.unit2 = QLabel(self)
+        self.equal3 = EqualLabel(self)
+        self.input3 = InputEdit(self)
+        self.unit3 = QLabel(self)
+        self.equal4 = EqualLabel(self)
+        self.input4 = InputEdit(self)
+        self.unit4 = QLabel(self)
+        self.equal5 = EqualLabel(self)
+        self.input5 = InputEdit(self)
+        self.unit5 = QLabel(self)
+        layout.addWidget(self.input1)
+        layout.addWidget(self.unit1)
+        layout.addWidget(self.equal2)
+        layout.addWidget(self.input2)
+        layout.addWidget(self.unit2)
+        layout.addWidget(self.equal3)
+        layout.addWidget(self.input3)
+        layout.addWidget(self.unit3)
+        layout.addWidget(self.equal4)
+        layout.addWidget(self.input4)
+        layout.addWidget(self.unit4)
+        layout.addWidget(self.equal5)
+        layout.addWidget(self.input5)
+        layout.addWidget(self.unit5)
+        layout.addStretch()
+
+        self.name_label = NameLabel(self)
+        main_layout.addWidget(self.name_label)
+        self.widget.setLayout(layout)
+        main_layout.addWidget(self.widget)
+        self.input1.focus_out.connect(self.input1_finished)
+        self.input2.focus_out.connect(self.input2_finished)
+        self.input3.focus_out.connect(self.input3_finished)
+        self.input4.focus_out.connect(self.input4_finished)
+        self.input5.focus_out.connect(self.input5_finished)
+
+        self.setLayout(main_layout)
+
+    def set_name(self, name: str):
+        self.name_label.setText(name)
+
+    def set_reverse_params(self, values: list):
+        self.reverse_param1 = values[0]
+        self.reverse_param2 = values[1]
+        self.reverse_param3 = values[2]
+        self.reverse_param4 = values[3]
+        self.init_calculate()
+
+    def set_units(self, units: list):
+        self.unit1.setText(units[0])
+        self.unit2.setText(units[1])
+        self.unit3.setText(units[2])
+        self.unit4.setText(units[3])
+        self.unit5.setText(units[4])
+
+    def init_calculate(self):
+        self.input1.set_value(1)
+        self.input2.set_value(self.reverse_param1)
+        self.input3.set_value(self.reverse_param2)
+        self.input4.set_value(self.reverse_param3)
+        self.input5.set_value(self.reverse_param4)
+
+    def input1_finished(self):
+        a = self.input1.value()
+        if not a:
+            return
+        b = a * self.reverse_param1
+        c = a * self.reverse_param2
+        d = a * self.reverse_param3
+        e = a * self.reverse_param4
+        self.input2.set_value(b)
+        self.input3.set_value(c)
+        self.input4.set_value(d)
+        self.input5.set_value(e)
+
+    def input2_finished(self):
+        b = self.input2.value()
+        if not b:
+            return
+        a = b / self.reverse_param1
+        c = a * self.reverse_param2
+        d = a * self.reverse_param3
+        e = a * self.reverse_param4
+        self.input1.set_value(a)
+        self.input3.set_value(c)
+        self.input4.set_value(d)
+        self.input5.set_value(e)
+
+    def input3_finished(self):
+        c = self.input3.value()
+        if not c:
+            return
+        a = c / self.reverse_param2
+        b = a * self.reverse_param1
+        d = a * self.reverse_param3
+        e = a * self.reverse_param4
+        self.input1.set_value(a)
+        self.input2.set_value(b)
+        self.input4.set_value(d)
+        self.input5.set_value(e)
+
+    def input4_finished(self):
+        d = self.input4.value()
+        if not d:
+            return
+        a = d / self.reverse_param3
+        b = a * self.reverse_param1
+        c = a * self.reverse_param2
+        e = a * self.reverse_param4
+        self.input1.set_value(a)
+        self.input2.set_value(b)
+        self.input3.set_value(c)
+        self.input5.set_value(e)
+
+    def input5_finished(self):
+        e = self.input5.value()
+        if not e:
+            return
+        a = e / self.reverse_param4
+        b = a * self.reverse_param1
+        c = a * self.reverse_param2
+        d = a * self.reverse_param3
+        self.input1.set_value(a)
+        self.input2.set_value(b)
+        self.input3.set_value(c)
+        self.input4.set_value(d)
 
 
 class Farm(QWidget):
@@ -64,140 +501,190 @@ class Farm(QWidget):
 
         main_layout = QVBoxLayout()
 
+        # 大豆价格换算
+        self.a1 = USDCNYWidget(self)
+        self.a1.set_name('大豆价格换算')
+        self.a1.set_units(['美元/蒲式耳', '美元/吨', '元/吨'])
+        self.a1.set_reverse_param(36.7437)
+        main_layout.addWidget(self.a1)
+
+        # 大豆单产换算
+        self.a2 = UNITThreeWidget(self)
+        self.a2.set_name('大豆单产换算')
+        self.a2.set_units(['蒲式耳/英亩', '吨/公顷', '斤/亩'])
+        self.a2.set_reverse_params([0.0672, 4.4799])
+        main_layout.addWidget(self.a2)
+
+        # 大豆重量容积换算
+        self.a3 = UNITFiveWidget(self)
+        self.a3.set_name('大豆重量容积换算')
+        self.a3.set_units(['蒲式耳', '磅', '公吨', '长吨', '短吨'])
+        self.a3.set_reverse_params([60, 0.0272, 0.0268, 0.03])
+        main_layout.addWidget(self.a3)
+
+        # 豆粕价格换算
+        self.m1 = USDCNYWidget(self)
+        self.m1.set_name('豆粕价格换算')
+        self.m1.set_units(['美元/短吨', '美元/吨', '元/吨'])
+        self.m1.set_reverse_param(1.1025)
+        main_layout.addWidget(self.m1)
+
+        # 豆粕重量容积换算
+        self.m2 = UNITThreeWidget(self)
+        self.m2.set_name('豆粕重量容积换算')
+        self.m2.set_units(['短吨', '磅', '公吨'])
+        self.m2.set_reverse_params([2000, 0.9072])
+        main_layout.addWidget(self.m2)
+
+        # 豆油价格换算
+        self.y1 = USDCNYWidget(self)
+        self.y1.set_name('豆油价格换算')
+        self.y1.set_units(['美分/磅', '美元/吨', '元/吨'])
+        self.y1.set_reverse_param(22.0462)
+        main_layout.addWidget(self.y1)
+
+        # 豆油重量容积换算
+        self.y2 = UNITThreeWidget(self)
+        self.y2.set_name('豆油重量容积换算')
+        self.y2.set_units(['短吨', '磅', '公吨'])
+        self.y2.set_reverse_params([2000, 0.9072])
+        main_layout.addWidget(self.y2)
+
+        # 玉米价格换算
+        self.c1 = USDCNYWidget(self)
+        self.c1.set_name('玉米价格换算')
+        self.c1.set_units(['美元/蒲式耳', '美元/吨', '元/吨'])
+        self.c1.set_reverse_param(39.36825)
+        main_layout.addWidget(self.c1)
+
+        # 玉米单产换算
+        self.c2 = UNITThreeWidget(self)
+        self.c2.set_name('玉米单产换算')
+        self.c2.set_units(['蒲式耳/英亩', '吨/公顷', '公斤/亩'])
+        self.c2.set_reverse_params([0.062719012, 4.18126749])
+        main_layout.addWidget(self.c2)
+
+        # 玉米重量容积换算
+        self.c3 = UNITFiveWidget(self)
+        self.c3.set_name('玉米重量容积换算')
+        self.c3.set_units(['蒲式耳', '磅', '公吨', '长吨', '短吨'])
+        self.c3.set_reverse_params([56, 0.0254012, 0.025, 0.028])
+        main_layout.addWidget(self.c3)
+
+        # 棉花价格换算
+        self.cf1 = USDCNYWidget(self)
+        self.cf1.set_name('棉花价格换算')
+        self.cf1.set_units(['美分/磅', '美元/吨', '元/吨'])
+        self.cf1.set_reverse_param(22.0462)
+        main_layout.addWidget(self.cf1)
+
+        # 棉花单产换算
+        self.cf2 = UNITThreeWidget(self)
+        self.cf2.set_name('棉花单产换算')
+        self.cf2.set_units(['磅/英亩', '吨/公顷', '公斤/亩'])
+        self.cf2.set_reverse_params([0.00112, 0.074666667])
+        main_layout.addWidget(self.cf2)
+
+        # 棉花重量容积换算
+        self.cf3 = UNITThreeWidget(self)
+        self.cf3.set_name('棉花重量容积换算')
+        self.cf3.set_units(['磅', '公吨', '包'])
+        self.cf3.set_reverse_params([0.0004536, 0.002083334])
+        main_layout.addWidget(self.cf3)
+
+        # 小麦价格换算
+        self.pm1 = USDCNYWidget(self)
+        self.pm1.set_name('小麦价格换算')
+        self.pm1.set_units(['美元/蒲式耳', '美元/吨', '元/吨'])
+        self.pm1.set_reverse_param(36.7437)
+        main_layout.addWidget(self.pm1)
+
+        # 小麦单产换算
+        self.pm2 = UNITThreeWidget(self)
+        self.pm2.set_name('小麦单产换算')
+        self.pm2.set_units(['蒲式耳/英亩', '吨/公顷', '公斤/亩'])
+        self.pm2.set_reverse_params([0.0671987654, 4.4799176955])
+        main_layout.addWidget(self.pm2)
+
+        # 小麦重量容积换算
+        self.pm3 = UNITFiveWidget(self)
+        self.pm3.set_name('小麦重量容积换算')
+        self.pm3.set_units(['蒲式耳', '磅', '公吨', '长吨', '短吨'])
+        self.pm3.set_reverse_params([60, 0.0272155, 0.0267857, 0.03])
+        main_layout.addWidget(self.pm3)
+
+        # 纽约原糖价格换算
+        self.sr1 = USDCNYWidget(self)
+        self.sr1.set_name('纽约原糖价格换算')
+        self.sr1.set_units(['美分/磅', '美元/吨', '元/吨'])
+        self.sr1.set_reverse_param(22.0462)
+        main_layout.addWidget(self.sr1)
+
+        # 纽约原糖重量容量换算
+        self.sr2 = UNITThreeWidget(self)
+        self.sr2.set_name('纽约原糖重量容量换算')
+        self.sr2.set_units(['短吨', '磅', '公吨'])
+        self.sr2.set_reverse_params([2000, 0.9072])
+        main_layout.addWidget(self.sr2)
+
+        main_layout.addStretch()
+        self.setLayout(main_layout)
+
+
+class Metal(QWidget):
+    RATE_DATA = rate.get_all_exchange_rate()
+
+    def __init__(self, *args, **kwargs):
+        super(Metal, self).__init__(*args, **kwargs)
+        self.USD_CNY_RATE = self.RATE_DATA.get('USD/CNY', None)
+        if self.USD_CNY_RATE:
+            self.USD_CNY_RATE = float(self.USD_CNY_RATE)
+
+        main_layout = QVBoxLayout()
+
         layout1 = QHBoxLayout()
         self.widget1 = QWidget(self)
         self.input11 = InputEdit('1', self)
-        self.unit11 = QLabel('美元/蒲式耳', self)
+        self.unit11 = QLabel('美元/盎司', self)
         self.equal11 = EqualLabel(self)
-        self.input12 = InputEdit('36.7437', self)
-        self.unit12 = QLabel('美元/吨', self)
-        self.equal12 = EqualLabel(self)
-        self.input13 = InputEdit(self)
-        self.unit13 = QLabel('元/吨', self)
+        self.input12 = InputEdit('', self)
+        self.unit12 = QLabel('元/克', self)
+
         layout1.addWidget(self.input11)
         layout1.addWidget(self.unit11)
         layout1.addWidget(self.equal11)
         layout1.addWidget(self.input12)
         layout1.addWidget(self.unit12)
-        layout1.addWidget(self.equal12)
-        layout1.addWidget(self.input13)
-        layout1.addWidget(self.unit13)
         layout1.addStretch()
 
-        main_layout.addWidget(NameLabel('大豆价格换算', self))
+        main_layout.addWidget(NameLabel('黄金/白银价格换算', self))
         self.widget1.setLayout(layout1)
-        main_layout.addWidget(self.widget1)
         self.init_calculate1()
+        main_layout.addWidget(self.widget1)
         self.input11.focus_out.connect(self.input11_finished)
         self.input12.focus_out.connect(self.input12_finished)
-        self.input13.focus_out.connect(self.input13_finished)
-
-        """ 豆粕价格换算 """
-        layout2 = QHBoxLayout()
-        self.widget2 = QWidget(self)
-        self.input21 = InputEdit('1', self)
-        self.unit21 = QLabel('美元/短吨', self)
-        self.equal21 = EqualLabel(self)
-        self.input22 = InputEdit('1.1025', self)
-        self.unit22 = QLabel('美元/吨', self)
-        self.equal22 = EqualLabel(self)
-        self.input23 = InputEdit(self)
-        self.unit23 = QLabel('元/吨', self)
-        layout2.addWidget(self.input21)
-        layout2.addWidget(self.unit21)
-        layout2.addWidget(self.equal21)
-        layout2.addWidget(self.input22)
-        layout2.addWidget(self.unit22)
-        layout2.addWidget(self.equal22)
-        layout2.addWidget(self.input23)
-        layout2.addWidget(self.unit23)
-        layout2.addStretch()
-
-        main_layout.addWidget(NameLabel('豆粕价格换算', self))
-        self.widget2.setLayout(layout2)
-        main_layout.addWidget(self.widget2)
-        self.init_calculate2()
-        self.input21.focus_out.connect(self.input21_finished)
-        self.input22.focus_out.connect(self.input22_finished)
-        self.input23.focus_out.connect(self.input23_finished)
 
         main_layout.addStretch()
         self.setLayout(main_layout)
 
     def init_calculate1(self):
-        if self.USD_CNY_RATE:
-            b = self.input12.value()
-            c = b * float(self.USD_CNY_RATE)
-            self.input13.set_value(c, count=4)
+        a = self.input11.value()
+        b = a * self.USD_CNY_RATE / 31.1035
+        self.input12.set_value(b, count=4)
 
     def input11_finished(self):
         a = self.input11.value()
         if not a:
             return
-        b = a * 36.7437
-        c = b * float(self.USD_CNY_RATE)
+        b = a * self.USD_CNY_RATE / 31.1035
         self.input12.set_value(b, count=4)
-        self.input13.set_value(c, count=4)
 
     def input12_finished(self):
         b = self.input12.value()
         if not b:
             return
-        a = b / 36.7437
-        c = b * float(self.USD_CNY_RATE)
+        a = b * 0.0311035 / self.USD_CNY_RATE
         self.input11.set_value(a, count=4)
-        self.input13.set_value(c, count=4)
-
-    def input13_finished(self):
-        c = self.input13.value()
-        if not c:
-            return
-        b = c / self.USD_CNY_RATE
-        a = b / 36.7437
-        self.input11.set_value(a, count=4)
-        self.input12.set_value(b, count=4)
-
-    def init_calculate2(self):
-        if self.USD_CNY_RATE:
-            b = self.input22.value()
-            c = b * float(self.USD_CNY_RATE)
-            self.input23.set_value(c, count=4)
-
-    def input21_finished(self):
-        a = self.input21.value()
-        if not a:
-            return
-        b = a * 1.1025
-        c = b * float(self.USD_CNY_RATE)
-        self.input22.set_value(b, count=4)
-        self.input23.set_value(c, count=4)
-
-    def input22_finished(self):
-        b = self.input22.value()
-        if not b:
-            return
-        a = b / 1.1025
-        c = b * float(self.USD_CNY_RATE)
-        self.input21.set_value(a, count=4)
-        self.input23.set_value(c, count=4)
-
-    def input23_finished(self):
-        c = self.input23.value()
-        if not c:
-            return
-        b = c / self.USD_CNY_RATE
-        a = b / 1.1025
-        self.input21.set_value(a, count=4)
-        self.input22.set_value(b, count=4)
-
-
-class Metal(QWidget):
-    def __init__(self, *args, **kwargs):
-        super(Metal, self).__init__(*args, **kwargs)
-        layout = QVBoxLayout()
-
-        layout.addWidget(QLabel('金属产业'))
-        self.setLayout(layout)
 
 
 class Chemical(QWidget):
@@ -231,13 +718,20 @@ class UnitTransform(QWidget):
         option_widget.setLayout(option_layout)
         layout.addWidget(option_widget)
 
+        self.content_area = QScrollArea(self)
+        self.content_area.setWidgetResizable(True)
+        self.content_area.setFrameShape(QFrame.NoFrame)
+        layout.addWidget(self.content_area)
+
         self.current_type = 'Farm'
-        self.current_widget = Farm(self)
-        layout.addWidget(self.current_widget)
+
         self.farm_button.clicked.connect(self.set_current_type)
         self.metal_button.clicked.connect(self.set_current_type)
         self.chemical_button.clicked.connect(self.set_current_type)
+
         self.setLayout(layout)
+
+        self.show_current_widget()
 
     def set_current_type(self):
         btn = self.sender()
@@ -247,15 +741,14 @@ class UnitTransform(QWidget):
     def show_current_widget(self):
         if not self.current_type:
             return
-        self.current_widget.deleteLater()
         if self.current_type == 'Farm':
-            self.current_widget = Farm()
+            current_widget = Farm(self)
         elif self.current_type == "Metal":
-            self.current_widget = Metal()
+            current_widget = Metal(self)
         elif self.current_type == 'Chemical':
-            self.current_widget = Chemical()
+            current_widget = Chemical(self)
         else:
             return
-        self.layout().addWidget(self.current_widget)
+        self.content_area.setWidget(current_widget)
 
 
