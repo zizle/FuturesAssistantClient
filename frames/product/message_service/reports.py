@@ -126,7 +126,7 @@ class MultiReport(QWidget):
         self.report_table = ReportTable(self)
         self.report_table.setColumnCount(4)
         self.report_table.setHorizontalHeaderLabels(['相关品种', '标题', '类型', '日期'])
-        self.report_table.setShowGrid(False)
+        # self.report_table.setShowGrid(False)
         self.report_table.horizontalHeader().setStyleSheet(HORIZONTAL_STYLE_NO_GRID)
         self.report_table.horizontalHeader().setDefaultSectionSize(150)
         self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
@@ -235,3 +235,22 @@ class TechnicalDisk(MultiReport):
         self.type_label.hide()
         self.report_combobox.hide()
 
+
+# 投资方案
+class InvestmentFile(MultiReport):
+    REPORT_TYPE = 8
+
+    def __init__(self, *args, **kwargs):
+        super(InvestmentFile, self).__init__(*args, **kwargs)
+        self.type_label.hide()
+        self.report_combobox.hide()
+
+
+# 投资方案
+class HedgeFile(MultiReport):
+    REPORT_TYPE = 9
+
+    def __init__(self, *args, **kwargs):
+        super(HedgeFile, self).__init__(*args, **kwargs)
+        self.type_label.hide()
+        self.report_combobox.hide()

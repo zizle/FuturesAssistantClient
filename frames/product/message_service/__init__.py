@@ -6,4 +6,4 @@
 """ 资讯服务"""
 
 from .shortmsg import ShortMessage
-from .reports import RegularReport, ReportTable, SpecialReport, ResearchReport, TechnicalDisk
+from .reports import RegularReport, ReportTable, SpecialReport, ResearchReport, TechnicalDisk, HedgeFile, InvestmentFile

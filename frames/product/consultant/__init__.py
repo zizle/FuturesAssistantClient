@@ -3,4 +3,4 @@
 # @Time  : 2021-01-19 14:10
 # @Author: zizle
 
-from .consultant import PersonTrain, Organization, Examine
+from .consultant import PersonTrain, Organization

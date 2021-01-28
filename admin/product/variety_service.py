@@ -6,7 +6,7 @@
 from PyQt5.QtWidgets import QSplitter, QLabel
 from PyQt5.QtCore import Qt
 from .abstract import ProductServiceAdmin
-from .variety import IntroductionAdmin
+from .variety import IntroductionAdmin, RuleAdmin
 
 
 class VarietyServiceAdmin(ProductServiceAdmin):
@@ -22,7 +22,7 @@ class VarietyServiceAdmin(ProductServiceAdmin):
         if menu_id == 1:
             page = IntroductionAdmin(self)
         elif menu_id == 2:
-            page = QLabel('暂未开放', self)
+            page = RuleAdmin(self)
         else:
             page = QLabel('暂未开放', self)
         self.frame_container.setCentralWidget(page)

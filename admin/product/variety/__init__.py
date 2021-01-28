@@ -4,3 +4,4 @@
 # @Author: zizle
 
 from .introduction import IntroductionAdmin
+from .rule import RuleAdmin
