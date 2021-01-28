@@ -56,7 +56,7 @@ class InputEdit(QLineEdit):
     def edit_finished(self):
         self.focus_out.emit(True)
 
-# 含汇率的单位转换
+# 美元人民币的单位转换
 class USDCNYWidget(QWidget):
     RATE_DATA = rate.get_all_exchange_rate()
 
@@ -145,6 +145,100 @@ class USDCNYWidget(QWidget):
         a, b = '', ''
         if self.USD_CNY_RATE:
             b = c / self.USD_CNY_RATE
+            a = b / self.reverse_param
+        self.input1.set_value(a)
+        self.input2.set_value(b)
+
+
+# 日元人民币的单位转换
+class JPYCNYWidget(QWidget):
+    RATE_DATA = rate.get_all_exchange_rate()
+
+    def __init__(self, *args, **kwargs):
+        super(JPYCNYWidget, self).__init__(*args, **kwargs)
+        self.JPY_CNY_RATE = self.RATE_DATA.get('100JPY/CNY', None)
+        if self.JPY_CNY_RATE:
+            self.JPY_CNY_RATE = float(self.JPY_CNY_RATE) / 100
+        self.reverse_param = 1
+        main_layout = QVBoxLayout()
+
+        layout = QHBoxLayout()
+        self.widget = QWidget(self)
+        self.input1 = InputEdit(self)
+        self.unit1 = QLabel(self)
+        self.equal2 = EqualLabel(self)
+        self.input2 = InputEdit(self)
+        self.unit2 = QLabel(self)
+        self.equal3 = EqualLabel(self)
+        self.input3 = InputEdit(self)
+        self.unit3 = QLabel(self)
+        layout.addWidget(self.input1)
+        layout.addWidget(self.unit1)
+        layout.addWidget(self.equal2)
+        layout.addWidget(self.input2)
+        layout.addWidget(self.unit2)
+        layout.addWidget(self.equal3)
+        layout.addWidget(self.input3)
+        layout.addWidget(self.unit3)
+        layout.addStretch()
+
+        self.name_label = NameLabel(self)
+        main_layout.addWidget(self.name_label)
+        self.widget.setLayout(layout)
+        main_layout.addWidget(self.widget)
+        self.input1.focus_out.connect(self.input1_finished)
+        self.input2.focus_out.connect(self.input2_finished)
+        self.input3.focus_out.connect(self.input3_finished)
+
+        self.setLayout(main_layout)
+
+    def set_name(self, name: str):
+        self.name_label.setText(name)
+
+    def set_reverse_param(self, value: float):
+        self.reverse_param = value
+        self.init_calculate()
+
+    def set_units(self, units: list):
+        self.unit1.setText(units[0])
+        self.unit2.setText(units[1])
+        self.unit3.setText(units[2])
+
+    def init_calculate(self):
+        self.input1.set_value(1)
+        self.input2.set_value(self.reverse_param)
+        if self.JPY_CNY_RATE:
+            self.input3.set_value(self.reverse_param * self.JPY_CNY_RATE)
+
+    def input1_finished(self):
+        a = self.input1.value()
+        if not a:
+            return
+        b = a * self.reverse_param
+        c = ''
+        if self.JPY_CNY_RATE:
+            c = b * self.JPY_CNY_RATE
+        self.input2.set_value(b)
+        self.input3.set_value(c)
+
+    def input2_finished(self):
+        b = self.input2.value()
+        if not b:
+            return
+        a = b / self.reverse_param
+        c = ''
+        if self.JPY_CNY_RATE:
+            c = b * self.JPY_CNY_RATE
+        self.input1.set_value(a)
+        self.input3.set_value(c)
+
+    def input3_finished(self):
+        c = self.input3.value()
+        if not c:
+            return
+        a, b = '', ''
+        if self.JPY_CNY_RATE:
+            b = c / self.JPY_CNY_RATE
             a = b / self.reverse_param
         self.input1.set_value(a)
         self.input2.set_value(b)
@@ -642,58 +736,48 @@ class Metal(QWidget):
 
         main_layout = QVBoxLayout()
 
-        layout1 = QHBoxLayout()
-        self.widget1 = QWidget(self)
-        self.input11 = InputEdit('1', self)
-        self.unit11 = QLabel('美元/盎司', self)
-        self.equal11 = EqualLabel(self)
-        self.input12 = InputEdit('', self)
-        self.unit12 = QLabel('元/克', self)
-
-        layout1.addWidget(self.input11)
-        layout1.addWidget(self.unit11)
-        layout1.addWidget(self.equal11)
-        layout1.addWidget(self.input12)
-        layout1.addWidget(self.unit12)
-        layout1.addStretch()
-
-        main_layout.addWidget(NameLabel('黄金/白银价格换算', self))
-        self.widget1.setLayout(layout1)
-        self.init_calculate1()
-        main_layout.addWidget(self.widget1)
-        self.input11.focus_out.connect(self.input11_finished)
-        self.input12.focus_out.connect(self.input12_finished)
+        # 黄金单位换算
+        self.au1 = UNITThreeWidget(self)
+        self.au1.set_name('黄金单位换算')
+        self.au1.set_units(['盎司', '克', '英镑'])
+        self.au1.set_reverse_params([31.1035, 0.0833])
+        main_layout.addWidget(self.au1)
 
         main_layout.addStretch()
         self.setLayout(main_layout)
-
-    def init_calculate1(self):
-        a = self.input11.value()
-        b = a * self.USD_CNY_RATE / 31.1035
-        self.input12.set_value(b, count=4)
-
-    def input11_finished(self):
-        a = self.input11.value()
-        if not a:
-            return
-        b = a * self.USD_CNY_RATE / 31.1035
-        self.input12.set_value(b, count=4)
-
-    def input12_finished(self):
-        b = self.input12.value()
-        if not b:
-            return
-        a = b * 0.0311035 / self.USD_CNY_RATE
-        self.input11.set_value(a, count=4)
 
 
 class Chemical(QWidget):
     def __init__(self, *args, **kwargs):
         super(Chemical, self).__init__(*args, **kwargs)
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
 
-        layout.addWidget(QLabel('能源化工'))
-        self.setLayout(layout)
+        # 原油价格换算
+        self.sc1 = USDCNYWidget(self)
+        self.sc1.set_name('原油价格换算')
+        self.sc1.set_units(['美元/桶', '美元/吨', '元/吨'])
+        self.sc1.set_reverse_param(7.3)
+        main_layout.addWidget(self.sc1)
+
+        # 原油重量容积换算
+        self.sc2 = UNITThreeWidget(self)
+        self.sc2.set_name('原油重量容积换算')
+        self.sc2.set_units(['吨', '桶', ''])
+        self.sc2.set_reverse_params([7.3, 1])
+        self.sc2.equal3.hide()
+        self.sc2.input3.hide()
+        self.sc2.unit3.hide()
+        main_layout.addWidget(self.sc2)
+
+        # 天胶价格换算
+        self.ru1 = JPYCNYWidget(self)
+        self.ru1.set_name('天胶价格换算')
+        self.ru1.set_units(['日元/公斤', '日元/吨', '元/吨'])
+        self.ru1.set_reverse_param(1000)
+        main_layout.addWidget(self.ru1)
+
+        main_layout.addStretch()
+        self.setLayout(main_layout)
 
 
 class UnitTransform(QWidget):
