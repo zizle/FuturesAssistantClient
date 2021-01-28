@@ -6,14 +6,16 @@
 from PyQt5.QtWidgets import QLabel
 
 from .abstract import ProductServiceAdmin, Qt
-from .consultant import PersonTrain, OrganizationCreated, ExamineChecked
+from .consultant import PersonTrain, OrganizationCreated, RiskManagerAdmin, OTCOptionAdmin, SafeFuturesAdmin
 
 
 class ConsultantServiceAdmin(ProductServiceAdmin):
     MENUS = [
         {"id": 1, "name": "人才培养"},
         {"id": 2, "name": "部门组建"},
-        {"id": 3, "name": "制度考核"},
+        {"id": 3, "name": "风险管理"},
+        {"id": 4, "name": "场外期权"},
+        {"id": 5, "name": "保险+期货"},
     ]
 
     def selected_menu(self, item):
@@ -24,7 +26,11 @@ class ConsultantServiceAdmin(ProductServiceAdmin):
         elif menu_id == 2:
             page = OrganizationCreated(self)
         elif menu_id == 3:
-            page = ExamineChecked(self)
+            page = RiskManagerAdmin(self)
+        elif menu_id == 4:
+            page = OTCOptionAdmin(self)
+        elif menu_id == 5:
+            page = SafeFuturesAdmin(self)
         else:
             page = QLabel('暂未开放', self)
         self.frame_container.setCentralWidget(page)

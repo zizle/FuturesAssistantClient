@@ -132,7 +132,22 @@ class OrganizationCreated(ConsultantMaintain):
     consultant_type = 'organization'
 
 
-# 制度考核
-class ExamineChecked(ConsultantMaintain):
-    consultant_type = 'examine'
+# 风险管理
+class RiskManagerAdmin(ConsultantMaintain):
+    consultant_type = 'riskmanager'
+
+
+# 场外期权
+class OTCOptionAdmin(ConsultantMaintain):
+    consultant_type = 'otcoption'
+
+
+# 保险+期货
+class SafeFuturesAdmin(ConsultantMaintain):
+    consultant_type = 'safefutures'
+
+
+# # 制度考核
+# class ExamineChecked(ConsultantMaintain):
+#     consultant_type = 'examine'
 

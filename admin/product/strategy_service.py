@@ -21,7 +21,8 @@ class StrategyServiceAdmin(ProductServiceAdmin):
         if menu_id == 1:
             page = ExchangeStrategy(self)
         elif menu_id == 2:
-            page = QLabel('暂未开放', self)
+            page = QLabel('到产品服务 - 资讯服务 - 报告管理 中进行维护!', self)
+            page.setAlignment(Qt.AlignCenter)
         else:
             page = QLabel('暂未开放', self)
         self.frame_container.setCentralWidget(page)

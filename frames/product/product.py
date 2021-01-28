@@ -8,10 +8,10 @@ from PyQt5.QtWidgets import QLabel, QWidget, QHBoxLayout, QSplitter, QMainWindow
 from PyQt5.QtCore import Qt, QMargins
 from PyQt5.QtGui import QFont, QIcon
 from widgets import TreeWidget
-from .message_service import ShortMessage, RegularReport, SpecialReport, ResearchReport, TechnicalDisk
-from .consultant import PersonTrain, Organization, Examine
+from .message_service import ShortMessage, RegularReport, SpecialReport, ResearchReport, TechnicalDisk, InvestmentFile, HedgeFile
+from .consultant import Organization, PersonTrain, RiskManager, OTCOption, SafeFutures
 from .strategy import ExchangeStrategy
-from .variety import IntroductionVariety
+from .variety import IntroductionVariety, RuleVariety
 
 
 class ProductPage(QWidget):
@@ -47,13 +47,17 @@ class ProductPage(QWidget):
                 {"menu_id": "1_2", "menu_name": "定期报告", "icon": "media/icons/point.png"},
                 {"menu_id": "1_3", "menu_name": "专题研究", "icon": "media/icons/point.png"},
                 {"menu_id": "1_4", "menu_name": "调研报告", "icon": "media/icons/point.png"},
-                {"menu_id": "1_5", "menu_name": "市场路演", "icon": "media/icons/point.png"},
+                # {"menu_id": "1_5", "menu_name": "市场路演", "icon": "media/icons/point.png"},
                 {"menu_id": "1_6", "menu_name": "技术解盘", "icon": "media/icons/point.png"}
             ]},
             {"menu_id": "2", "menu_name": "顾问服务", "icon": "media/icons/product/consultant.png","children": [
                 {"menu_id": "2_1", "menu_name": "人才培养", "icon": "media/icons/point.png"},
                 {"menu_id": "2_2", "menu_name": "部门组建", "icon": "media/icons/point.png"},
-                {"menu_id": "2_3", "menu_name": "制度考核", "icon": "media/icons/point.png"}
+                {"menu_id": "2_3", "menu_name": "风险管理", "icon": "media/icons/point.png"},
+            ]},
+            {"menu_id": "5", "menu_name": "价格保障", "icon": "media/icons/product/price_protect.png","children": [
+                {"menu_id": "5_1", "menu_name": "场外期权", "icon": "media/icons/point.png"},
+                {"menu_id": "5_2", "menu_name": "保险+期货", "icon": "media/icons/point.png"},
             ]},
             {"menu_id": "3", "menu_name": "策略服务", "icon": "media/icons/product/strategy.png", "children": [
                 {"menu_id": "3_1", "menu_name": "交易策略", "icon": "media/icons/point.png"},
@@ -104,11 +108,21 @@ class ProductPage(QWidget):
         elif menu_id == '2_2':
             page = Organization(self)
         elif menu_id == '2_3':
-            page = Examine(self)
+            page = RiskManager(self)
         elif menu_id == '3_1':
             page = ExchangeStrategy(self)
+        elif menu_id == '3_2':  # 投资方案
+            page = InvestmentFile(self)
+        elif menu_id == '3_3':  # 套保方案
+            page = HedgeFile(self)
         elif menu_id == '4_1':
             page = IntroductionVariety(self)
+        elif menu_id == '4_2':
+            page = RuleVariety(self)
+        elif menu_id == '5_1':
+            page = OTCOption(self)
+        elif menu_id == '5_2':
+            page = SafeFutures(self)
         else:
             page = QLabel("「" + menu_text + "」正在研发中···\n更多资讯请访问【首页】查看.")
             page.setStyleSheet('font-size:16px;font-weight:bold;color:rgb(230,50,50)')

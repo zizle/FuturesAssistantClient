@@ -295,9 +295,9 @@ class PDFContentWidget(QWidget):
         # 异步获取文件内容
         network_manager = getattr(qApp, "_network")
         reply = network_manager.get(QNetworkRequest(QUrl(self.file)))
-        reply.finished.connect(self.add_paf_pages)
+        reply.finished.connect(self.add_pdf_pages)
 
-    def add_paf_pages(self):
+    def add_pdf_pages(self):
         page_container = QWidget(self)   # 页面容器
         page_container.setObjectName("pageContainer")
         container_layout = QVBoxLayout()
@@ -360,6 +360,7 @@ class PDFContentWidget(QWidget):
         self.scroll_bar.hide()
 
     def set_file(self, filename, filepath):
+        print(filepath)
         self.clear()
         self.file_name = filename
         self.file = filepath

@@ -63,7 +63,7 @@ SYSTEM_MENUS = [
         ]},
         {"id": "-9_2", "name": "产品服务", "logo": "", "children": [
             {"id": "-9_2_0", "name": "资讯服务", "logo": "", "children": None},
-            {"id": "-9_2_1", "name": "顾问服务", "logo": "", "children": None},
+            {"id": "-9_2_1", "name": "顾问服务+价格保障", "logo": "", "children": None},
             {"id": "-9_2_2", "name": "策略服务", "logo": "", "children": None},
             {"id": "-9_2_3", "name": "品种服务", "logo": "", "children": None},
         ]},

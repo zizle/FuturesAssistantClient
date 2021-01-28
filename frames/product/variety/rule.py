@@ -13,20 +13,20 @@ from apis.variety import VarietyAPI
 from settings import STATIC_URL
 
 
-class IntroductionVariety(QWidget):
+class RuleVariety(QWidget):
     def __init__(self, *args, **kwargs):
-        super(IntroductionVariety, self).__init__(*args, **kwargs)
+        super(RuleVariety, self).__init__(*args, **kwargs)
         layout = QVBoxLayout()
         layout.setContentsMargins(QMargins(0, 0, 0, 0))
         option_widget = OptionWidget(self)
         option_widget.setFixedHeight(40)
         option_layout = QHBoxLayout()
-        self.label1 = QLabel('品种:', self)
-        self.variety_selector = QComboBox(self)
-        self.variety_selector.setMinimumWidth(100)
+        self.label1 = QLabel('规则文件:', self)
+        self.rule_selector = QComboBox(self)
+        self.rule_selector.setMinimumWidth(300)
         self.view_button = QPushButton('查看', self)
         option_layout.addWidget(self.label1)
-        option_layout.addWidget(self.variety_selector)
+        option_layout.addWidget(self.rule_selector)
         option_layout.addWidget(self.view_button)
         option_layout.addStretch()
         option_widget.setLayout(option_layout)
@@ -49,20 +49,20 @@ class IntroductionVariety(QWidget):
         self.view_button.clicked.connect(self.show_file)
 
         self.variety_api = VarietyAPI(self)
-        self.variety_api.get_intro_reply.connect(self.variety_intro_reply)
-        self.variety_api.get_variety_intro_file()
+        self.variety_api.get_rule_reply.connect(self.variety_rule_reply)
+        self.variety_api.get_variety_rule_file()
 
-    def variety_intro_reply(self, data):
-        self.variety_selector.clear()
-        intros = data['intros']
-        for intro_item in intros:
-            self.variety_selector.addItem(intro_item['variety_name'], intro_item['filepath'])
-        if len(intros) > 0:
+    def variety_rule_reply(self, data):
+        self.rule_selector.clear()
+        rules = data['rules']
+        for intro_item in rules:
+            self.rule_selector.addItem(intro_item['variety_name'], intro_item['filepath'])
+        if len(rules) > 0:
             self.show_file()
 
     def show_file(self):
-        filepath = self.variety_selector.currentData()
+        filepath = self.rule_selector.currentData()
         if filepath:
             self.loading_cover.show()
             filepath = STATIC_URL + filepath
-            self.pdf_show.set_file(filename='品种介绍', filepath=filepath)
+            self.pdf_show.set_file(filename='制度规则', filepath=filepath)
