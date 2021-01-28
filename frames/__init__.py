@@ -11,7 +11,7 @@ import pickle
 import requests
 from PyQt5.QtWidgets import qApp, QSplashScreen
 from PyQt5.QtGui import QPixmap, QFont, QImage
-from PyQt5.QtCore import Qt, QSize, QUrl, QSettings, QEventLoop, QVariant, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QSize, QUrl, QSettings, QEventLoop, QVariant, QThread, pyqtSignal, QTimer
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from utils.client import get_client_uuid
 from settings import ADMINISTRATOR, SERVER_API, STATIC_URL, BASE_DIR, logger
@@ -29,6 +29,7 @@ class GetImages(QThread):
 
     def __init__(self, *args, **kwargs):
         super(GetImages, self).__init__(*args, **kwargs)
+        self.is_error = False
         self.images = []
 
     def set_images(self, images):
@@ -44,13 +45,17 @@ class GetImages(QThread):
             # print(image_item)
             try:
                 r = requests.get(url=STATIC_URL + image_item['image'])
+                if r.status_code != 200:
+                    raise ValueError('GET IMAGE STATUS CODE: {}'.format(r.status_code))
                 # 写入数据
                 imagepath = os.path.join(BASE_DIR, 'cache/' + image_item['image'])
                 with open(imagepath, 'wb') as f:
                     f.write(r.content)
             except Exception as e:
                 logger.error('缓存广告图片文件失败!{}'.format(e))
+                self.is_error = True
                 continue
+        self.all_reply.emit(True)
 
 
 class WelcomePage(QSplashScreen):
@@ -74,6 +79,19 @@ class WelcomePage(QSplashScreen):
         self.event_loop = QEventLoop(self)
         self.images_thread = GetImages()
 
+        # 关闭的timer
+        self.exit_seconds = 10
+        self.exit_timer = QTimer(self)
+        self.exit_timer.timeout.connect(self.exit_timer_out)
+
+    def exit_timer_out(self):
+        if self.exit_seconds < 1:
+            logger.error('获取部分资源失败,无法开启!')
+            sys.exit(-1)
+        else:
+            self.showMessage('获取部分资源失败!{}后自动退出!'.format(self.exit_seconds), alignment=Qt.AlignCenter)
+            self.exit_seconds -= 1
+
     def get_all_advertisement(self):
         """ 获取当前系统的广告信息 """
         url = SERVER_API + 'advertisement/'
@@ -85,12 +103,12 @@ class WelcomePage(QSplashScreen):
     def get_advertisement_reply(self):
         reply = self.sender()
         if reply.error():
-            pass
+            self.showMessage('获取部分资源失败!{}后自动退出!'.format(self.exit_seconds), alignment=Qt.AlignCenter)
+            self.exit_timer.start(1000)
         else:
             data = json.loads(reply.readAll().data().decode("utf-8"))
             self.start_image_thread(data['advertisements'])
         reply.deleteLater()
-        self.event_loop.quit()
 
     def start_image_thread(self, advertisements):
         """ 开启获取图片的线程 """
@@ -100,8 +118,15 @@ class WelcomePage(QSplashScreen):
             pickle.dump(advertisements, adf)
         # 开启线程请求数据
         self.images_thread.set_images(advertisements)
+        self.images_thread.all_reply.connect(self.get_image_thread_finished)
         self.images_thread.finished.connect(self.images_thread.deleteLater)
         self.images_thread.start()
+
+    def get_image_thread_finished(self):
+        if self.images_thread.is_error:
+            self.exit_timer.start(1000)
+        else:
+            self.event_loop.quit()
 
     def get_sys_variety(self):
         self.variety_api.get_variety_en_sorted()
@@ -141,7 +166,9 @@ class WelcomePage(QSplashScreen):
         reply = self.sender()
         if reply.error():
             logger.error("New Client ERROR!{}".format(reply.error()))
-            sys.exit(-1)
+            # sys.exit(-1)
+            self.exit_timer.start(1000)
+            return
         data = reply.readAll().data()
         data = json.loads(data.decode("utf-8"))
         reply.deleteLater()
@@ -177,7 +204,6 @@ class WelcomePage(QSplashScreen):
         font.setWeight(75)
         self.setFont(font)
         self.showMessage("欢迎使用分析决策系统\n程序正在启动中...", Qt.AlignCenter, Qt.blue)
-        # self.event_loop.quit()
 
     @staticmethod
     def initial_auth_file():
