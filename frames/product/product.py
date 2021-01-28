@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt, QMargins
 from PyQt5.QtGui import QFont, QIcon
 from widgets import TreeWidget
 from .message_service import ShortMessage, RegularReport, SpecialReport, ResearchReport, TechnicalDisk, InvestmentFile, HedgeFile
-from .consultant import Organization, PersonTrain
+from .consultant import Organization, PersonTrain, RiskManager, OTCOption, SafeFutures
 from .strategy import ExchangeStrategy
 from .variety import IntroductionVariety, RuleVariety
 
@@ -107,6 +107,8 @@ class ProductPage(QWidget):
             page = PersonTrain(self)
         elif menu_id == '2_2':
             page = Organization(self)
+        elif menu_id == '2_3':
+            page = RiskManager(self)
         elif menu_id == '3_1':
             page = ExchangeStrategy(self)
         elif menu_id == '3_2':  # 投资方案
@@ -117,6 +119,10 @@ class ProductPage(QWidget):
             page = IntroductionVariety(self)
         elif menu_id == '4_2':
             page = RuleVariety(self)
+        elif menu_id == '5_1':
+            page = OTCOption(self)
+        elif menu_id == '5_2':
+            page = SafeFutures(self)
         else:
             page = QLabel("「" + menu_text + "」正在研发中···\n更多资讯请访问【首页】查看.")
             page.setStyleSheet('font-size:16px;font-weight:bold;color:rgb(230,50,50)')

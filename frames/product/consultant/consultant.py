@@ -51,7 +51,6 @@ class ConsultantWidget(QScrollArea):
         self.image_label.setPixmap(QPixmap(file))
         self.image_label.setScaledContents(True)
 
-
     def get_current_article(self):
         """ 获取当前文章内容 """
         if self.consultant_type is None:
@@ -80,6 +79,20 @@ class PersonTrain(ConsultantWidget):
 class Organization(ConsultantWidget):
     consultant_type = 'organization'
 
+
+# 风险管理
+class RiskManager(ConsultantWidget):
+    consultant_type = 'riskmanager'
+
+
+# 场外期权
+class OTCOption(ConsultantWidget):
+    consultant_type = 'otcoption'
+
+
+# 保险+期货
+class SafeFutures(ConsultantWidget):
+    consultant_type = 'safefutures'
 
 # 制度考核废弃了
 # class Examine(ConsultantWidget):
