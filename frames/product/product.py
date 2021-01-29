@@ -45,10 +45,15 @@ class ProductPage(QWidget):
             {"menu_id": "1", "menu_name": "资讯服务", "icon": "media/icons/product/message.png", "children": [
                 {"menu_id": "1_1", "menu_name": "短信通", "icon": "media/icons/point.png"},
                 {"menu_id": "1_2", "menu_name": "定期报告", "icon": "media/icons/point.png"},
-                {"menu_id": "1_3", "menu_name": "专题研究", "icon": "media/icons/point.png"},
-                {"menu_id": "1_4", "menu_name": "调研报告", "icon": "media/icons/point.png"},
+                {"menu_id": "1_3", "menu_name": "分析文章", "icon": "media/icons/point.png"},
                 # {"menu_id": "1_5", "menu_name": "市场路演", "icon": "media/icons/point.png"},
-                {"menu_id": "1_6", "menu_name": "技术解盘", "icon": "media/icons/point.png"}
+                {"menu_id": "1_6", "menu_name": "技术解盘", "icon": "media/icons/point.png"},
+                {"menu_id": "1_4", "menu_name": "调研报告", "icon": "media/icons/point.png"},
+            ]},
+            {"menu_id": "3", "menu_name": "策略服务", "icon": "media/icons/product/strategy.png", "children": [
+                {"menu_id": "3_1", "menu_name": "交易策略", "icon": "media/icons/point.png"},
+                {"menu_id": "3_2", "menu_name": "投资方案", "icon": "media/icons/point.png"},
+                {"menu_id": "3_3", "menu_name": "套保方案", "icon": "media/icons/point.png"},
             ]},
             {"menu_id": "2", "menu_name": "顾问服务", "icon": "media/icons/product/consultant.png","children": [
                 {"menu_id": "2_1", "menu_name": "人才培养", "icon": "media/icons/point.png"},
@@ -58,11 +63,6 @@ class ProductPage(QWidget):
             {"menu_id": "5", "menu_name": "价格保障", "icon": "media/icons/product/price_protect.png","children": [
                 {"menu_id": "5_1", "menu_name": "场外期权", "icon": "media/icons/point.png"},
                 {"menu_id": "5_2", "menu_name": "保险+期货", "icon": "media/icons/point.png"},
-            ]},
-            {"menu_id": "3", "menu_name": "策略服务", "icon": "media/icons/product/strategy.png", "children": [
-                {"menu_id": "3_1", "menu_name": "交易策略", "icon": "media/icons/point.png"},
-                {"menu_id": "3_2", "menu_name": "投资方案", "icon": "media/icons/point.png"},
-                {"menu_id": "3_3", "menu_name": "套保方案", "icon": "media/icons/point.png"},
             ]},
             {"menu_id": "4", "menu_name": "品种基础", "icon": "media/icons/product/variety.png", "children": [
                 {"menu_id": "4_1", "menu_name": "品种介绍", "icon": "media/icons/point.png"},

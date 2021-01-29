@@ -235,7 +235,7 @@ class RegisterUI(QWidget):
         declare_layout.addWidget(self.declare_check)
         # declare_label = QLabel('注册即表示您已知晓')
         # declare_layout.addWidget(declare_label)
-        self.declare_button = QPushButton('《免责声明》', self)
+        self.declare_button = QPushButton('《客户端使用特别声明》', self)
         self.declare_button.setCursor(Qt.PointingHandCursor)
         declare_layout.addWidget(self.declare_button)
         declare_layout.addStretch()
