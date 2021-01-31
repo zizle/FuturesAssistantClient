@@ -191,7 +191,7 @@ class NavigationBar(QWidget):
     def set_menus(self, menu_data, parent_menu=None):
         """ 设置菜单 """
         for menu_item in menu_data:
-            if menu_item["children"]:
+            if menu_item["children"] and menu_item['is_show']:
                 if parent_menu:
                     menu = parent_menu.addMenu(menu_item["name"])
                     menu.setIcon(QIcon(menu_item["logo"]))
@@ -201,14 +201,15 @@ class NavigationBar(QWidget):
                 menu.setObjectName("subMenu")
                 self.set_menus(menu_item["children"], menu)
             else:
-                if parent_menu:
-                    action = parent_menu.addAction(menu_item["name"])
-                    action.setIcon(QIcon(menu_item["logo"]))
-                else:
-                    action = self.menu_bar.addAction(menu_item["name"])
-                    action.setIcon(QIcon(menu_item["logo"]))
-                setattr(action, "id", menu_item['id'])
-                action.triggered.connect(self.select_menu_action)
+                if menu_item['is_show']:
+                    if parent_menu:
+                        action = parent_menu.addAction(menu_item["name"])
+                        action.setIcon(QIcon(menu_item["logo"]))
+                    else:
+                        action = self.menu_bar.addAction(menu_item["name"])
+                        action.setIcon(QIcon(menu_item["logo"]))
+                    setattr(action, "id", menu_item['id'])
+                    action.triggered.connect(self.select_menu_action)
 
     def select_menu_action(self):
         action = self.sender()

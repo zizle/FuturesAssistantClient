@@ -43,45 +43,45 @@ HOMEPAGE_TABLE_ROW_HEIGHT = 28  # 由于字体需要必须大于24
 
 # 支持多级(但模块权限仅遍历3级)
 SYSTEM_MENUS = [
-    {"id": "0", "name": "首页", "logo": "", "children": None},
-    {"id": "1", "name": "产品服务", "logo": "", "children": None},
-    {"id": "3", "name": "交割服务", "logo": "", "children": None},
-    {"id": "4", "name": "计算平台", "logo": "", "children": None},
-    {"id": "2", "name": "行业数据", "logo": "", "children": [
-        {"id": "2_0", "name": "品种数据库", "logo": "", "children": None},
-        {"id": "2_1", "name": "交易所数据", "logo": "", "children": None},
-        {"id": "2_2", "name": "品种数据分析", "logo": "", "children": None},
+    {"id": "0", "name": "首页", "logo": "", "is_show": True, "children": None},
+    {"id": "1", "name": "产品服务", "logo": "", "is_show": True, "children": None},
+    {"id": "3", "name": "交割服务", "logo": "", "is_show": True, "children": None},
+    {"id": "4", "name": "计算平台", "logo": "", "is_show": True, "children": None},
+    {"id": "2", "name": "行业数据", "logo": "", "is_show": True, "children": [
+        {"id": "2_0", "name": "品种数据库", "logo": "", "is_show": True, "children": None},
+        {"id": "2_1", "name": "交易所数据", "logo": "", "is_show": True, "children": None},
+        {"id": "2_2", "name": "品种数据分析", "logo": "", "is_show": ADMINISTRATOR, "children": None},
     ]},
-    {"id": "-9", "name": "后台管理", "logo": "", "children": [
-        {"id": "-9_1", "name": "运营管理", "logo": "", "children": [
-            {"id": "-9_1_0", "name": "品种管理", "logo": "", "children": None},
-            {"id": "-9_1_1", "name": "用户管理", "logo": "", "children": None},
-            {"id": "-9_1_2", "name": "客户端管理", "logo": "", "children": None}
+    {"id": "-9", "name": "后台管理", "logo": "", "is_show": ADMINISTRATOR, "children": [
+        {"id": "-9_1", "name": "运营管理", "logo": "", "is_show": True, "children": [
+            {"id": "-9_1_0", "name": "品种管理", "logo": "", "is_show": True, "children": None},
+            {"id": "-9_1_1", "name": "用户管理", "logo": "", "is_show": True, "children": None},
+            {"id": "-9_1_2", "name": "客户端管理", "logo": "", "is_show": True, "children": None}
         ]},
-        {"id": "-9_0", "name": "首页管理", "logo": "", "children": [
-            {"id": "-9_0_0", "name": "广告设置", "logo": "", "children": None},
+        {"id": "-9_0", "name": "首页管理", "logo": "", "is_show": True, "children": [
+            {"id": "-9_0_0", "name": "广告设置", "logo": "", "is_show": True, "children": None},
         ]},
-        {"id": "-9_2", "name": "产品服务", "logo": "", "children": [
-            {"id": "-9_2_0", "name": "资讯服务", "logo": "", "children": None},
-            {"id": "-9_2_1", "name": "顾问服务+价格保障", "logo": "", "children": None},
-            {"id": "-9_2_2", "name": "策略服务", "logo": "", "children": None},
-            {"id": "-9_2_3", "name": "品种服务", "logo": "", "children": None},
+        {"id": "-9_2", "name": "产品服务", "logo": "", "is_show": True, "children": [
+            {"id": "-9_2_0", "name": "资讯服务", "logo": "", "is_show": True, "children": None},
+            {"id": "-9_2_1", "name": "顾问服务+价格保障", "logo": "", "is_show": True, "children": None},
+            {"id": "-9_2_2", "name": "策略服务", "logo": "", "is_show": True, "children": None},
+            {"id": "-9_2_3", "name": "品种服务", "logo": "", "is_show": True, "children": None},
         ]},
-        {"id": "-9_4", "name": "交割服务", "logo": "", "children": [
-            {"id": "-9_4_0", "name": "仓库信息管理", "logo": "", "children": None},
-            {"id": "-9_4_1", "name": "仓单数据提取", "logo": "", "children": None},
+        {"id": "-9_4", "name": "交割服务", "logo": "", "is_show": True, "children": [
+            {"id": "-9_4_0", "name": "仓库信息管理", "logo": "", "is_show": True, "children": None},
+            {"id": "-9_4_1", "name": "仓单数据提取", "logo": "", "is_show": True, "children": None},
         ]},
-        {"id": "-9_3", "name": "行业数据", "logo": "", "children": [
-            {"id": "-9_3_0", "name": "品种数据库", "logo": "", "children": None},
-            {"id": "-9_3_1", "name": "交易所数据", "logo": "", "children": None},
-            {"id": "-9_3_2", "name": "现货报价数据", "logo": "", "children": None},
-            {"id": "-9_3_3", "name": "汇率数据", "logo": "", "children": None},
+        {"id": "-9_3", "name": "行业数据", "logo": "", "is_show": True, "children": [
+            {"id": "-9_3_0", "name": "品种数据库", "logo": "", "is_show": True, "children": None},
+            {"id": "-9_3_1", "name": "交易所数据", "logo": "", "is_show": True, "children": None},
+            {"id": "-9_3_2", "name": "现货报价数据", "logo": "", "is_show": True, "children": None},
+            {"id": "-9_3_3", "name": "汇率数据", "logo": "", "is_show": True, "children": None},
         ]},
     ]},
-    {"id": "0_0", "name": "关于系统", "logo": "", "children": [
-        {"id": "0_0_1", "name": "版本检查", "logo": "", "children": None},
-        {"id": "0_0_2", "name": "权限刷新", "logo": "", "children": None},
-        {"id": "0_0_3", "name": "密码修改", "logo": "", "children": None},
+    {"id": "0_0", "name": "关于系统", "logo": "", "is_show": True, "children": [
+        {"id": "0_0_1", "name": "版本检查", "logo": "", "is_show": True, "children": None},
+        {"id": "0_0_2", "name": "权限刷新", "logo": "", "is_show": True, "children": None},
+        {"id": "0_0_3", "name": "密码修改", "logo": "", "is_show": True, "children": None},
     ]},
 ]
 

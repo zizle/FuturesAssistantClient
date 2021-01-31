@@ -360,7 +360,6 @@ class PDFContentWidget(QWidget):
         self.scroll_bar.hide()
 
     def set_file(self, filename, filepath):
-        print(filepath)
         self.clear()
         self.file_name = filename
         self.file = filepath

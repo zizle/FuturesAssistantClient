@@ -249,8 +249,10 @@ class A(QWidget):
         e = self.input5.value()
         f = self.input6.value()
         g = self.input7.value()
-        if not all([a, b, c, d, e, f, g]):
-            p = InformationPopup('请填写完整参数后进行计算!', self)
+        params = [a, b, c, d, e, f, g]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
+            p = InformationPopup('请填写完整数据再试算!', self)
             p.exec_()
             return
         # 计算
@@ -265,8 +267,80 @@ class A(QWidget):
         b = self.input22.value()
         c = self.input23.value()
         d = self.input24.value()
+        params = [a, b, c, d]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
+            p = InformationPopup('请填写完整数据再试算!', self)
+            p.exec_()
+            return
         r = a * 0.785 + b * 0.19 - c - d
         self.result2.set_value(r)
+
+
+class AP(QWidget):
+
+    RATE_DATA = rate.get_all_exchange_rate()
+
+    def __init__(self, *args, **kwargs):
+        super(AP, self).__init__(*args, **kwargs)
+        self.USD_CNY_RATE = self.RATE_DATA.get('USD/CNY', None)
+        if self.USD_CNY_RATE:
+            self.USD_CNY_RATE = float(self.USD_CNY_RATE)
+        main_layout = QVBoxLayout()
+        """ 苹果成本价 """
+        widget1 = QWidget(self)
+        widget1.setFixedWidth(CALCULATE_WIDGET_WIDTH)
+        layout1 = QGridLayout()
+        layout1.setContentsMargins(QMargins(MARGIN_LEFT, 0, MARGIN_RIGHT, MARGIN_BOTTOM))
+        self.name1 = NameLabel('苹果成本价格测算', self)
+        self.label11 = QLabel('收购价', self)
+        self.input11 = InputEdit(self)
+        self.unit11 = QLabel('元/吨', self)
+
+        layout1.addWidget(self.name1, 0, 0, 1, 3)
+        layout1.addWidget(self.label11, 1, 0)
+        layout1.addWidget(self.input11, 1, 1)
+        layout1.addWidget(self.unit11, 1, 2)
+
+        self.label12 = QLabel('等级容许差额', self)
+        self.input12 = InputEdit(self)
+        self.unit12 = QLabel('元/吨', self)
+
+        layout1.addWidget(self.label12, 2, 0)
+        layout1.addWidget(self.input12, 2, 1)
+        layout1.addWidget(self.unit12, 2, 2)
+
+        layout1.addWidget(QLabel(self), 3, 0)
+
+        self.calculate_button1 = CalculateButton('试算成本', self)
+        self.result1 = ResultLabel(self)
+        self.result_unit1 = QLabel('元/吨', self)
+        layout1.addWidget(self.calculate_button1, 15, 0)
+        layout1.addWidget(self.result1, 15, 1)
+        layout1.addWidget(self.result_unit1, 15, 2)
+        widget1.setLayout(layout1)
+        self.init_calculate1()
+        self.calculate_button1.clicked.connect(self.calculate1)
+        main_layout.addWidget(widget1, alignment=Qt.AlignTop | Qt.AlignHCenter)
+
+        self.setLayout(main_layout)
+
+    def init_calculate1(self):
+        self.input12.set_value(1000)
+
+    def calculate1(self):
+        """
+        成本公式=山东栖霞一二级富士苹果收购价格+等级容许差额
+        """
+        a = self.input11.value()
+        b = self.input12.value()
+        params = [a, b]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
+            p = InformationPopup('请填写完整数据再试算!', self)
+            p.exec_()
+            return
+        self.result1.set_value(a + b, count=4)
 
 
 class AL(QWidget):
@@ -476,14 +550,6 @@ class AL(QWidget):
         self.result2.set_value(result, count=4)
 
 
-class B(QWidget):
-    def __init__(self, *args, **kwargs):
-        super(B, self).__init__(*args, **kwargs)
-        layout = QGridLayout()
-        layout.addWidget(QLabel('这是豆二的计算公式界面', self), 0, 0)
-        self.setLayout(layout)
-
-
 class C(QWidget):
     RATE_DATA = rate.get_all_exchange_rate()
 
@@ -686,6 +752,275 @@ class C(QWidget):
             return
         result = (a * 0.7 + b * 0.05 + c * 0.07 + d * 0.115) - e - f
         self.result2.set_value(result, count=4)
+
+
+class CF(QWidget):
+
+    RATE_DATA = rate.get_all_exchange_rate()
+
+    def __init__(self, *args, **kwargs):
+        super(CF, self).__init__(*args, **kwargs)
+        self.USD_CNY_RATE = self.RATE_DATA.get('USD/CNY', None)
+        if self.USD_CNY_RATE:
+            self.USD_CNY_RATE = float(self.USD_CNY_RATE)
+        main_layout = QVBoxLayout()
+        """ 皮棉价格 """
+        widget1 = QWidget(self)
+        widget1.setFixedWidth(CALCULATE_WIDGET_WIDTH)
+        layout1 = QGridLayout()
+        layout1.setContentsMargins(QMargins(MARGIN_LEFT, 0, MARGIN_RIGHT, MARGIN_BOTTOM))
+        self.name1 = NameLabel('皮棉价格', self)
+        self.label11 = QLabel('衣分率', self)
+        self.input11 = InputEdit(self)
+        self.unit11 = QLabel('%', self)
+
+        layout1.addWidget(self.name1, 0, 0, 1, 3)
+        layout1.addWidget(self.label11, 1, 0)
+        layout1.addWidget(self.input11, 1, 1)
+        layout1.addWidget(self.unit11, 1, 2)
+
+        self.label12 = QLabel('棉籽价格', self)
+        self.input12 = InputEdit(self)
+        self.unit12 = QLabel('元/斤', self)
+
+        layout1.addWidget(self.label12, 2, 0)
+        layout1.addWidget(self.input12, 2, 1)
+        layout1.addWidget(self.unit12, 2, 2)
+
+        self.label13 = QLabel('籽棉价格', self)
+        self.input13 = InputEdit(self)
+        self.unit13 = QLabel('元/斤', self)
+
+        layout1.addWidget(self.label13, 3, 0)
+        layout1.addWidget(self.input13, 3, 1)
+        layout1.addWidget(self.unit13, 3, 2)
+
+        layout1.addWidget(QLabel(self), 4, 0)
+
+        self.calculate_button1 = CalculateButton('试算价格', self)
+        self.result1 = ResultLabel(self)
+        self.result_unit1 = QLabel('元/吨', self)
+        layout1.addWidget(self.calculate_button1, 5, 0)
+        layout1.addWidget(self.result1, 5, 1)
+        layout1.addWidget(self.result_unit1, 5, 2)
+        widget1.setLayout(layout1)
+        self.init_calculate1()
+        self.calculate_button1.clicked.connect(self.calculate1)
+        main_layout.addWidget(widget1, alignment=Qt.AlignTop | Qt.AlignHCenter)
+
+        """ 皮棉成本计算 """
+        widget2 = QWidget(self)
+        widget2.setFixedWidth(CALCULATE_WIDGET_WIDTH)
+        layout2 = QGridLayout()
+        layout2.setContentsMargins(QMargins(MARGIN_LEFT, 0, MARGIN_RIGHT, MARGIN_BOTTOM))
+        self.name2 = NameLabel('皮棉成本计算', self)
+        self.label21 = QLabel('衣分率', self)
+        self.input21 = InputEdit(self)
+        self.unit21 = QLabel('%', self)
+
+        layout2.addWidget(self.name2, 0, 0, 1, 3)
+        layout2.addWidget(self.label21, 1, 0)
+        layout2.addWidget(self.input21, 1, 1)
+        layout2.addWidget(self.unit21, 1, 2)
+
+        self.label22 = QLabel('籽棉单价', self)
+        self.input22 = InputEdit(self)
+        self.unit22 = QLabel('元/斤', self)
+
+        layout2.addWidget(self.label22, 2, 0)
+        layout2.addWidget(self.input22, 2, 1)
+        layout2.addWidget(self.unit22, 2, 2)
+
+        self.label23 = QLabel('耗损率', self)
+        self.input23 = InputEdit(self)
+        self.unit23 = QLabel('元/斤', self)
+
+        layout2.addWidget(self.label23, 3, 0)
+        layout2.addWidget(self.input23, 3, 1)
+        layout2.addWidget(self.unit23, 3, 2)
+
+        self.label24 = QLabel('购进棉籽单价', self)
+        self.input24 = InputEdit(self)
+        self.unit24 = QLabel('元/斤', self)
+
+        layout2.addWidget(self.label24, 4, 0)
+        layout2.addWidget(self.input24, 4, 1)
+        layout2.addWidget(self.unit24, 4, 2)
+
+        self.label25 = QLabel('购进数量', self)
+        self.input25 = InputEdit(self)
+        self.unit25 = QLabel('斤', self)
+
+        layout2.addWidget(self.label25, 5, 0)
+        layout2.addWidget(self.input25, 5, 1)
+        layout2.addWidget(self.unit25, 5, 2)
+
+        # self.label26 = QLabel('收购价格', self)
+        # self.input26 = InputEdit(self)
+        # self.unit26 = QLabel('元/斤', self)
+        #
+        # layout2.addWidget(self.label26, 6, 0)
+        # layout2.addWidget(self.input26, 6, 1)
+        # layout2.addWidget(self.unit26, 6, 2)
+
+        layout2.addWidget(QLabel(self), 7, 0)
+
+        self.calculate_button2 = CalculateButton('试算成本', self)
+        self.result2 = ResultLabel(self)
+        self.result_unit2 = QLabel('元/吨', self)
+        layout2.addWidget(self.calculate_button2, 8, 0)
+        layout2.addWidget(self.result2, 8, 1)
+        layout2.addWidget(self.result_unit2, 8, 2)
+        widget2.setLayout(layout2)
+        self.init_calculate2()
+        self.calculate_button2.clicked.connect(self.calculate2)
+        main_layout.addWidget(widget2, alignment=Qt.AlignTop | Qt.AlignHCenter)
+
+        """ 进口棉花配额内成本测算 """
+        widget3 = QWidget(self)
+        widget3.setFixedWidth(CALCULATE_WIDGET_WIDTH)
+        layout3 = QGridLayout()
+        layout3.setContentsMargins(QMargins(MARGIN_LEFT, 0, MARGIN_RIGHT, MARGIN_BOTTOM))
+        self.name3 = NameLabel('进口棉花配额内成本测算', self)
+        self.label31 = QLabel('NYBOT棉花CNF报价', self)
+        self.input31 = InputEdit(self)
+        self.unit31 = QLabel('美分/磅', self)
+
+        layout3.addWidget(self.name3, 0, 0, 1, 3)
+        layout3.addWidget(self.label31, 1, 0)
+        layout3.addWidget(self.input31, 1, 1)
+        layout3.addWidget(self.unit31, 1, 2)
+
+        self.label32 = QLabel('海运保险费率', self)
+        self.input32 = InputEdit(self)
+        self.unit32 = QLabel('%', self)
+
+        layout3.addWidget(self.label32, 2, 0)
+        layout3.addWidget(self.input32, 2, 1)
+        layout3.addWidget(self.unit32, 2, 2)
+
+        self.label33 = QLabel('进口代理费率', self)
+        self.input33 = InputEdit(self)
+        self.unit33 = QLabel('%', self)
+
+        layout3.addWidget(self.label33, 3, 0)
+        layout3.addWidget(self.input33, 3, 1)
+        layout3.addWidget(self.unit33, 3, 2)
+
+        self.label34 = QLabel('关税税率', self)
+        self.input34 = InputEdit(self)
+        self.unit34 = QLabel('元/斤', self)
+
+        layout3.addWidget(self.label34, 4, 0)
+        layout3.addWidget(self.input34, 4, 1)
+        layout3.addWidget(self.unit34, 4, 2)
+
+        self.label35 = QLabel('汇率', self)
+        self.input35 = InputEdit(self)
+        self.unit35 = QLabel('USD/CNY', self)
+
+        layout3.addWidget(self.label35, 5, 0)
+        layout3.addWidget(self.input35, 5, 1)
+        layout3.addWidget(self.unit35, 5, 2)
+
+        self.label36 = QLabel('增值税率', self)
+        self.input36 = InputEdit(self)
+        self.unit36 = QLabel('%', self)
+
+        layout3.addWidget(self.label36, 6, 0)
+        layout3.addWidget(self.input36, 6, 1)
+        layout3.addWidget(self.unit36, 6, 2)
+
+        # self.label26 = QLabel('收购价格', self)
+        # self.input26 = InputEdit(self)
+        # self.unit26 = QLabel('元/斤', self)
+        #
+        # layout2.addWidget(self.label26, 6, 0)
+        # layout2.addWidget(self.input26, 6, 1)
+        # layout2.addWidget(self.unit26, 6, 2)
+
+        layout3.addWidget(QLabel(self), 7, 0)
+
+        self.calculate_button3 = CalculateButton('试算成本', self)
+        self.result3 = ResultLabel(self)
+        self.result_unit3 = QLabel('元/吨', self)
+        layout3.addWidget(self.calculate_button3, 8, 0)
+        layout3.addWidget(self.result3, 8, 1)
+        layout3.addWidget(self.result_unit3, 8, 2)
+        widget3.setLayout(layout3)
+        self.init_calculate3()
+        self.calculate_button3.clicked.connect(self.calculate3)
+        main_layout.addWidget(widget3, alignment=Qt.AlignTop | Qt.AlignHCenter)
+
+        self.setLayout(main_layout)
+
+    def init_calculate1(self):
+        self.input11.set_value(38)
+
+    def init_calculate2(self):
+        self.input21.set_value(38)
+        self.input23.set_value(1)
+        self.input25.set_value(1)
+
+    def init_calculate3(self):
+        if self.USD_CNY_RATE:
+            self.input35.set_value(self.USD_CNY_RATE)
+        self.input32.set_value(0.2)
+        self.input33.set_value(1)
+        self.input34.set_value(1)
+        self.input36.set_value(13)
+
+    def calculate1(self):
+        # result = (a -b * (1 - c - 0.01)) / (c - 0.01) * 2000
+        # 皮棉价格=(籽棉价格-棉籽价格 x(1-衣分率-0.01))÷(衣分率-0.01)X2000
+        a = self.input13.value()
+        b = self.input12.value()
+        c = self.input11.value(p=True)
+        params = [a, b, c]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
+            p = InformationPopup('请填写完整数据再试算!', self)
+            p.exec_()
+            return
+        result = (a -b * (1 - c - 0.01)) / (c - 0.01) * 2000
+        self.result1.set_value(result, count=4)
+
+    def calculate2(self):
+        ## 收购价格 =  (籽棉价格-棉籽价格 x (1-衣分-0.01))÷(衣分- 0.01) x 2000
+        # 购进籽棉成本＝购进数量×籽棉单价
+        # 棉籽成本＝（1－衣分率－损耗率）×购进棉籽单价
+        # 每吨皮棉成本＝（购进籽棉成本－其中的棉籽成本） / 衣分率 ×100 ×200
+        # 每吨皮棉成本＝（ 购进数量×籽棉单价 － （1－衣分率－损耗率）×购进棉籽单价 ）/ 衣分率 ×100 ×20
+        # result = (a * b - (1 - c -d) * e) / c * 100 * 20
+        a = self.input25.value()
+        b = self.input22.value()
+        c = self.input21.value(p=True)
+        d = self.input23.value(p=True)
+        e = self.input24.value()
+        params = [a, b, c, d, e]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
+            p = InformationPopup('请填写完整数据再试算!', self)
+            p.exec_()
+            return
+        result = (a * b - (1 - c - d) * e) / c * 2000
+        self.result2.set_value(result, count=4)
+
+    def calculate3(self):
+        # 配额内成本 ＝ 外棉报价（美分/磅）× 22.0462×汇率 x (1+税率) x (1+增值税）
+        # result = a * 22.0462 * r * (1 + b) * (1 + c)
+        a = self.input31.value()
+        r = self.input35.value()
+        b = self.input34.value(p=True)
+        c = self.input36.value(p=True)
+        params = [a, b, c, r]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
+            p = InformationPopup('请填写完整数据再试算!', self)
+            p.exec_()
+            return
+        result = a * 22.0462 * r * (1 + b) * (1 + c)
+        self.result3.set_value(result, count=4)
 
 
 class CU(QWidget):
@@ -904,6 +1239,72 @@ class CU(QWidget):
             return
         result = (a - (tc / (b * c + rc * 22.0462))) * r + d
         self.result2.set_value(result, count=4)
+
+
+class CJ(QWidget):
+
+    RATE_DATA = rate.get_all_exchange_rate()
+
+    def __init__(self, *args, **kwargs):
+        super(CJ, self).__init__(*args, **kwargs)
+        self.USD_CNY_RATE = self.RATE_DATA.get('USD/CNY', None)
+        if self.USD_CNY_RATE:
+            self.USD_CNY_RATE = float(self.USD_CNY_RATE)
+        main_layout = QVBoxLayout()
+        """ 红枣成本价格测算 """
+        widget1 = QWidget(self)
+        widget1.setFixedWidth(CALCULATE_WIDGET_WIDTH)
+        layout1 = QGridLayout()
+        layout1.setContentsMargins(QMargins(MARGIN_LEFT, 0, MARGIN_RIGHT, MARGIN_BOTTOM))
+        self.name1 = NameLabel('红枣成本价格测算', self)
+        self.label11 = QLabel('沧州红枣价格', self)
+        self.input11 = InputEdit(self)
+        self.unit11 = QLabel('元/吨', self)
+
+        layout1.addWidget(self.name1, 0, 0, 1, 3)
+        layout1.addWidget(self.label11, 1, 0)
+        layout1.addWidget(self.input11, 1, 1)
+        layout1.addWidget(self.unit11, 1, 2)
+
+        self.label12 = QLabel('加工费', self)
+        self.input12 = InputEdit(self)
+        self.unit12 = QLabel('元/吨', self)
+
+        layout1.addWidget(self.label12, 2, 0)
+        layout1.addWidget(self.input12, 2, 1)
+        layout1.addWidget(self.unit12, 2, 2)
+
+        layout1.addWidget(QLabel(self), 3, 0)
+
+        self.calculate_button1 = CalculateButton('试算成本', self)
+        self.result1 = ResultLabel(self)
+        self.result_unit1 = QLabel('元/吨', self)
+        layout1.addWidget(self.calculate_button1, 15, 0)
+        layout1.addWidget(self.result1, 15, 1)
+        layout1.addWidget(self.result_unit1, 15, 2)
+        widget1.setLayout(layout1)
+        self.init_calculate1()
+        self.calculate_button1.clicked.connect(self.calculate1)
+        main_layout.addWidget(widget1, alignment=Qt.AlignTop | Qt.AlignHCenter)
+
+        self.setLayout(main_layout)
+
+    def init_calculate1(self):
+        self.input12.set_value(400)
+
+    def calculate1(self):
+        """
+        成本公式=沧州价格+加工费
+        """
+        a = self.input11.value()
+        b = self.input12.value()
+        params = [a, b]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
+            p = InformationPopup('请填写完整数据再试算!', self)
+            p.exec_()
+            return
+        self.result1.set_value(a + b, count=4)
 
 
 class EB(QWidget):
@@ -2710,7 +3111,7 @@ class NI(QWidget):
         layout2 = QGridLayout()
         layout2.setContentsMargins(QMargins(MARGIN_LEFT, MARGIN_TOP, MARGIN_RIGHT, MARGIN_BOTTOM))
         self.name2 = NameLabel('镍生产成本', self)
-        self.label21 = QLabel('镍矿Ni1.6-1.6价格', self)
+        self.label21 = QLabel('镍矿Ni1.5-1.6价格', self)
         self.input21 = InputEdit(self)
         self.unit21 = QLabel('元/吨', self)
 
@@ -3031,7 +3432,7 @@ class PB(QWidget):
         if self.USD_CNY_RATE:
             self.input14.set_value(self.USD_CNY_RATE, count=4)
         self.input15.set_value(13)
-        self.input16.set_value(1)
+        self.input16.set_value(3)
         self.input17.set_value(150)
 
     def calculate1(self):
@@ -4060,14 +4461,38 @@ class RU(QWidget):
         layout3.addWidget(self.input33, 3, 1)
         layout3.addWidget(self.unit33, 3, 2)
 
-        layout3.addWidget(QLabel(self), 4, 0)
+        self.label34 = QLabel('增值税', self)
+        self.input34 = InputEdit(self)
+        self.unit34 = QLabel('%', self)
+
+        layout3.addWidget(self.label34, 4, 0)
+        layout3.addWidget(self.input34, 4, 1)
+        layout3.addWidget(self.unit34, 4, 2)
+
+        self.label35 = QLabel('关税', self)
+        self.input35 = InputEdit(self)
+        self.unit35 = QLabel('%', self)
+
+        layout3.addWidget(self.label35, 5, 0)
+        layout3.addWidget(self.input35, 5, 1)
+        layout3.addWidget(self.unit35, 5, 2)
+
+        self.label36 = QLabel('港杂费', self)
+        self.input36 = InputEdit(self)
+        self.unit36 = QLabel('元/吨', self)
+
+        layout3.addWidget(self.label36, 6, 0)
+        layout3.addWidget(self.input36, 6, 1)
+        layout3.addWidget(self.unit36, 6, 2)
+
+        layout3.addWidget(QLabel(self), 7, 0)
 
         self.calculate_button3 = CalculateButton('试算成本', self)
         self.result3 = ResultLabel(self)
         self.result_unit3 = QLabel('元/斤', self)
-        layout3.addWidget(self.calculate_button3, 5, 0)
-        layout3.addWidget(self.result3, 5, 1)
-        layout3.addWidget(self.result_unit3, 5, 2)
+        layout3.addWidget(self.calculate_button3, 8, 0)
+        layout3.addWidget(self.result3, 8, 1)
+        layout3.addWidget(self.result_unit3, 8, 2)
         widget3.setLayout(layout3)
         self.init_calculate3()
         self.calculate_button3.clicked.connect(self.calculate3)
@@ -4087,6 +4512,9 @@ class RU(QWidget):
     def init_calculate3(self):
         if self.USD_CNY_RATE:
             self.input33.set_value(self.USD_CNY_RATE, count=4)
+        self.input34.set_value(13)
+        self.input35.set_value(20)
+        self.input36.set_value(350)
 
     def calculate1(self):
         # 烟片成本=（白片+加工费）*1000/汇率
@@ -4119,18 +4547,21 @@ class RU(QWidget):
         self.result2.set_value(result, count=4)
 
     def calculate3(self):
-        # 天然橡胶进口利润=全乳胶现货价-CIF青岛主港STR20*汇率
-        # result = a - b * r
+        # 天然橡胶进口利润=全乳胶现货价-CIF青岛主港STR20*汇率*(1 + 增值税) * （1 + 关税） - 港杂费
+        # result = a - b * r * (1 + c) * (1 + d) - e
         a = self.input31.value()
         b = self.input32.value()
+        c = self.input34.value(p=True)
+        d = self.input35.value(p=True)
+        e = self.input36.value()
         r = self.input33.value()
-        params = [a, b, r]
+        params = [a, b, c, d, e, r]
         params = list(filter(lambda x: x != 0, params))
         if not all(params):
             p = InformationPopup('请填写完整数据再试算!', self)
             p.exec_()
             return
-        result = a - b * r
+        result = a - b * r * (1 + c) * (1 + d) - e
         self.result3.set_value(result, count=4)
 
 
@@ -4684,6 +5115,191 @@ class SP(QWidget):
         self.result1.set_value(result, count=4)
 
 
+class SR(QWidget):
+
+    RATE_DATA = rate.get_all_exchange_rate()
+
+    def __init__(self, *args, **kwargs):
+        super(SR, self).__init__(*args, **kwargs)
+        self.USD_CNY_RATE = self.RATE_DATA.get('USD/CNY', None)
+        if self.USD_CNY_RATE:
+            self.USD_CNY_RATE = float(self.USD_CNY_RATE)
+        main_layout = QVBoxLayout()
+        """ 进口糖成本测算 """
+        widget1 = QWidget(self)
+        widget1.setFixedWidth(CALCULATE_WIDGET_WIDTH)
+        layout1 = QGridLayout()
+        layout1.setContentsMargins(QMargins(MARGIN_LEFT, 0, MARGIN_RIGHT, MARGIN_BOTTOM))
+        self.name1 = NameLabel('进口糖成本测算', self)
+        self.label11 = QLabel('原糖价格', self)
+        self.input11 = InputEdit(self)
+        self.unit11 = QLabel('美分/磅', self)
+
+        layout1.addWidget(self.name1, 0, 0, 1, 3)
+        layout1.addWidget(self.label11, 1, 0)
+        layout1.addWidget(self.input11, 1, 1)
+        layout1.addWidget(self.unit11, 1, 2)
+
+        self.label12 = QLabel('升贴水', self)
+        self.input12 = InputEdit(self)
+        self.unit12 = QLabel('', self)
+
+        layout1.addWidget(self.label12, 2, 0)
+        layout1.addWidget(self.input12, 2, 1)
+        layout1.addWidget(self.unit12, 2, 2)
+
+        self.label13 = QLabel('海外运费', self)
+        self.input13 = InputEdit(self)
+        self.unit13 = QLabel('美元/吨', self)
+
+        layout1.addWidget(self.label13, 3, 0)
+        layout1.addWidget(self.input13, 3, 1)
+        layout1.addWidget(self.unit13, 3, 2)
+
+        self.label14 = QLabel('银行手续费率', self)
+        self.input14 = InputEdit(self)
+        self.unit14 = QLabel('%', self)
+
+        layout1.addWidget(self.label14, 4, 0)
+        layout1.addWidget(self.input14, 4, 1)
+        layout1.addWidget(self.unit14, 4, 2)
+
+        self.label15 = QLabel('增值税率', self)
+        self.input15 = InputEdit(self)
+        self.unit15 = QLabel('%', self)
+
+        layout1.addWidget(self.label15, 5, 0)
+        layout1.addWidget(self.input15, 5, 1)
+        layout1.addWidget(self.unit15, 5, 2)
+
+        self.label16 = QLabel('耗损率', self)
+        self.input16 = InputEdit(self)
+        self.unit16 = QLabel('%', self)
+
+        layout1.addWidget(self.label16, 6, 0)
+        layout1.addWidget(self.input16, 6, 1)
+        layout1.addWidget(self.unit16, 6, 2)
+
+        self.label17 = QLabel('汇率', self)
+        self.input17 = InputEdit(self)
+        self.unit17 = QLabel('USD/CNY', self)
+
+        layout1.addWidget(self.label17, 7, 0)
+        layout1.addWidget(self.input17, 7, 1)
+        layout1.addWidget(self.unit17, 7, 2)
+
+        self.label18 = QLabel('海外保险费率', self)
+        self.input18 = InputEdit(self)
+        self.unit18 = QLabel('%', self)
+
+        layout1.addWidget(self.label18, 8, 0)
+        layout1.addWidget(self.input18, 8, 1)
+        layout1.addWidget(self.unit18, 8, 2)
+
+        self.label19 = QLabel('利息及劳务费', self)
+        self.input19 = InputEdit(self)
+        self.unit19 = QLabel('美元/吨', self)
+
+        layout1.addWidget(self.label19, 9, 0)
+        layout1.addWidget(self.input19, 9, 1)
+        layout1.addWidget(self.unit19, 9, 2)
+
+        self.label110 = QLabel('外贸代理费率', self)
+        self.input110 = InputEdit(self)
+        self.unit110 = QLabel('%', self)
+
+        layout1.addWidget(self.label110, 10, 0)
+        layout1.addWidget(self.input110, 10, 1)
+        layout1.addWidget(self.unit110, 10, 2)
+
+        self.label111 = QLabel('海关关税率', self)
+        self.input111 = InputEdit(self)
+        self.unit111 = QLabel('%', self)
+
+        layout1.addWidget(self.label111, 11, 0)
+        layout1.addWidget(self.input111, 11, 1)
+        layout1.addWidget(self.unit111, 11, 2)
+
+        self.label112 = QLabel('加工及运杂费', self)
+        self.input112 = InputEdit(self)
+        self.unit112 = QLabel('美元/吨', self)
+
+        layout1.addWidget(self.label112, 12, 0)
+        layout1.addWidget(self.input112, 12, 1)
+        layout1.addWidget(self.unit112, 12, 2)
+
+        self.label113 = QLabel('旋光度增值', self)
+        self.input113 = InputEdit(self)
+        self.unit113 = QLabel('', self)
+
+        layout1.addWidget(self.label113, 13, 0)
+        layout1.addWidget(self.input113, 13, 1)
+        layout1.addWidget(self.unit113, 13, 2)
+
+        layout1.addWidget(QLabel(self), 14, 0)
+
+        self.calculate_button1 = CalculateButton('试算成本', self)
+        self.result1 = ResultLabel(self)
+        self.result_unit1 = QLabel('元/吨', self)
+        layout1.addWidget(self.calculate_button1, 15, 0)
+        layout1.addWidget(self.result1, 15, 1)
+        layout1.addWidget(self.result_unit1, 15, 2)
+        widget1.setLayout(layout1)
+        self.init_calculate1()
+        self.calculate_button1.clicked.connect(self.calculate1)
+        main_layout.addWidget(widget1, alignment=Qt.AlignTop | Qt.AlignHCenter)
+
+        self.setLayout(main_layout)
+
+    def init_calculate1(self):
+        if self.USD_CNY_RATE:
+            self.input17.set_value(self.USD_CNY_RATE)
+        self.input11.set_value(16)
+        self.input12.set_value(0.05)
+        self.input13.set_value(30)
+        self.input14.set_value(0.0125)
+        self.input15.set_value(13)
+        self.input16.set_value(3)
+        self.input18.set_value(0.4616)
+        self.input19.set_value(25)
+        self.input110.set_value(1)
+        self.input111.set_value(15)
+        self.input112.set_value(300)
+        self.input113.set_value(1.04)
+
+    def calculate1(self):
+        """
+        初价=（原糖价格＋升贴水）*22.04623(重量单位换算)*1.0275(旋光度增值)；
+        海运保险费= 初价*海运保险费率；
+        到岸价(人民币)= (初价+海运保险费+海外运费)*汇率；
+        不含税价= 到岸价*（1+外贸代理费率）*（1+银行手续费率）+利息及劳务费；
+        含税价= 不含税价*（1+海关税率）*（1+增值税率）；
+        """
+        a = self.input11.value()  # 原糖价格
+        b = self.input12.value()  # 升贴水
+        c = self.input13.value()  # 海外运费
+        d = self.input14.value(p=True)  # 银行首手续费
+        e = self.input15.value(p=True)  # 增值税率
+        f = self.input16.value(p=True)  # 耗损率
+        g = self.input17.value()  # 汇率
+        h = self.input18.value(p=True)  # 海外保险费率
+        i = self.input19.value()  # 利息劳务费
+        j = self.input110.value(p=True)  # 外贸代理费率
+        k = self.input111.value(p=True)  # 海关关税
+        l = self.input112.value()  # 加工与杂费
+        m = self.input113.value()  # 旋光度增值
+        params = [a, b, c, d, e, f, g, h, i, j, k, l, m]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
+            p = InformationPopup('请填写完整数据再试算!', self)
+            p.exec_()
+            return
+        chujia = (a + b) * 22.04623 * m
+        daoanjia = (chujia + chujia * h + c) * g
+        result = (daoanjia * (1 + j) * (1 + d) + i) * (1 + k) * (1 + e)
+        self.result1.set_value(result, count=4)
+
+
 class SS(QWidget):
     RATE_DATA = rate.get_all_exchange_rate()
 
@@ -4701,7 +5317,7 @@ class SS(QWidget):
         self.name1 = NameLabel('不锈钢生产成本', self)
         self.label11 = QLabel('高镍铁价格', self)
         self.input11 = InputEdit(self)
-        self.unit11 = QLabel('元/吨', self)
+        self.unit11 = QLabel('元/镍', self)
 
         layout1.addWidget(self.name1, 0, 0, 1, 3)
         layout1.addWidget(self.label11, 1, 0)
