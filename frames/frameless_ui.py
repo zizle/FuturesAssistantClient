@@ -181,7 +181,7 @@ class NavigationBar(QWidget):
             "#usernameButton:hover{border:none;color:rgb(250,250,250)}"
             "#logoutButton{border-image:url(media/icons/logout.png);}"
             "#logoutButton:hover{border-image:url(media/icons/logout_hover.png);}"
-            "#menuBar{background-color:rgb(80,83,85);color:rgb(255,255,255);font-size:12px}"
+            "#menuBar{background-color:rgb(80,83,85);color:rgb(255,255,255);font-size:14px}"
             "#menuBar::item{background-color:rgb(80,83,85);border:1px solid rgb(34,142,155);"
             "padding:2px 5px;margin:0 1px;}"
             "#menuBar::item:selected{background-color:rgb(34,132,200);color:rgb(255,255,255)}"
