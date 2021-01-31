@@ -167,7 +167,7 @@ class MultiReport(QWidget):
 
     def current_variety_changed(self):
         """ 品种变化 """
-        if self.report_combobox.currentData() is None:
+        if self.REPORT_TYPE == 1 and self.report_combobox.currentData() is None:
             return
         self.reset_paginator_pages()
         self.get_current_reports()
@@ -181,6 +181,8 @@ class MultiReport(QWidget):
         self.get_current_reports()
 
     def get_current_reports(self):
+        if self.variety_combobox.currentData() is None:
+            return
         self.report_api.get_paginator_reports(report_type=self.REPORT_TYPE, variety_en=self.variety_combobox.currentData(),
                                               page=self.paginator.current_page, page_size=30)
 
@@ -208,7 +210,7 @@ class RegularReport(MultiReport):
 
 
 class SpecialReport(MultiReport):
-    """ 专题研究 """
+    """ 分析文章 """
     REPORT_TYPE = 5
 
     def __init__(self, *args, **kwargs):
@@ -246,7 +248,7 @@ class InvestmentFile(MultiReport):
         self.report_combobox.hide()
 
 
-# 投资方案
+# 套保方案
 class HedgeFile(MultiReport):
     REPORT_TYPE = 9
 

@@ -743,6 +743,22 @@ class Metal(QWidget):
         self.au1.set_reverse_params([31.1035, 0.0833])
         main_layout.addWidget(self.au1)
 
+        # 黄金价格换算
+        self.au2 = UNITThreeWidget(self)
+        self.au2.set_name('黄金价格换算')
+        self.au2.set_units(['美元/盎司', '元/千克', '元/克'])
+        if self.USD_CNY_RATE:
+            self.au2.set_reverse_params([self.USD_CNY_RATE / 0.0311035, self.USD_CNY_RATE / 31.1035])
+        main_layout.addWidget(self.au2)
+
+        # 白银价格换算
+        self.ag1 = UNITThreeWidget(self)
+        self.ag1.set_name('白银价格换算')
+        self.ag1.set_units(['美元/盎司', '元/千克', '元/克'])
+        if self.USD_CNY_RATE:
+            self.ag1.set_reverse_params([self.USD_CNY_RATE / 0.0311035, self.USD_CNY_RATE / 31.1035])
+        main_layout.addWidget(self.ag1)
+
         main_layout.addStretch()
         self.setLayout(main_layout)
 

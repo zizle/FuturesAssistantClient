@@ -118,7 +118,7 @@ class FarmCalculate(VarietyCalculate):
     GROUP = 'farm'
 
     def include_variety(self):
-        return ['A', 'C', 'JD', 'P', 'LH', 'PM', 'RS']
+        return ['A', 'AP', 'C', 'CF', 'CJ', 'JD', 'P', 'LH', 'PM', 'RS', 'SR']
 
 
 class ChemicalCalculate(VarietyCalculate):

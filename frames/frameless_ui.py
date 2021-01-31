@@ -181,7 +181,7 @@ class NavigationBar(QWidget):
             "#usernameButton:hover{border:none;color:rgb(250,250,250)}"
             "#logoutButton{border-image:url(media/icons/logout.png);}"
             "#logoutButton:hover{border-image:url(media/icons/logout_hover.png);}"
-            "#menuBar{background-color:rgb(80,83,85);color:rgb(255,255,255);font-size:12px}"
+            "#menuBar{background-color:rgb(80,83,85);color:rgb(255,255,255);font-size:14px}"
             "#menuBar::item{background-color:rgb(80,83,85);border:1px solid rgb(34,142,155);"
             "padding:2px 5px;margin:0 1px;}"
             "#menuBar::item:selected{background-color:rgb(34,132,200);color:rgb(255,255,255)}"
@@ -191,7 +191,7 @@ class NavigationBar(QWidget):
     def set_menus(self, menu_data, parent_menu=None):
         """ 设置菜单 """
         for menu_item in menu_data:
-            if menu_item["children"]:
+            if menu_item["children"] and menu_item['is_show']:
                 if parent_menu:
                     menu = parent_menu.addMenu(menu_item["name"])
                     menu.setIcon(QIcon(menu_item["logo"]))
@@ -201,14 +201,15 @@ class NavigationBar(QWidget):
                 menu.setObjectName("subMenu")
                 self.set_menus(menu_item["children"], menu)
             else:
-                if parent_menu:
-                    action = parent_menu.addAction(menu_item["name"])
-                    action.setIcon(QIcon(menu_item["logo"]))
-                else:
-                    action = self.menu_bar.addAction(menu_item["name"])
-                    action.setIcon(QIcon(menu_item["logo"]))
-                setattr(action, "id", menu_item['id'])
-                action.triggered.connect(self.select_menu_action)
+                if menu_item['is_show']:
+                    if parent_menu:
+                        action = parent_menu.addAction(menu_item["name"])
+                        action.setIcon(QIcon(menu_item["logo"]))
+                    else:
+                        action = self.menu_bar.addAction(menu_item["name"])
+                        action.setIcon(QIcon(menu_item["logo"]))
+                    setattr(action, "id", menu_item['id'])
+                    action.triggered.connect(self.select_menu_action)
 
     def select_menu_action(self):
         action = self.sender()

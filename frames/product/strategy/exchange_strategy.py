@@ -130,7 +130,7 @@ class ExchangeStrategy(QWidget):
         for msg_item in data['strategy']:
             content = "<div style='text-indent:30px;line-height:28px;'>{}</div>".format(msg_item['content'])
             m = ShortMsgContentWidget(time_str=msg_item['create_time'], content_str=content, parent=self)
-            self.content_widget.layout().insertWidget(0, m)
+            self.content_widget.layout().addWidget(m)
         self.content_widget.layout().addStretch()
 
 
