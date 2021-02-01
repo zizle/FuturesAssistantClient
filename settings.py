@@ -9,7 +9,7 @@ from PyQt5.QtCore import QSettings
 SYS_BIT = "32" if sys.maxsize < 2 ** 32 else "64"
 PLATE_FORM = "WIN7"
 ADMINISTRATOR = True
-WINDOW_TITLE = '分析决策系统(研究员)' if ADMINISTRATOR else '分析决策系统客户端'
+WINDOW_TITLE = '分析决策系统(研究员)' if ADMINISTRATOR else '瑞智分析决策系统'
 
 # SERVER_API = "http://127.0.0.1:8000/api/"
 SERVER_API = "http://210.13.218.130:9004/api/"

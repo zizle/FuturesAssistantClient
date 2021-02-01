@@ -6,8 +6,7 @@
 # 各品种的计算控件
 import math
 import datetime
-from PyQt5.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QLineEdit, QPushButton, QFrame, QDateEdit, \
-    QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QLineEdit, QPushButton, QFrame, QDateEdit
 from PyQt5.QtCore import Qt, QRegExp, QMargins, QDate
 from PyQt5.QtGui import QRegExpValidator
 from gglobal import rate
@@ -1931,8 +1930,14 @@ class GZ(QWidget):  # 国债
         n = self.input16.value()
         c = self.input14.value(p=True)
         f = self.input15.value()
-        if not all([r, x, n, c, f]):
+        params = [r, x, n, c, f]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
             p = InformationPopup('请填写完整数据再试算', self)
+            p.exec_()
+            return
+        if r == 0 or f == 0:
+            p = InformationPopup('国债票面利率或付息次数不能为0', self)
             p.exec_()
             return
         # print('10年期国债期货合约票面利率3%-r',r)
@@ -1956,7 +1961,9 @@ class GZ(QWidget):  # 国债
         b = self.input23.value()
         c = self.input22.value()
         r = self.input24.value()
-        if not all([a, b, c, r]):
+        params = [a, b, c, r]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
             p = InformationPopup('请填写完整数据再试算', self)
             p.exec_()
             return
@@ -1970,7 +1977,9 @@ class GZ(QWidget):  # 国债
         a = self.input31.value()
         b = self.input32.value()
         c = self.input35.value()
-        if not all([a, b, c]):
+        params = [a, b, c]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
             p = InformationPopup('请填写完整数据再试算', self)
             p.exec_()
             return
@@ -1986,7 +1995,9 @@ class GZ(QWidget):  # 国债
         r = self.input45.value()
         c = self.input44.value()
         d = self.input43.value()
-        if not all([a, b, c, d, r]):
+        params = [a, b, c, d, r]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
             p = InformationPopup('请填写完整数据再试算', self)
             p.exec_()
             return
@@ -2238,7 +2249,6 @@ class J(QWidget):
 
     def init_calculate1(self):
         pass
-
 
     def calculate1(self):
         # 计算锰矿成本
@@ -3451,7 +3461,9 @@ class PB(QWidget):
         d = self.input15.value(p=True)
         e = self.input16.value(p=True)
         f = self.input17.value()
-        if not all([a, b, c, r, d, e, f]):
+        params = [a, b, c, r, d, e, f]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
             p = InformationPopup('请填写完整数据再试算!', self)
             p.exec_()
             return
@@ -5940,7 +5952,9 @@ class ZN(QWidget):
         d = self.input15.value(p=True)
         e = self.input16.value(p=True)
         f = self.input17.value()
-        if not all([a, b, c, r, d, e, f]):
+        params = [a, b, c, r, d, e, f]
+        params = list(filter(lambda x: x != 0, params))
+        if not all(params):
             p = InformationPopup('请填写完整数据再试算!', self)
             p.exec_()
             return
