@@ -814,6 +814,12 @@ class UnitTransform(QWidget):
         option_layout.addWidget(self.farm_button)
         option_layout.addWidget(self.metal_button)
         option_layout.addWidget(self.chemical_button)
+
+        # 提示
+        tip_label = QLabel('对应输入框填入数据后按`Enter`键进行换算', self)
+        tip_label.setStyleSheet('font-size:12px;color:#b3182e')
+        option_layout.addWidget(tip_label)
+
         option_layout.addStretch()
         option_widget.setLayout(option_layout)
         layout.addWidget(option_widget)
