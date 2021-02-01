@@ -7,8 +7,6 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabe
                              QTableWidget)
 from PyQt5.QtCore import QMargins, Qt, QDate, QSize
 from PyQt5.QtGui import QBrush, QPalette, QPixmap, QPainter, QPen, QColor
-from components.exchange_tree import ExchangeLibTree
-
 
 class OptionWidget(QWidget):
     def paintEvent(self, event):

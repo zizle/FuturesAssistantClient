@@ -833,7 +833,7 @@ class CF(QWidget):
 
         self.label23 = QLabel('耗损率', self)
         self.input23 = InputEdit(self)
-        self.unit23 = QLabel('元/斤', self)
+        self.unit23 = QLabel('%', self)
 
         layout2.addWidget(self.label23, 3, 0)
         layout2.addWidget(self.input23, 3, 1)
@@ -1935,9 +1935,14 @@ class GZ(QWidget):  # 国债
             p = InformationPopup('请填写完整数据再试算', self)
             p.exec_()
             return
+        # print('10年期国债期货合约票面利率3%-r',r)
+        # print('交割月至下月付息月月份-x', x)
+        # print('剩余付息次数-n', n)
+        # print('票面利率-c', c)
+        # print('每年付息次数-f', f)
         # 计算
         v1 = 1 / math.pow((1 + r / f), x * f / 12)
-        v2 = c/f + c/r + (1 - c/r) * (1 / math.pow((1+r/f), x-1))
+        v2 = c/f + c/r + (1 - c/r) * (1 / math.pow((1+r/f), n-1))
         v3 = c/f * (1 - x*f/12)
         result = v1 * v2 - v3
         self.result1.set_value(result, count=4)
