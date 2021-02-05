@@ -33,7 +33,7 @@ app_dawn = QSettings('dawn/initial.ini', QSettings.IniFormat)
 cache_dawn = QSettings('dawn/cache.ini', QSettings.IniFormat)  # 解析大商所日排名的缓存文件夹
 
 # 首页广告变化速率，单位毫秒
-IMAGE_SLIDER_RATE = 3000
+IMAGE_SLIDER_RATE = 6000
 # 标题栏高度
 TITLE_BAR_HEIGHT = 27
 # 菜单栏高度
