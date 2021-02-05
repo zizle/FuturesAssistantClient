@@ -607,7 +607,7 @@ class C(QWidget):
 
         self.label16 = QLabel('汇率', self)
         self.input16 = InputEdit(self)
-        self.unit16 = QLabel('%', self)
+        self.unit16 = QLabel('USD/CNY', self)
 
         layout1.addWidget(self.label16, 6, 0)
         layout1.addWidget(self.input16, 6, 1)
@@ -1748,17 +1748,13 @@ class GZ(QWidget):  # 国债
         layout2.setContentsMargins(QMargins(MARGIN_LEFT, MARGIN_TOP, MARGIN_RIGHT, MARGIN_BOTTOM))
 
         self.name2 = NameLabel('国债基差', self)
-        self.label21 = QLabel('面值100元国债价格', self)
+        self.label21 = QLabel('面值100元国债现券净价', self)
         self.input21 = InputEdit(self)
         self.unit21 = QLabel(self)
 
         self.label22 = QLabel('面值100元国债期货价', self)
         self.input22 = InputEdit(self)
         self.unit22 = QLabel(self)
-
-        self.label23 = QLabel('持有至交割期收益', self)
-        self.input23 = InputEdit(self)
-        self.unit23 = QLabel(self)
 
         self.label24 = QLabel('转换因子', self)
         self.input24 = InputEdit(self)
@@ -1771,23 +1767,20 @@ class GZ(QWidget):  # 国债
         layout2.addWidget(self.label22, 2, 0)
         layout2.addWidget(self.input22, 2, 1)
         layout2.addWidget(self.unit22, 2, 2)
-        layout2.addWidget(self.label23, 3, 0)
-        layout2.addWidget(self.input23, 3, 1)
-        layout2.addWidget(self.unit23, 3, 2)
-        layout2.addWidget(self.label24, 4, 0)
-        layout2.addWidget(self.input24, 4, 1)
-        layout2.addWidget(self.unit24, 4, 2)
+        layout2.addWidget(self.label24, 3, 0)
+        layout2.addWidget(self.input24, 3, 1)
+        layout2.addWidget(self.unit24, 3, 2)
 
-        layout2.addWidget(QLabel(self), 5, 0)  # 占位行
+        layout2.addWidget(QLabel(self), 4, 0)  # 占位行
 
         self.calculate_button2 = CalculateButton('计算基差', self)
         self.calculate_button2.clicked.connect(self.calculate2)
         self.result2 = ResultLabel(self)
         self.unit24 = QLabel(self)
 
-        layout2.addWidget(self.calculate_button2, 6, 0)
-        layout2.addWidget(self.result2, 6, 1)
-        layout2.addWidget(self.unit24, 6, 2)
+        layout2.addWidget(self.calculate_button2, 5, 0)
+        layout2.addWidget(self.result2, 5, 1)
+        layout2.addWidget(self.unit24, 5, 2)
 
         widget2.setLayout(layout2)
         main_layout.addWidget(widget2, alignment=Qt.AlignTop | Qt.AlignHCenter)
@@ -1802,7 +1795,7 @@ class GZ(QWidget):  # 国债
         layout3.setContentsMargins(QMargins(MARGIN_LEFT, MARGIN_TOP, MARGIN_RIGHT, MARGIN_BOTTOM))
         self.name3 = NameLabel('100元可交割国债应计利息', self)
         self.label31 = QLabel('可交割国债票面利率', self)
-        self.input31 = InputEdit(self)
+        self.input31 = InputEdit('3.46', self)
         self.unit31 = QLabel('%', self)
 
         layout3.addWidget(self.name3, 0, 0, 1, 3)
@@ -1835,7 +1828,7 @@ class GZ(QWidget):  # 国债
         layout3.addWidget(self.unit34, 4, 2)
 
         self.label35 = QLabel('当前付息周期实际天数', self)
-        self.input35 = InputEdit(self)
+        self.input35 = InputEdit('365', self)
         self.unit35 = QLabel(self)
 
         layout3.addWidget(self.label35, 5, 0)
@@ -1955,26 +1948,25 @@ class GZ(QWidget):  # 国债
         self.input45.setText(str(self.result1.get_value()))
 
     def calculate2(self):  # 国债基差
-        # result = (a - b) - (c * 转换因子r)
-        # 国债基差＝(面值100元国债价格 - 持有至交割期的收益) - (面值100元期货合约价 x 转换因子)
+        # B = P - (F * C)
+        # 国债基差 ＝ 面值100元国债现货净价 - (面值100元期货合约价 x 转换因子)
         a = self.input21.value()
-        b = self.input23.value()
         c = self.input22.value()
         r = self.input24.value()
-        params = [a, b, c, r]
+        params = [a, c, r]
         params = list(filter(lambda x: x != 0, params))
         if not all(params):
             p = InformationPopup('请填写完整数据再试算', self)
             p.exec_()
             return
-        result = (a - b) - (c * r)
+        result = a - c * r
         self.result2.set_value(result, count=4)
 
     def calculate3(self):
         # result = (a * 100 / b) * (days / c)
         # 应计利息 = (票面利率 * 100 / 每年付息次数 ) * (第二交割日 - 上一付息日) / 当前付息周期实际天数
-        days = get_date_range_count(self.input33.value(), self.input34.value(), c='day')
-        a = self.input31.value()
+        days = get_date_range_count(self.input34.value(), self.input33.value(), c='day')
+        a = self.input31.value(p=True)
         b = self.input32.value()
         c = self.input35.value()
         params = [a, b, c]
@@ -1984,7 +1976,7 @@ class GZ(QWidget):  # 国债
             p.exec_()
             return
         result = (a * 100 / b) * (days / c)
-        self.result3.set_value(result, count=4)
+        self.result3.set_value(result, count=7)
         self.input44.setText(str(self.result3.get_value()))
 
     def calculate4(self):
@@ -2002,7 +1994,7 @@ class GZ(QWidget):  # 国债
             p.exec_()
             return
         result = a * (b * r + c) * (d / 100)
-        self.result4.set_value(result, count=4)
+        self.result4.set_value(result, count=2)
 
 
 class HC(QWidget):
@@ -2611,7 +2603,7 @@ class L(QWidget):
 
         self.label25 = QLabel('杂费', self)
         self.input25 = InputEdit(self)
-        self.unit25 = QLabel('USD/CNY', self)
+        self.unit25 = QLabel('元/吨', self)
 
         layout2.addWidget(self.label25, 5, 0)
         layout2.addWidget(self.input25, 5, 1)
@@ -3299,7 +3291,7 @@ class P(QWidget):
 
         self.label15 = QLabel('汇率', self)
         self.input15 = InputEdit(self)
-        self.unit15 = QLabel('%', self)
+        self.unit15 = QLabel('USD/CNY', self)
 
         layout1.addWidget(self.label15, 5, 0)
         layout1.addWidget(self.input15, 5, 1)
@@ -3307,7 +3299,7 @@ class P(QWidget):
 
         self.label16 = QLabel('港杂费', self)
         self.input16 = InputEdit(self)
-        self.unit16 = QLabel('%', self)
+        self.unit16 = QLabel('元/吨', self)
 
         layout1.addWidget(self.label16, 6, 0)
         layout1.addWidget(self.input16, 6, 1)
@@ -3680,7 +3672,7 @@ class PM(QWidget):
 
         self.label16 = QLabel('汇率', self)
         self.input16 = InputEdit(self)
-        self.unit16 = QLabel('%', self)
+        self.unit16 = QLabel('USD/CNY', self)
 
         layout1.addWidget(self.label16, 6, 0)
         layout1.addWidget(self.input16, 6, 1)
@@ -3688,7 +3680,7 @@ class PM(QWidget):
 
         self.label17 = QLabel('港杂费', self)
         self.input17 = InputEdit(self)
-        self.unit17 = QLabel('%', self)
+        self.unit17 = QLabel('元/吨', self)
 
         layout1.addWidget(self.label17, 7, 0)
         layout1.addWidget(self.input17, 7, 1)
@@ -5707,7 +5699,7 @@ class V(QWidget):
 
         self.label25 = QLabel('杂费', self)
         self.input25 = InputEdit(self)
-        self.unit25 = QLabel(self)
+        self.unit25 = QLabel('元/吨', self)
 
         layout2.addWidget(self.label25, 5, 0)
         layout2.addWidget(self.input25, 5, 1)
