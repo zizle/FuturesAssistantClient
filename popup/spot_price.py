@@ -23,7 +23,10 @@ class SpotPricePopup(QDialog):
         main_layout = QVBoxLayout()
         opt_layout = QHBoxLayout()
         self.date_edit = QDateEdit(self)
-        self.date_edit.setDate(QDate.currentDate())
+        current = QDate.currentDate()
+        if datetime.now().strftime('%H:%M') < '17:00':
+            current = current.addDays(-1)
+        self.date_edit.setDate(current)
         self.date_edit.setCalendarPopup(True)
         self.date_edit.setDisplayFormat("yyyy-MM-dd")
         opt_layout.addWidget(self.date_edit)
