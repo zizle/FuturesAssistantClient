@@ -134,5 +134,5 @@ logger = logging.getLogger('errorlog')
 logger.addHandler(config_logger_handler())
 
 # 屏蔽或重命名的品种(品种数据库)
-SHIELD_VARIETY = ['CY', 'WR', 'NR']
+SHIELD_VARIETY = ['BB', 'FB', 'RI', 'LR', 'CY', 'JR', 'WR', 'NR']
 RENAME_VARIETY = {"CF": '棉花(纱)'}

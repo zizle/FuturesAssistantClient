@@ -107,6 +107,11 @@ class CalculatePlat(CalculatePlatUi):
     def set_exchange_rate_data(self, data):
         """ 设置汇率数据 """
         rate.set_exchange_rate(data['rates'])
+        self.set_default_page()
+
+    def set_default_page(self):
+        page = FinanceCalculate(self)
+        self.frame_loader.setCentralWidget(page)
 
     def user_selected_menu(self, item):
         """ 用户选择菜单 """

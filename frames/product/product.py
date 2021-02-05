@@ -38,6 +38,7 @@ class ProductPage(QWidget):
         self.add_menus()
         # 按钮菜单点击事件
         self.menu_tree.itemClicked.connect(self.user_selected_menu)
+        self.set_default_page()
 
     def add_menus(self):
         # 添加左侧菜单
@@ -86,6 +87,10 @@ class ProductPage(QWidget):
                 child.setIcon(0, QIcon(children_item['icon']))
                 top_item.addChild(child)
         self.menu_tree.expandAll()
+
+    def set_default_page(self):
+        page = RegularReport(self)
+        self.right_frame.setCentralWidget(page)
 
     def user_selected_menu(self, item):
         if not item.parent() and item.childCount():  # 点击父级展开

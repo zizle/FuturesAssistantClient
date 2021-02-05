@@ -618,7 +618,7 @@ class DisposeChartPopup(QDialog):
         # 初始化大小
         available_size = QDesktopWidget().availableGeometry()  # 用户的桌面信息,来改变自身窗体大小
         available_width, available_height = available_size.width(), available_size.height()
-        self.resize(available_width * 0.65, available_height * 0.72)
+        self.resize(available_width * 0.70, available_height * 0.72)
 
         self.setAttribute(Qt.WA_DeleteOnClose)
 
