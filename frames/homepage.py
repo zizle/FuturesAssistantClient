@@ -14,7 +14,7 @@ from widgets.pdf_shower import PDFContentPopup
 from popup.advertisement import TextPopup
 from popup.spot_price import SpotPricePopup
 from .homepage_ui import HomepageUI, ControlButton, PixMapLabel, LeftChildrenMenuWidget
-from settings import BASE_DIR, SERVER_API, STATIC_URL, HOMEPAGE_MENUS, SHIELD_VARIETY, RENAME_VARIETY
+from settings import BASE_DIR, SERVER_API, STATIC_URL, HOMEPAGE_MENUS, SHIELD_VARIETY, RENAME_VARIETY, IMAGE_SLIDER_RATE
 
 
 class Homepage(HomepageUI):
@@ -168,7 +168,7 @@ class Homepage(HomepageUI):
             self.control_buttons.append(button)
             self.control_widget.layout().addWidget(button)
         if advertisements:
-            self.slide_stacked.autoStart(msec=4000)
+            self.slide_stacked.autoStart(msec=IMAGE_SLIDER_RATE)
 
     # def add_images(self):
     #     """ 添加轮播的图片信息（开发GUI测试代码） """
