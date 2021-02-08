@@ -12,9 +12,9 @@ import pandas
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from frames import WelcomePage, ClientMainApp
 
+QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)  # 高分辨率DPI屏幕自动缩放
 
 app = QApplication(sys.argv)
-QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 font = QFont()
 font.setPointSize(11)
 font.setFamily('Arial')

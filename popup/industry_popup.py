@@ -945,6 +945,7 @@ class AddSheetRecordPopup(QDialog):
 
         self.sheet_api = SheetAPI(self)
         self.sheet_api.sheet_last_reply.connect(self.last_row_reply)
+        self.sheet_api.add_record_reply.connect(self.add_new_reply)
 
         self.add_row_button.clicked.connect(self.insert_new_row)
         self.remove_row_button.clicked.connect(self.remove_last_row)
@@ -995,7 +996,6 @@ class AddSheetRecordPopup(QDialog):
             p.exec_()
             return None
         return value
-
 
     def handle_row_data(self, item):
         if len(item)<1:
@@ -1068,14 +1068,14 @@ class AddSheetRecordPopup(QDialog):
             row_data = []
             for col in range(self.paste_table.columnCount()):
                 text = self.paste_table.item(row, col).text().strip()
-                if col == 0 and not self.handle_date_column(text):
-                    is_error = True
-                    break
-                elif self.handle_value_column(text) is None:
-                    is_error = True
-                    break
+                if col == 0:
+                    if not self.handle_date_column(text):
+                        is_error = True
+                        break
                 else:
-                    pass
+                    if self.handle_value_column(text) is None:
+                        is_error = True
+                        break
                 if not is_error:
                     row_data.append(text)
             if row_data:
@@ -1086,5 +1086,16 @@ class AddSheetRecordPopup(QDialog):
         new_data, is_error = self.get_table_new_data()
         if is_error:
             return
-        print(new_data)
+        self.sheet_api.save_sheet_new_data(self.sheet_id, new_data)
+
+    def add_new_reply(self, success):
+        if success:
+            p = InformationPopup('添加新数据成功!', self)
+            p.exec_()
+            # 清除新数据行
+            self.paste_table.setRowCount(1)
+        else:
+            p = InformationPopup('添加新数据失败!', self)
+            p.exec_()
+
 
