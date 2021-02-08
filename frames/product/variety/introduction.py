@@ -19,7 +19,7 @@ class IntroductionVariety(QWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(QMargins(0, 0, 0, 0))
         option_widget = OptionWidget(self)
-        option_widget.setFixedHeight(40)
+        option_widget.setFixedHeight(45)
         option_layout = QHBoxLayout()
         self.label1 = QLabel('品种:', self)
         self.variety_selector = QComboBox(self)

@@ -4508,7 +4508,7 @@ class RU(QWidget):
 
         self.calculate_button3 = CalculateButton('试算成本', self)
         self.result3 = ResultLabel(self)
-        self.result_unit3 = QLabel('元/斤', self)
+        self.result_unit3 = QLabel('元/吨', self)
         layout3.addWidget(self.calculate_button3, 8, 0)
         layout3.addWidget(self.result3, 8, 1)
         layout3.addWidget(self.result_unit3, 8, 2)
