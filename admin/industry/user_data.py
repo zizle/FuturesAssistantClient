@@ -15,7 +15,7 @@ from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
 from PyQt5.QtGui import QBrush, QColor, QCursor, QIcon
 from settings import SERVER_API, logger
 from utils.client import get_user_token, get_client_uuid
-from popup.industry_popup import UpdateFolderPopup, DisposeChartPopup, SheetWidgetPopup
+from popup.industry_popup import UpdateFolderPopup, DisposeChartPopup, SheetWidgetPopup, AddSheetRecordPopup
 from popup.sheet_charts import SheetChartsPopup, DeciphermentPopup, ChartPopup, EditChartOptionPopup
 from popup.message import InformationPopup, WarningPopup
 from widgets import OperateButton
@@ -655,8 +655,11 @@ class UserDataMaintain(UserDataMaintainUI):
     def sheet_table_right_mouse(self):
         r_menu = QMenu(self)
         edit_action = r_menu.addAction('修改数据')
-        edit_action.setIcon(QIcon(QIcon('media/icons/edit.png')))
+        edit_action.setIcon(QIcon('media/icons/edit.png'))
         edit_action.triggered.connect(self.edit_sheet_values_popup)
+        add_action = r_menu.addAction('增加数据')
+        add_action.setIcon(QIcon('media/icons/add.png'))
+        add_action.triggered.connect(self.to_add_sheet_records)
         r_menu.exec_(QCursor.pos())
 
     def edit_sheet_values_popup(self):
@@ -669,7 +672,19 @@ class UserDataMaintain(UserDataMaintainUI):
         sheet_popup = SheetWidgetPopup(sheet_id, self)
         sheet_popup.setWindowTitle(sheet_title)
         sheet_popup.setWindowIcon(QIcon('media/icons/edit_hover.png'))
-        sheet_popup.exec_()
+        sheet_popup.show()
+
+    def to_add_sheet_records(self):
+        current_row = self.variety_sheet_widget.sheet_table.currentRow()
+        if current_row < 0:
+            return
+        # 弹窗提供增加数据表入口
+        sheet_id = self.variety_sheet_widget.sheet_table.item(current_row, 0).text()
+        sheet_title = self.variety_sheet_widget.sheet_table.item(current_row, 3).text()
+        add_popup = AddSheetRecordPopup(self)
+        add_popup.set_sheet_id(sheet_id)
+        add_popup.setWindowTitle(sheet_title)
+        add_popup.exec_()
 
     """ 数据图形显示 """
 

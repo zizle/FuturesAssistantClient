@@ -18,9 +18,11 @@ from widgets.path_edit import FolderPathLineEdit
 from widgets.loading import LoadingCover
 from channels.chart import ChartOptionChannel
 from utils.client import get_client_uuid, get_user_token
+from utils.constant import BLUE_STYLE_HORIZONTAL_STYLE
 from .message import InformationPopup
 from settings import BASE_DIR, SERVER_API, logger
 from widgets import OperateButton
+from apis.industry import SheetAPI
 
 """ 配置更新文件夹 """
 
@@ -905,3 +907,184 @@ class DisposeChartPopup(QDialog):
             days_list.append(start_day.strftime("%m-%d"))
             start_day += timedelta(days=1)
         return days_list
+
+
+""" 添加指定表的数据 """
+
+
+class AddSheetRecordPopup(QDialog):
+    def __init__(self, *args, **kwargs):
+        super(AddSheetRecordPopup, self).__init__(*args, **kwargs)
+        self.sheet_id = None
+
+        # 初始化大小
+        available_size = QDesktopWidget().availableGeometry()  # 用户的桌面信息,来改变自身窗体大小
+        available_width, available_height = available_size.width(), available_size.height()
+        self.resize(available_width * 0.70, available_height * 0.72)
+
+        layout = QVBoxLayout()
+        self.tip_label = QLabel(self)
+        self.tip_label.setText('【第一行为当前表中最近日期数据】手动添加一行后,在对应位置双击录入数据。'
+                               '\n使用Ctrl+V粘贴,粘贴后可双击修改,确认无误后点击右侧保存!其中第一列格式需为yyyy-mm-dd\n'
+                               '移除一行有选中行移除选中行,无选中行移除末尾行。')
+        self.tip_label.setStyleSheet('color:rgb(204, 95, 45)')
+        layout.addWidget(self.tip_label)
+        top_layout = QHBoxLayout()
+        self.add_row_button = QPushButton('添加一行', self)
+        top_layout.addWidget(self.add_row_button)
+        self.remove_row_button = QPushButton('移除一行', self)
+        top_layout.addWidget(self.remove_row_button)
+        top_layout.addStretch()
+        self.save_button = QPushButton('确定保存', self)
+        top_layout.addWidget(self.save_button)
+        layout.addLayout(top_layout)
+        self.paste_table = QTableWidget(self)
+        self.paste_table.horizontalHeader().setStyleSheet(BLUE_STYLE_HORIZONTAL_STYLE)
+        layout.addWidget(self.paste_table)
+        self.setLayout(layout)
+
+        self.sheet_api = SheetAPI(self)
+        self.sheet_api.sheet_last_reply.connect(self.last_row_reply)
+
+        self.add_row_button.clicked.connect(self.insert_new_row)
+        self.remove_row_button.clicked.connect(self.remove_last_row)
+        self.save_button.clicked.connect(self.to_save_rows)
+
+    def insert_new_row(self):
+        c_row = self.paste_table.rowCount()
+        if c_row > 0:
+            c_date = self.paste_table.item(c_row - 1, 0).text()
+            next_date = self.handle_date_column(c_date)
+            if next_date:
+                self.paste_table.insertRow(c_row)
+                self.paste_table.setItem(c_row, 0, QTableWidgetItem(next_date))
+                for col in range(1, self.paste_table.columnCount()):
+                    self.paste_table.setItem(c_row, col, QTableWidgetItem())
+
+    def remove_last_row(self):
+        row_count = self.paste_table.rowCount()
+        if row_count > 1:
+            current_row = self.paste_table.currentRow()
+            if current_row > 0:
+                self.paste_table.removeRow(current_row)
+            else:
+                self.paste_table.removeRow(row_count - 1)
+
+    def keyPressEvent(self, event) -> None:
+        super(AddSheetRecordPopup, self).keyPressEvent(event)
+        if event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_V:
+            # 处理粘贴板中的数据
+            self.handle_clipboard()
+
+    def handle_date_column(self, date_str):
+        try:
+            next_date = (datetime.strptime(date_str, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+        except Exception:
+            p = InformationPopup('第一列日期格式有误!', self)
+            p.exec_()
+            return None
+        return next_date
+
+    def handle_value_column(self, value):
+        if not value:
+            return ''
+        try:
+            float(value)
+        except Exception:
+            p = InformationPopup('含非法数据类型!', self)
+            p.exec_()
+            return None
+        return value
+
+
+    def handle_row_data(self, item):
+        if len(item)<1:
+            return []
+        try:
+            item[0] = datetime.strptime(item[0], '%Y-%m-%d').strftime('%Y-%m-%d')
+        except Exception:
+            try:
+                item[0] = datetime.strptime(item[0], '%Y/%m/%d').strftime('%Y-%m-%d')
+            except Exception:
+                return []
+            else:
+                return item
+        else:
+            return item
+
+    def handle_clipboard(self):
+        # 处理粘贴板数据
+        clipboard = qApp.clipboard()
+        origin_text = clipboard.text()
+        # 根据换行符切分数据
+        row_list = origin_text.split('\n')
+        new_data = []
+        for row_text in row_list:
+            new_data.append(row_text.split('\t'))
+        # 处理一下数据
+        new_data = list(map(self.handle_row_data, new_data))
+        new_data = list(filter(lambda x: len(x) > 0, new_data))
+        # 填充数据
+        col_count = self.paste_table.columnCount()
+        for row in new_data:
+            row_count = self.paste_table.rowCount()
+            self.paste_table.insertRow(row_count)
+            if len(row) < col_count:
+                row += ['' for _ in range(col_count - len(row))]
+            # 添加数据
+            for col in range(col_count):
+                item = QTableWidgetItem(str(row[col]).replace(',', ''))
+                item.setTextAlignment(Qt.AlignCenter)
+                self.paste_table.setItem(row_count, col, item)
+
+    def set_sheet_id(self, sheet_id):
+        self.sheet_id = sheet_id
+        # 获取最新数据行
+        self.sheet_api.get_sheet_last(self.sheet_id)
+
+    def last_row_reply(self, data):
+        # 显示到表格中且设置不可编辑
+        last_row = data.get('last_row', None)
+        header_row = data.get('header_row', None)
+        if not header_row:
+            return
+        del header_row['id']
+        header_keys = ['column_{}'.format(col) for col in range(len(header_row))]
+        self.paste_table.setRowCount(1)
+        self.paste_table.setColumnCount(len(header_keys))
+        self.paste_table.setHorizontalHeaderLabels([header_row.get(k, '') for k in header_keys])
+        for col, key in enumerate(header_keys):
+            item = QTableWidgetItem(last_row.get(key, ''))
+            item.setTextAlignment(Qt.AlignCenter)
+            item.setFlags(Qt.ItemIsEditable)  # 不可编辑
+            item.setForeground(QBrush(QColor(100, 100, 100)))
+            self.paste_table.setItem(0, col, item)
+
+    def get_table_new_data(self):
+        # 获取表中的新数据
+        new_data = []
+        is_error = False
+        for row in range(1, self.paste_table.rowCount()):
+            row_data = []
+            for col in range(self.paste_table.columnCount()):
+                text = self.paste_table.item(row, col).text().strip()
+                if col == 0 and not self.handle_date_column(text):
+                    is_error = True
+                    break
+                elif self.handle_value_column(text) is None:
+                    is_error = True
+                    break
+                else:
+                    pass
+                if not is_error:
+                    row_data.append(text)
+            if row_data:
+                new_data.append(row_data)
+        return new_data, is_error
+
+    def to_save_rows(self):
+        new_data, is_error = self.get_table_new_data()
+        if is_error:
+            return
+        print(new_data)
+

@@ -7,11 +7,14 @@
 import sys
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QCoreApplication, Qt
 import pandas
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from frames import WelcomePage, ClientMainApp
 
+
 app = QApplication(sys.argv)
+QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 font = QFont()
 font.setPointSize(11)
 font.setFamily('Arial')
