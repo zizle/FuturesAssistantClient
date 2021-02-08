@@ -11,10 +11,12 @@ from PyQt5.QtCore import Qt, QObject, pyqtSignal, QUrl
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 from settings import SERVER_API, logger
+from utils.client import get_user_token
 
 
 class SheetAPI(QObject):
     sheet_last_reply = pyqtSignal(dict)
+    add_record_reply = pyqtSignal(bool)
 
     def __init__(self, *args, **kwargs):
         super(SheetAPI, self).__init__(*args, **kwargs)
@@ -36,8 +38,22 @@ class SheetAPI(QObject):
             self.sheet_last_reply.emit(data)
         reply.deleteLater()
 
-    def save_sheet_new_data(self, sheet_id: int, data: dict):
-        url = SERVER_API + 'sheet/{}/record/last/'.format(sheet_id)
+    def save_sheet_new_data(self, sheet_id: int, data: list):
+        url = SERVER_API + 'sheet/{}/record/add/'.format(sheet_id)
+        r = QNetworkRequest(QUrl(url))
+        r.setRawHeader('Authorization'.encode('utf8'), get_user_token().encode('utf8'))
+        r.setHeader(QNetworkRequest.ContentTypeHeader, 'application/json')
+        reply = self.network_manager.post(r, json.dumps(data).encode('utf8'))
+        reply.finished.connect(self.add_reply)
+
+    def add_reply(self):
+        reply = self.sender()
+        if reply.error():
+            logger.error('POST-Request add sheet record Error:{}'.format(reply.error()))
+            self.add_record_reply.emit(False)
+        else:
+            self.add_record_reply.emit(True)
+        reply.deleteLater()
 
 
 

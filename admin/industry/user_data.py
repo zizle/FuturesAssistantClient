@@ -147,6 +147,7 @@ class UserDataMaintain(UserDataMaintainUI):
         # 图形表单元格变化(在添加数据之前取消关联才不会崩溃)
         self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)
         self.sheet_chart_widget.only_me_check.stateChanged.connect(self.chart_page_variety_changed)  # 重新请求图形界面的图形
+        self.sheet_chart_widget.category_combobox.currentTextChanged.connect(self.chart_page_variety_changed)  # 图形类别变化
 
     def _get_user_variety(self):
         """ 获取用户有权限的品种信息 """
@@ -484,6 +485,7 @@ class UserDataMaintain(UserDataMaintainUI):
             self.variety_sheet_widget.sheet_table.setItem(row, 6, item6)
 
             item7_button = OperateButton("media/icons/chart.png", "media/icons/chart_hover.png", self)
+            item7_button.setText(str(row_item['chart_count']))
             setattr(item7_button, "row_index", row)
             item7_button.clicked.connect(self.show_sheet_charts_values)
             self.variety_sheet_widget.sheet_table.setCellWidget(row, 7, item7_button)
@@ -692,9 +694,10 @@ class UserDataMaintain(UserDataMaintainUI):
         """ 图形显示页品种变化 """
         current_variety = self.sheet_chart_widget.variety_combobox.currentData()
         is_own = 1 if self.sheet_chart_widget.only_me_check.checkState() else 0
+        category = self.sheet_chart_widget.category_combobox.currentData()
         user_token = get_user_token().split(" ")[1]
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "variety/{}/chart/?is_own={}&token={}".format(current_variety, is_own, user_token)
+        url = SERVER_API + "variety/{}/chart/?is_own={}&token={}&category={}".format(current_variety, is_own, user_token, category)
         user_token = get_user_token()
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader("Authorization".encode("utf-8"), user_token.encode("utf-8"))
@@ -922,7 +925,8 @@ class UserDataMaintain(UserDataMaintainUI):
         user_token = get_user_token().split(' ')[1]
         is_own = 1 if self.sheet_chart_widget.only_me_check.checkState() else 0
         variety_en = self.sheet_chart_widget.variety_combobox.currentData()
-        url = SERVER_API + "variety/{}/chart/?is_own={}&render=1&token={}".format(variety_en, is_own, user_token)
+        category = self.sheet_chart_widget.category_combobox.currentData()
+        url = SERVER_API + "variety/{}/chart/?is_own={}&render=1&token={}&category={}".format(variety_en, is_own, user_token, category)
         self.sheet_chart_widget.chart_container.load(QUrl(url))
 
     def swap_to_render_variety_charts(self, tab_index):

@@ -2006,12 +2006,12 @@ class HC(QWidget):
         if self.USD_CNY_RATE:
             self.USD_CNY_RATE = float(self.USD_CNY_RATE)
         main_layout = QVBoxLayout()
-        """ 螺纹钢生产成本 """
+        """ 热卷生产成本 """
         widget1 = QWidget(self)
         widget1.setFixedWidth(CALCULATE_WIDGET_WIDTH)
         layout1 = QGridLayout()
         layout1.setContentsMargins(QMargins(MARGIN_LEFT, 0, MARGIN_RIGHT, MARGIN_BOTTOM))
-        self.name1 = NameLabel('螺纹钢生产成本', self)
+        self.name1 = NameLabel('热轧卷板生产成本', self)
         self.label11 = QLabel('铁矿石价格', self)
         self.input11 = InputEdit(self)
         self.unit11 = QLabel('元/吨', self)
@@ -2064,8 +2064,8 @@ class HC(QWidget):
         self.input14.set_value(300)
 
     def calculate1(self):
-        # 热卷生产成本 =〔（（1.6×铁矿石+0.45×焦炭）/0.9）×0.96＋（0.15×废钢）〕/0.82＋轧钢费用
-        # result = ((1.6 * a + 0.45 * b) / 0.9 * 0.96 + (0.15 * c)) / 0.82 + d
+        # 热卷生产成本 =〔（（1.6×铁矿石+0.4×焦炭）/0.9）×0.96＋（0.12×废钢）〕/0.9＋轧钢费用
+        # result = ((1.6 * a + 0.4 * b) / 0.9 * 0.96 + (0.12 * c)) / 0.9 + d
         a = self.input11.value()
         b = self.input12.value()
         c = self.input13.value()
@@ -2076,7 +2076,7 @@ class HC(QWidget):
             p = InformationPopup('请填写完整数据再试算!', self)
             p.exec_()
             return
-        result = ((1.6 * a + 0.45 * b) / 0.9 * 0.96 + (0.15 * c)) / 0.82 + d
+        result = ((1.6 * a + 0.4 * b) / 0.9 * 0.96 + (0.12 * c)) / 0.9 + d
         self.result1.set_value(result, count=4)
 
 
@@ -4121,7 +4121,7 @@ class RB(QWidget):
         layout1.addWidget(self.input13, 3, 1)
         layout1.addWidget(self.unit13, 3, 2)
 
-        self.label14 = QLabel('轧钢费用', self)
+        self.label14 = QLabel('合金', self)
         self.input14 = InputEdit(self)
         self.unit14 = QLabel('元/吨', self)
 
@@ -4129,14 +4129,22 @@ class RB(QWidget):
         layout1.addWidget(self.input14, 4, 1)
         layout1.addWidget(self.unit14, 4, 2)
 
-        layout1.addWidget(QLabel(self), 5, 0)
+        self.label15 = QLabel('轧钢费用', self)
+        self.input15 = InputEdit(self)
+        self.unit15 = QLabel('元/吨', self)
+
+        layout1.addWidget(self.label15, 5, 0)
+        layout1.addWidget(self.input15, 5, 1)
+        layout1.addWidget(self.unit15, 5, 2)
+
+        layout1.addWidget(QLabel(self), 6, 0)
 
         self.calculate_button1 = CalculateButton('试算成本', self)
         self.result1 = ResultLabel(self)
         self.result_unit1 = QLabel('元/吨', self)
-        layout1.addWidget(self.calculate_button1, 6, 0)
-        layout1.addWidget(self.result1, 6, 1)
-        layout1.addWidget(self.result_unit1, 6, 2)
+        layout1.addWidget(self.calculate_button1, 7, 0)
+        layout1.addWidget(self.result1, 7, 1)
+        layout1.addWidget(self.result_unit1, 7, 2)
         widget1.setLayout(layout1)
         self.init_calculate1()
         self.calculate_button1.clicked.connect(self.calculate1)
@@ -4145,22 +4153,24 @@ class RB(QWidget):
         self.setLayout(main_layout)
 
     def init_calculate1(self):
-        self.input14.set_value(150)
+        self.input14.set_value(80)
+        self.input15.set_value(150)
 
     def calculate1(self):
-        # 螺纹钢生产成本 =〔（（1.6×铁矿石+0.45×焦炭）/0.9）×0.96＋（0.15×废钢）〕/0.82＋轧钢费用
-        # result = ((1.6 * a + 0.45 * b) / 0.9 * 0.96 + (0.15 * c)) / 0.82 + d
+        # 螺纹钢生产成本 =〔（（1.6×铁矿石+0.4×焦炭）/0.9）×0.96＋（0.12×废钢）〕/0.9 + 合金 + 轧钢费用
+        # result = ((1.6 * a + 0.4 * b) / 0.9 * 0.96 + (0.12 * c)) / 0.9 + d + e
         a = self.input11.value()
         b = self.input12.value()
         c = self.input13.value()
         d = self.input14.value()
-        params = [a, b, c, d]
+        e = self.input15.value()
+        params = [a, b, c, d, e]
         params = list(filter(lambda x: x != 0, params))
         if not all(params):
             p = InformationPopup('请填写完整数据再试算!', self)
             p.exec_()
             return
-        result = ((1.6 * a + 0.45 * b) / 0.9 * 0.96 + (0.15 * c)) / 0.82 + d
+        result = ((1.6 * a + 0.4 * b) / 0.9 * 0.96 + (0.12 * c)) / 0.9 + d + e
         self.result1.set_value(result, count=4)
 
 
@@ -4498,7 +4508,7 @@ class RU(QWidget):
 
         self.calculate_button3 = CalculateButton('试算成本', self)
         self.result3 = ResultLabel(self)
-        self.result_unit3 = QLabel('元/斤', self)
+        self.result_unit3 = QLabel('元/吨', self)
         layout3.addWidget(self.calculate_button3, 8, 0)
         layout3.addWidget(self.result3, 8, 1)
         layout3.addWidget(self.result_unit3, 8, 2)

@@ -134,5 +134,13 @@ logger = logging.getLogger('errorlog')
 logger.addHandler(config_logger_handler())
 
 # 屏蔽或重命名的品种(品种数据库)
-SHIELD_VARIETY = ['BB', 'FB', 'RI', 'LR', 'CY', 'JR', 'WR', 'NR']
-RENAME_VARIETY = {"CF": '棉花(纱)'}
+# SHIELD_VARIETY = ['BB', 'BC', 'FB', 'RI', 'LR', 'CY', 'JR', 'WR', 'NR']
+# 加入数据库的品种
+INCLUDE_VARIETY = [
+    'GP', 'GZ', 'WB', 'HG',
+    'A', 'AG', 'AL', 'AP', 'AU', 'BU', 'C', 'CF', 'CJ', 'CS', 'CU', 'EB', 'EG', 'FG', 'FU', 'HC', 'I', 'IC',
+    'IF', 'IH', 'J', 'JD', 'JM', 'L', 'LH', 'LU', 'M', 'MA', 'NI', 'OI', 'P', 'PB', 'PF', 'PG', 'PK', 'PM', 'PP',
+    'RB', 'RM', 'RR', 'RS', 'RU', 'SA', 'SC', 'SF', 'SM', 'SN', 'SP', 'SR', 'SS', 'T', 'TA', 'TF', 'TS', 'UR', 'V',
+    'WH', 'Y', 'ZC', 'ZN']
+
+RENAME_VARIETY = {"CF": '棉花(纱)', 'A': '大豆'}

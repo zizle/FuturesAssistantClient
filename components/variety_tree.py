@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import qApp
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtCore import QUrl
 from widgets.folded_box import ScrollFoldedBox
-from settings import SERVER_API, logger, SHIELD_VARIETY, RENAME_VARIETY
+from settings import SERVER_API, logger, INCLUDE_VARIETY, RENAME_VARIETY
 
 
 class VarietyTree(ScrollFoldedBox):
@@ -53,7 +53,7 @@ class VarietyTree(ScrollFoldedBox):
             head = self.addHead(group_name)
             body = self.addBody(head=head)
             for sub_item in group_item:
-                if sub_item["variety_en"] in SHIELD_VARIETY:
+                if sub_item["variety_en"] not in INCLUDE_VARIETY:
                     continue
                 if sub_item["variety_en"] in RENAME_VARIETY.keys():
                     sub_item["variety_name"] = RENAME_VARIETY.get(sub_item["variety_en"])

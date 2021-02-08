@@ -222,6 +222,14 @@ class SheetChartUI(QWidget):
         self.variety_combobox.setMinimumWidth(80)
         opts_layout.addWidget(self.variety_combobox)
 
+        # 指定图形类型
+        opts_layout.addWidget(QLabel('类型:', self))
+        self.category_combobox = QComboBox(self)
+        self.category_combobox.addItem('全部', '0')
+        self.category_combobox.addItem('普通图形', 'normal')
+        self.category_combobox.addItem('季节图形', 'season')
+        opts_layout.addWidget(self.category_combobox)
+
         # 只看我上传选项
         self.only_me_check = QCheckBox(self)
         self.only_me_check.setText("只看我配置的")
