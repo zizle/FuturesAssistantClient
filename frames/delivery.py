@@ -556,15 +556,16 @@ class WarehouseTable(QTableWidget):
     # 以品种获取仓库的显示方式
     def variety_warehouse_show(self, warehouses):
         self.clear()
-        table_headers = ["品种", "交割仓库", "地址", "联系人", "联系方式", "升贴水", "查看"]
+        table_headers = ["品种", "交割仓库", "简称", "地址", "联系人", "联系方式", "升贴水", "查看"]
         self.setColumnCount(len(table_headers))
         self.setRowCount(len(warehouses))
         self.setHorizontalHeaderLabels(table_headers)
         self.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeToContents)
         for row, row_item in enumerate(warehouses):
-            self.setRowHeight(row,30)
+            self.setRowHeight(row, 30)
             item0 = QTableWidgetItem(row_item['variety'])
             item0.setTextAlignment(Qt.AlignCenter)
             item0.id = row_item['id']
@@ -575,24 +576,27 @@ class WarehouseTable(QTableWidget):
             item1.setToolTip(row_item['name'])
             item1.setTextAlignment(Qt.AlignCenter)
             self.setItem(row, 1, item1)
+            item2 = QTableWidgetItem(row_item['short_name'])
+            item2.setTextAlignment(Qt.AlignCenter)
+            self.setItem(row, 2, item2)
             item2 = QTableWidgetItem(row_item['addr'])
             item2.setToolTip(row_item['addr'])
             item2.setTextAlignment(Qt.AlignCenter)
-            self.setItem(row, 2, item2)
+            self.setItem(row, 3, item2)
             item3 = QTableWidgetItem(row_item['linkman'])
             item3.setTextAlignment(Qt.AlignCenter)
-            self.setItem(row, 3, item3)
+            self.setItem(row, 4, item3)
             item4 = QTableWidgetItem(row_item['links'])
             item4.setToolTip(row_item['links'])
             item4.setTextAlignment(Qt.AlignCenter)
-            self.setItem(row, 4, item4)
+            self.setItem(row, 5, item4)
             item5 = QTableWidgetItem(row_item['premium'])
             item5.setTextAlignment(Qt.AlignCenter)
-            self.setItem(row, 5, item5)
+            self.setItem(row, 6, item5)
             item6 = QTableWidgetItem('仓单')
             item6.setForeground(QBrush(QColor(100, 150, 200)))
             item6.setTextAlignment(Qt.AlignCenter)
-            self.setItem(row, 6, item6)
+            self.setItem(row, 7, item6)
         self.setFixedHeight(self.rowCount() * 30 + 35)
 
 

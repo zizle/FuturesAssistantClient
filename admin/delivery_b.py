@@ -321,7 +321,18 @@ class WarehouseAdmin(QWidget):
         layout.setContentsMargins(QMargins(0, 0, 1, 0))
         self.switch_button = QPushButton('新增仓库', self)
         self.switch_button.clicked.connect(self.switch_option)
-        layout.addWidget(self.switch_button, alignment=Qt.AlignLeft)
+
+        opts_layout = QHBoxLayout()
+        opts_layout.addWidget(self.switch_button)
+        self.search_edit = QLineEdit(self)
+        opts_layout.addWidget(self.search_edit)
+
+        self.confirm_search = QPushButton('下一个', self)
+        self.confirm_search.clicked.connect(self.search_warehouse_in)
+        opts_layout.addWidget(self.confirm_search)
+        opts_layout.addStretch()
+
+        layout.addLayout(opts_layout)
 
         self.warehouse_table = WarehouseTable(self)
         self.warehouse_table.action_signal.connect(self.table_actions_signal)
@@ -331,6 +342,28 @@ class WarehouseAdmin(QWidget):
         self.new_warehouse.hide()
         layout.addWidget(self.new_warehouse)
         self.setLayout(layout)
+
+        self.current_row = -1
+
+    def search_warehouse_in(self):
+        keyword = self.search_edit.text()
+        is_exists = False
+        for row in range(self.current_row + 1, self.warehouse_table.rowCount()):
+            for col in range(self.warehouse_table.columnCount()):
+                item = self.warehouse_table.item(row, col)
+                if item:
+                    text = item.text()
+                    if keyword in text:
+                        is_exists = True
+                        self.current_row = row
+                        self.warehouse_table.setCurrentCell(row, col)
+                        break
+            if not is_exists:
+                continue
+            break
+        if not is_exists:
+            QMessageBox.information(self, '无结果', '到底了没有查到对应简称仓库')
+            self.current_row = -1
 
     def switch_option(self):
         if self.switch_button.text() == '新增仓库':
