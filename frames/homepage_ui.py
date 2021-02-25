@@ -4,15 +4,17 @@
 # @Author: zizle
 import math
 import os
+import json
 from datetime import datetime
 from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QListWidget,
                              QStackedWidget, QGridLayout, QTableWidget, QFrame, QHeaderView, QTableWidgetItem,
-                             QAbstractItemView, QGraphicsDropShadowEffect)
+                             QAbstractItemView, QGraphicsDropShadowEffect, QTextEdit, QMessageBox)
 from PyQt5.QtCore import Qt, QRect, QMargins, QSize, QUrl, QThread, pyqtSignal
 from PyQt5.QtGui import QPainter, QPixmap, QIcon, QImage, QBrush, QColor
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkAccessManager
 from widgets.sliding_stacked import SlidingStackedWidget
-from settings import BASE_DIR, STATIC_URL, HOMEPAGE_TABLE_ROW_HEIGHT, HOMEPAGE_MENUS
+from utils.client import get_user_token
+from settings import BASE_DIR, STATIC_URL, SERVER_API, HOMEPAGE_TABLE_ROW_HEIGHT, HOMEPAGE_MENUS
 
 
 class MenusContainerWidget(QWidget):
@@ -376,7 +378,65 @@ class ModuleWidget(QWidget):
         )
 
 
-# 首页布局
+""" 意见反馈控件 """
+
+
+class SuggestWidget(QWidget):
+
+    def __init__(self, *args, **kwargs):
+        super(SuggestWidget, self).__init__(*args, **kwargs)
+        layout = QVBoxLayout()
+        title_label = QLabel('意见建议', self)
+        title_label.setStyleSheet('font-weight:bold')
+        layout.addWidget(title_label, alignment=Qt.AlignLeft | Qt.AlignTop)
+
+        self.text_edit = QTextEdit(self)
+        self.text_edit.setMinimumHeight(300)
+        layout.addWidget(self.text_edit)
+
+        self.submit_button = QPushButton('提交', self)
+        self.submit_button.clicked.connect(self.submit_suggestion)
+        layout.addWidget(self.submit_button, alignment=Qt.AlignBottom | Qt.AlignRight)
+        msg = "<div style=font-size:11px>如有其他问题或更多建议也可联系QQ:<span style=color:red>3482137862</span>" \
+              "或发送邮件到邮箱<span style=color:red>3482137862@qq.com</span>进行反馈。</div>"
+        tip_label = QLabel(msg, self)
+        tip_label.setWordWrap(True)
+        tip_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        layout.addWidget(tip_label)
+        self.setLayout(layout)
+
+    def submit_suggestion(self):
+        if not self.text_edit.toPlainText().strip():
+            return
+        """ 提交意见反馈 """
+        data = dict()
+        data['content'] = self.text_edit.toHtml()
+        data['user_token'] = get_user_token(raw=True)
+        print(data)
+        self.submit_button.setEnabled(False)
+        # 发起请求
+        url = SERVER_API + 'suggest/'
+        network_manager = getattr(qApp, '_network', None)
+        if not network_manager:
+            return
+        req = QNetworkRequest(QUrl(url))
+        req.setHeader(QNetworkRequest.ContentTypeHeader, 'application/json')
+        reply = network_manager.post(req, json.dumps(data).encode('utf8'))
+        reply.finished.connect(self.suggest_reply)
+
+    def suggest_reply(self):
+        reply = self.sender()
+        self.submit_button.setEnabled(True)
+        if reply.error():
+            msg = '提交反馈失败了,原因：{}'.format(reply.error())
+        else:
+            msg = '提交成功!'
+            self.text_edit.clear()
+        QMessageBox.information(self, '信息', msg)
+        reply.deleteLater()
+
+
+        # 首页布局
 #  ——————————————————————————————
 # | 侧 |          |              |
 # | 边 |    菜单   |    广告      |

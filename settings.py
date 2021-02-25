@@ -56,7 +56,8 @@ SYSTEM_MENUS = [
         {"id": "-9_1", "name": "运营管理", "logo": "", "is_show": True, "children": [
             {"id": "-9_1_0", "name": "品种管理", "logo": "", "is_show": True, "children": None},
             {"id": "-9_1_1", "name": "用户管理", "logo": "", "is_show": True, "children": None},
-            {"id": "-9_1_2", "name": "客户端管理", "logo": "", "is_show": True, "children": None}
+            {"id": "-9_1_2", "name": "客户端管理", "logo": "", "is_show": True, "children": None},
+            {"id": "-9_1_3", "name": "意见建议", "logo": "", "is_show": True, "children": None}
         ]},
         {"id": "-9_0", "name": "首页管理", "logo": "", "is_show": True, "children": [
             {"id": "-9_0_0", "name": "广告设置", "logo": "", "is_show": True, "children": None},
@@ -101,7 +102,8 @@ HOMEPAGE_MENUS = [
         {"id": "l_1_0", "name": "资讯服务", "children": [
             {"id": "l_1_0_1", "name": "短信通"},
         ]},
-    ]}
+    ]},
+    {"id": "l_-1", "name": "意 见\n反 馈", "logo": "", "children": []}
 ]
 
 

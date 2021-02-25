@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import (QScrollArea, QFrame, QWidget, QVBoxLayout, QHBoxLay
 from PyQt5.QtGui import QPalette, QFont, QColor, QPainter, QBrush, QPen
 from PyQt5.QtCore import QDate, QTimeLine, QMargins, Qt, QRectF, QLineF, QTimer
 
-from widgets import OptionWidget
 from utils.constant import VERTICAL_SCROLL_STYLE
 from apis.product import ExchangeStrategyAPI
 

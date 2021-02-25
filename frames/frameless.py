@@ -18,6 +18,7 @@ from settings import SERVER_API, ADMINISTRATOR, BASE_DIR, ONLINE_COUNT_INTERVAL,
 from utils.client import get_user_token, is_module_verify, remove_user_logged, get_client_uuid, set_client_uuid_with_ini
 from .frameless_ui import FrameLessWindowUI
 
+from admin.suggest import SuggestAdmin
 from admin.operator.user_manager import UserManager
 from admin.operator.client_manager import ClientManage
 from admin.operator.variety import VarietyAdmin
@@ -25,7 +26,7 @@ from admin.industry.user_data import UserDataMaintain
 from admin.industry.exchange_spider import ExchangeSpider
 from admin.industry.spot_price import SpotPriceAdmin
 from admin.industry.exchange_rate import ExchangeRateAdmin
-from admin.operator.user_extension import UserExtensionPage
+# from admin.operator.user_extension import UserExtensionPage
 from admin.receipt_parser import ReceiptParser
 from admin.homepage.advertisement import HomepageAdAdmin
 from admin.product.message_service import MessageServiceAdmin
@@ -436,7 +437,7 @@ class ClientMainApp(FrameLessWindowUI):
         elif module_id == "-9_1_2":
             page = ClientManage(self)
         elif module_id == "-9_1_3":      # 后台管理-研究员微信ID
-            page = UserExtensionPage(self)
+            page = SuggestAdmin(self)
         elif module_id == "-9_2_0":
             page = MessageServiceAdmin(self)      # 后台管理资讯服务
         elif module_id == "-9_2_1":
