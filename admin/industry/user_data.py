@@ -119,6 +119,7 @@ class UserDataMaintain(UserDataMaintainUI):
             {"name": "数据源配置", "name_en": "source_config"},
             {"name": "品种数据表", "name_en": "variety_sheet"},
             {"name": "我的数据图", "name_en": "sheet_chart"},
+            # {"name": "品种现货数据", "name_en": "spot_price"}
         ]:
             menu = QListWidgetItem(menu_item["name"])
             menu.setData(Qt.UserRole, menu_item["name_en"])
@@ -185,6 +186,8 @@ class UserDataMaintain(UserDataMaintainUI):
             self.variety_sheet_widget.variety_combobox.addItem(variety_item["variety_name"], variety_item["variety_en"])
             # 品种图形显示页
             self.sheet_chart_widget.variety_combobox.addItem(variety_item["variety_name"], variety_item["variety_en"])
+        # 现货数据管理页
+        self.spot_price_widget.set_variety(varieties)
 
         # 数据表显示页品种选择变化(不在__init__内连接信号可以减少一次网络请求)
         self.variety_sheet_widget.variety_combobox.currentTextChanged.connect(self.variety_combobox_changed)
@@ -202,7 +205,10 @@ class UserDataMaintain(UserDataMaintainUI):
         elif current_menu == "sheet_chart":
             self.maintain_frame.setCurrentIndex(2)
             self.chart_page_variety_changed()  # 手动调用请求品种的图形(否则第一次切换到图形页没有数据列表)
-            return  # 图形界面无需再请求品种下的数据分组
+            return  # 图形界面无需再请求品种下的数据分组(即不执行后面的if self.is_ready的逻辑)
+        elif current_menu == "spot_price":
+            self.maintain_frame.setCurrentIndex(3)
+            return
         else:
             return
         if self.is_ready:
