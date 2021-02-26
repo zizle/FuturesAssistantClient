@@ -8,7 +8,8 @@
 import pandas as pd
 import json
 from PyQt5.QtWidgets import (qApp, QTableWidgetItem, QWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QSplitter,
-                             QTableWidget, QGridLayout, QDateEdit, QPushButton, QHBoxLayout, QMainWindow, QLabel, QFrame)
+                             QTableWidget, QGridLayout, QDateEdit, QPushButton, QHBoxLayout, QMainWindow, QLabel,
+                             QFrame, QHeaderView)
 from PyQt5.QtCore import Qt, QTimer, QUrl, QMargins, QDate, QTime
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 from PyQt5.QtNetwork import QNetworkRequest
@@ -316,6 +317,9 @@ class ExchangeDataShow(QWidget):
                 self.table_show_daily_content(data['content_keys'], data['result'])
             if self.data_type == 'rank':
                 self.table_show_rank_content(data['content_keys'], data['result'])
+            if self.data_type == 'receipt':
+                self.table_show_receipt_content(data['content_keys'], data['result'])
+
         reply.deleteLater()
         self.loading_cover.hide()
 
@@ -371,6 +375,20 @@ class ExchangeDataShow(QWidget):
             for col, col_key in enumerate(columns):
                 item = QTableWidgetItem(str(row_item[col_key]))
                 item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                self.data_table.setItem(row, col, item)
+
+    def table_show_receipt_content(self, content_key: dict, content_values: list):
+        columns = list(content_key.keys())
+        # 填表
+        column_count = len(columns)
+        self.data_table.setColumnCount(column_count)
+        # 设置表头
+        self.data_table.setHorizontalHeaderLabels([content_key[key] for key in columns])
+        self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.data_table.setRowCount(len(content_values))
+        for row, row_item in enumerate(content_values):
+            for col, key in enumerate(columns):
+                item = QTableWidgetItem(str(row_item[key]))
                 self.data_table.setItem(row, col, item)
 
 
@@ -438,6 +456,7 @@ class ExchangeQuery(QWidget):
                 "children": [
                     {"id": "daily", "name": "日交易数据", "logo": "media/icons/point.png"},
                     {"id": "rank", "name": "持仓排名", "logo": "media/icons/point.png"},
+                    {"id": "receipt", "name": "每日仓单", "logo": "media/icons/point.png"},
                 ]
             },
             {
@@ -445,6 +464,7 @@ class ExchangeQuery(QWidget):
                 "children": [
                     {"id": "daily", "name": "日交易数据", "logo": "media/icons/point.png"},
                     {"id": "rank", "name": "持仓排名", "logo": "media/icons/point.png"},
+                    {"id": "receipt", "name": "每日仓单", "logo": "media/icons/point.png"},
                 ]
             },
             {
@@ -452,6 +472,7 @@ class ExchangeQuery(QWidget):
                 "children": [
                     {"id": "daily", "name": "日交易数据", "logo": "media/icons/point.png"},
                     {"id": "rank", "name": "持仓排名", "logo": "media/icons/point.png"},
+                    {"id": "receipt", "name": "每日仓单", "logo": "media/icons/point.png"},
                 ]
             },
         ]

@@ -89,7 +89,7 @@ class WelcomePage(QSplashScreen):
             logger.error('获取部分资源失败,无法开启!')
             sys.exit(-1)
         else:
-            self.showMessage('获取部分资源失败!{}后自动退出!'.format(self.exit_seconds), alignment=Qt.AlignCenter)
+            self.showMessage('获取部分资源失败!{}秒后自动退出!'.format(self.exit_seconds), alignment=Qt.AlignCenter)
             self.exit_seconds -= 1
 
     def get_all_advertisement(self):

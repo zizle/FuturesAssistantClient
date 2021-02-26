@@ -282,13 +282,16 @@ class SHFEParser(QObject):
         # 仓单和增减转为int类型
         json_df["WRTWGHTS"] = json_df["WRTWGHTS"].apply(int)
         json_df["WRTCHANGE"] = json_df["WRTCHANGE"].apply(int)
-        # 添加日期
-        date_str = self.date.strftime("%Y%m%d")
-        json_df["DATE"] = [date_str for _ in range(json_df.shape[0])]
-        # 整理出想要的数据列(仓库名称(简称),交易代码,日期,仓单,增减)
-        result_df = json_df.reindex(columns=["WHABBRNAME", "VAREN", "DATE", "WRTWGHTS", "WRTCHANGE"])
-        result_df.columns = ["warehouse", "variety_en", "date", "receipt", "receipt_increase"]
-        return result_df
+        # 整理出想要的数据列(仓库名称(简称),交易代码,仓单,增减)
+        result_df = json_df.reindex(columns=["WHABBRNAME", "VAREN", "WRTWGHTS", "WRTCHANGE"])
+        result_df.columns = ["warehouse", "variety_en", "receipt", "increase"]
+        # 以品种分组求和
+        sum_df = result_df.groupby(by=['variety_en'], as_index=False)[['receipt', 'increase']].sum()
+        date_int = int(self.date.timestamp())
+        sum_df["date"] = [date_int for _ in range(sum_df.shape[0])]
+        sum_df.columns = ["variety_en", "receipt", "increase", "date"]
+        sum_df = sum_df.reindex(columns=["date", "variety_en", "receipt", "increase"])
+        return sum_df
 
     def save_receipt_server(self, source_df):
         """ 保存仓单日报到服务器 """

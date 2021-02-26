@@ -4,7 +4,7 @@
 # @Author: zizle
 
 
-# 郑商所的仓单爬虫
+# 郑商所的仓单爬虫（本文件没有用）
 
 import os
 import datetime
@@ -73,7 +73,9 @@ class CZCEReceiptSpider(QObject):
             self.parser_status.emit("没有发现郑商所{}的仓单日报源文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
             return
         html_dfs = read_html(file_path)  # 解析每个dfs,获取品种和对应的仓单数据情况
-        # for df in html_dfs:
-        #     print(df)
+        for df in html_dfs:
+            for row in df.itertuples():
+                print(row[0])
+            print('')
 
 

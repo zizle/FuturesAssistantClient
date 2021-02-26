@@ -12,7 +12,6 @@ from spiders.czce import CZCESpider, CZCEParser
 from spiders.shfe import SHFESpider, SHFEParser
 from spiders.cffex import CFFEXSpider, CFFEXParser
 from spiders.dce import DCESpider, DCEParser
-from spiders.czce_receipt import CZCEReceiptSpider
 from utils.client import get_user_token
 from popup.message import InformationPopup
 from settings import SERVER_API
@@ -68,17 +67,9 @@ class ExchangeSpider(ExchangeSpiderUI):
         self.parser = None
         self.parser_result_df = None
 
-        # 郑商所仓单爬取的爬虫
-        self.czce_receipt_spider = CZCEReceiptSpider(self)
-        self.czce_receipt_spider.spider_status.connect(self.spider_source_finished)
-        self.czce_receipt_spider.parser_status.connect(self.parser_source_finished)
-
-
         # self.tree_widget.selected_signal.connect(self.selected_action)  # 树控件点击事件
         # self.spider_start_button.clicked.connect(self.starting_spider_data)  # 开始抓取
         # self.parser_start_button.clicked.connect(self.starting_parser_data)  # 开始解析
-        # 郑商所仓单html文件获取
-        self.czce_receipt_html_button.clicked.connect(self.get_czce_html_file)
 
     def change_current_spider(self):
         """ 选择爬虫 """
@@ -120,10 +111,6 @@ class ExchangeSpider(ExchangeSpiderUI):
             return
         self.parser.parser_finished.connect(self.parser_source_finished)
 
-    def get_czce_html_file(self):
-        self.czce_receipt_html_button.setEnabled(False)
-        self.czce_receipt_spider.set_date(self.spider_date_edit.text())
-        self.czce_receipt_spider.get_receipt_html()
 
     def get_point_file(self):
         """ 抓取当前数据源文件 """
@@ -188,23 +175,20 @@ class ExchangeSpider(ExchangeSpiderUI):
             )
         # 解析的交易所
         elif parser_data_type == "receipt":
-            if exchange_lib == 'cffex':
-                self.parser_status.setText('中国金融期货交易所没有仓单可解析!')
-                self.parser_start_button.setEnabled(True)
+            source_data_frame = self.parser.parser_receipt_source_file()
+            if source_data_frame.empty:
                 return
-            elif exchange_lib == "czce":  # 爬取郑商所品种仓单数据
-                self.czce_receipt_spider.set_date(self.parser_date_edit.text())
-                self.czce_receipt_spider.parser_receipts()
-
             # 预览数据
-            # for i in source_data_frame.itertuples():
-            #     print(i)
-            # 保存数据到服务器数据库
-            # self.parser.save_receipt_server(source_df=source_data_frame)
+            self.preview_parser_result(source_data_frame, exchange_lib, "receipt")
+            self.parser_status.setText(
+                "解析{}的仓单日报数据完成!日期:{} = {}".format(
+                    parser_exchange_lib, self.parser_date_edit.text(), int(datetime.datetime.strptime(
+                        self.parser_date_edit.text(), '%Y-%m-%d').timestamp()
+                                                                           )
+                )
+            )
         else:
             pass
-
-
 
 
     # def selected_action(self, exchange, action):
@@ -253,7 +237,6 @@ class ExchangeSpider(ExchangeSpiderUI):
         self.spider_status.setText(message)
         if can_reconnect:
             self.spider_start_button.setEnabled(True)
-            self.czce_receipt_html_button.setEnabled(True)
 
     def parser_source_finished(self, message, can_reconnect):
         """ 解析数据返回的信号 """
@@ -334,9 +317,9 @@ class ExchangeSpider(ExchangeSpiderUI):
                 "date", "variety_en", "contract","rank", "trade_company", "trade", "trade_increase", "long_position_company",
                 "long_position", "long_position_increase", "short_position_company", "short_position",
                 "short_position_increase"]
-        # elif data_type == "receipt":
-        #     column_labels = [""]
-        #     column_key = []
+        elif data_type == "receipt":
+            column_labels = ["日期", "品种代码", "仓单数量", "当日增减"]
+            column_key = ["date", "variety_en", "receipt", "increase"]
         else:
             return
         # 清空表格显示数据

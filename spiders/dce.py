@@ -19,7 +19,7 @@ from settings import USER_AGENTS, LOCAL_SPIDER_SRC, SERVER_API
 
 
 def get_variety_en(name):
-    variety_en = VARIETY_EN.get(name, None)
+    variety_en = VARIETY_EN.get(name.replace('小计', ''), None)
     if variety_en is None:
         logger.error("大商所{}品种对应的代码不存在...".format(name))
         raise ValueError("品种不存在...")
@@ -509,8 +509,10 @@ class DCEParser(QObject):
         html_df.columns = ["VARIETY", "WARENAME", "YRECEIPT", "TRECEIPT", "INCREATE"]
         # 填充nan为上一行数据
         html_df.fillna(method='ffill', inplace=True)
-        # 去除品种含小计,总计等行
-        html_df = html_df[~html_df['VARIETY'].str.contains('总计|小计|合计')]
+        # # 去除品种含小计,总计等行
+        # html_df = html_df[~html_df['VARIETY'].str.contains('总计|小计|合计')]
+        # 选取含有小计的行(20210226改：取品种的结果只能取这个才准确)
+        html_df = html_df[html_df['VARIETY'].str.contains('小计')]
         # 仓库简称处理
         html_df["WARENAME"] = html_df["WARENAME"].apply(full_width_to_half_width)
         # 增加品种代码
@@ -519,10 +521,14 @@ class DCEParser(QObject):
         date_str = self.date.strftime("%Y%m%d")
         html_df["DATE"] = [date_str for _ in range(html_df.shape[0])]
         # 重置索引
-        result_df = html_df.reindex(
-            columns=["WARENAME", "VARIETYEN", "DATE", "TRECEIPT", "INCREATE"])
-        result_df.columns = ["warehouse", "variety_en", "date", "receipt", "receipt_increase"]
-        return result_df
+        result_df = html_df.reindex(columns=["WARENAME", "VARIETYEN", "DATE", "TRECEIPT", "INCREATE"])
+        # 品种分组求和
+        sum_df = result_df.groupby(by=['VARIETYEN'], as_index=False)[['TRECEIPT', 'INCREATE']].sum()
+        date_int = int(self.date.timestamp())
+        sum_df["DATE"] = [date_int for _ in range(sum_df.shape[0])]
+        sum_df.columns = ["variety_en", "receipt", "increase", "date"]
+        sum_df = sum_df.reindex(columns=["date", "variety_en", "receipt", "increase"])
+        return sum_df
 
     def save_receipt_server(self, source_df):
         """ 保存仓单日报到服务器 """
