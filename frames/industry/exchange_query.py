@@ -255,6 +255,7 @@ class ExchangeDataShow(QWidget):
         self.get_variety_with_current_exchange()
         # 查询
         self.query_button.clicked.connect(self.get_current_variety_data)
+        self.query_button.click()
         
     def resizeEvent(self, event):
         super(ExchangeDataShow, self).resizeEvent(event)
@@ -488,7 +489,7 @@ class ExchangeQuery(QWidget):
             # 请求交易所的所有品种
             # self.get_variety_with_current_exchange()
             # 显示界面
-            self.set_data_show_page(parent_id, 'daily')  # 默认查询日行情数据
+            # self.set_data_show_page(parent_id, 'daily')  # 默认查询日行情数据
         elif tree_item.parent():
             item_id = getattr(tree_item, "id")
             parent_id = getattr(tree_item.parent(), "id")

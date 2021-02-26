@@ -4,12 +4,17 @@
 # @Author: zizle
 
 """ 用户数据维护 (产业数据库) """
+import json
 
 from PyQt5.QtWidgets import (QWidget, QSplitter, QHBoxLayout, QVBoxLayout, QListWidget, QTabWidget, QLabel, QComboBox,
                              QPushButton, QTableWidget, QAbstractItemView, QFrame, QLineEdit, QCheckBox, QHeaderView,
-                             QProgressBar, QTabBar, QStylePainter, QStyleOptionTab, QStyle)
-from PyQt5.QtCore import QMargins, Qt, pyqtSignal
+                             QProgressBar, QTabBar, QStylePainter, QStyleOptionTab, QStyle, QFormLayout, QDateEdit,
+                             QTableWidgetItem, qApp, QMessageBox)
+from PyQt5.QtGui import QDoubleValidator
+from PyQt5.QtCore import QMargins, Qt, pyqtSignal, QDate, QUrl
 from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtNetwork import QNetworkRequest, QNetworkAccessManager
+from settings import SERVER_API
 
 
 class HorizontalTabBar(QTabBar):
@@ -282,6 +287,93 @@ class SheetChartUI(QWidget):
         )
 
 
+# 现货报价数据维护(2021.02.25)
+class SpotPriceWidget(QWidget):
+    def __init__(self, *args, **kwargs):
+        super(SpotPriceWidget, self).__init__(*args, **kwargs)
+        layout = QVBoxLayout()
+        form_widget = QWidget(self)
+        form_layout = QFormLayout()
+        self.date_edit = QDateEdit(self)
+        self.date_edit.setDate(QDate.currentDate())
+        self.date_edit.setCalendarPopup(True)
+        self.date_edit.setDisplayFormat('yyyy-MM-dd')
+        form_layout.addRow("日期:", self.date_edit)
+        self.spot_table = QTableWidget(self)
+        self.spot_table.setColumnCount(2)
+        self.spot_table.setHorizontalHeaderLabels(['品种', '价格'])
+        self.spot_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        form_layout.addRow("数据:", self.spot_table)
+        self.submit_button = QPushButton('确定提交', self)
+        submit_layout = QHBoxLayout()
+        submit_layout.addStretch()
+        submit_layout.addWidget(self.submit_button)
+        form_layout.addRow("", submit_layout)
+        form_widget.setLayout(form_layout)
+        form_widget.setMinimumWidth(660)
+        layout.addWidget(form_widget, alignment=Qt.AlignHCenter)
+        self.setLayout(layout)
+
+        self.date_edit.dateChanged.connect(self.get_spot_prices)
+        self.submit_button.clicked.connect(self.submit_spot_prices)
+
+    def set_variety(self, variety_list):
+        self.spot_table.clearContents()
+        variety_list = list(filter(lambda x: x['variety_en'] not in ['GP', 'GZ', 'WB', 'HG'], variety_list))
+        self.spot_table.setRowCount(len(variety_list))
+        for row, v_item in enumerate(variety_list):
+            item0 = QTableWidgetItem(v_item['variety_name'])
+            item0.setData(Qt.UserRole, v_item['variety_en'])
+            item1 = QLineEdit(self)
+            item1.setValidator(QDoubleValidator(item1))
+            self.spot_table.setItem(row, 0, item0)
+            self.spot_table.setCellWidget(row, 1, item1)
+
+        # 获取当日现货报价
+        self.get_spot_prices()
+
+    def get_spot_prices(self):  # 请求当前日期的现货数据
+        current_date = self.date_edit.text().replace('-', '')
+        network_manager = getattr(qApp, '_network', QNetworkAccessManager(self))
+        url = QUrl(SERVER_API + 'spot-price/')
+        url.setQuery("date={}".format(current_date))
+        reply = network_manager.get(QNetworkRequest(url))
+        reply.finished.connect(self.spot_price_reply)
+
+    def update_spot_price(self, spot_prices):
+        spot_prices = {item['variety_en']: item['price'] for item in spot_prices}
+        row_count = self.spot_table.rowCount()
+        for row in range(row_count):
+            variety_en = self.spot_table.item(row, 0).data(Qt.UserRole)
+            edit_widget = self.spot_table.cellWidget(row, 1)
+            edit_widget.setText(str(spot_prices.get(variety_en, '')))
+
+    def spot_price_reply(self):
+        reply = self.sender()
+        if not reply.error():
+            data = json.loads(reply.readAll().data().decode('utf8'))
+            self.update_spot_price(data['data'])
+        reply.deleteLater()
+
+    def get_table_data(self):
+        data = []
+        row_count = self.spot_table.rowCount()
+        for row in range(row_count):
+            variety_en = self.spot_table.item(row, 0).data(Qt.UserRole)
+            edit_widget = self.spot_table.cellWidget(row, 1)
+            price_str = edit_widget.text().strip()
+            if price_str:
+                data.append({'variety_en': variety_en, 'price': float(price_str)})
+        return data
+
+    def submit_spot_prices(self):
+        data = self.get_table_data()
+        print(data)
+        # 将数据上传到服务器进行保存
+        current_date = self.date_edit.text()
+        print(current_date)
+
+
 class UserDataMaintainUI(QWidget):
     def __init__(self, *args, **kwargs):
         super(UserDataMaintainUI, self).__init__(*args, **kwargs)
@@ -322,3 +414,7 @@ class UserDataMaintainUI(QWidget):
         self.sheet_chart_widget = SheetChartUI(self)
 
         self.maintain_frame.addTab(self.sheet_chart_widget, "数据图")
+
+        # 实例化现货数据维护界面
+        self.spot_price_widget = SpotPriceWidget(self)
+        self.maintain_frame.addTab(self.spot_price_widget, "现货数据")

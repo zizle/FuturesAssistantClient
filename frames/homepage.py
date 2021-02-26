@@ -8,12 +8,14 @@ import webbrowser
 import json
 from PyQt5.QtWidgets import qApp, QListWidgetItem, QTableWidgetItem
 from PyQt5.QtGui import QIcon, QColor
-from PyQt5.QtCore import QUrl, QEventLoop, pyqtSignal, Qt, QTimer
+from PyQt5.QtCore import QUrl, QEventLoop, pyqtSignal, Qt
 from PyQt5.QtNetwork import QNetworkRequest
 from widgets.pdf_shower import PDFContentPopup
 from popup.advertisement import TextPopup
 from popup.spot_price import SpotPricePopup
-from .homepage_ui import HomepageUI, ControlButton, PixMapLabel, LeftChildrenMenuWidget
+from popup.message import InformationPopup
+from .homepage_ui import HomepageUI, ControlButton, PixMapLabel, LeftChildrenMenuWidget, SuggestWidget
+from utils.client import get_user_token
 from settings import BASE_DIR, SERVER_API, STATIC_URL, HOMEPAGE_MENUS, INCLUDE_VARIETY, RENAME_VARIETY, IMAGE_SLIDER_RATE
 
 
@@ -103,9 +105,13 @@ class Homepage(HomepageUI):
         # 遍历菜单,增加QListWidgetItem和新增stackedWidget
         for list_menu in all_menus:
             menu_item = QListWidgetItem(list_menu["name"])
+            menu_item.setData(Qt.UserRole, list_menu['id'])
             self.left_menu.addItem(menu_item)
-            left_widget = LeftChildrenMenuWidget(list_menu["children"], self)
-            left_widget.SelectedMenu.connect(self.left_children_menu_selected)
+            if list_menu['id'] == "l_-1":  # 意见反馈
+                left_widget = SuggestWidget(self)
+            else:
+                left_widget = LeftChildrenMenuWidget(list_menu["children"], self)
+                left_widget.SelectedMenu.connect(self.left_children_menu_selected)
             self.left_stacked.addWidget(left_widget)
         item = self.left_menu.item(0)
         item.setSelected(True)

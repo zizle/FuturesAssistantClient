@@ -332,8 +332,8 @@ class CZCEParser(QObject):
             data = json.loads(data.decode("utf-8"))
             self.parser_finished.emit(data["message"], True)
 
-    def parser_receipt_source_file(self):
-        """ 解析仓单日报源文件 """
+    def parser_receipt_source_file1(self):
+        """ 解析仓单日报源文件（excel文件格式无法使用,弃用,爬取方式改为spiders/cze_receipt.py内）记20210225 """
         file_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/receipt/{}.xls'.format(self.date.strftime("%Y-%m-%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现郑商所{}的仓单日报源文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)

@@ -62,7 +62,9 @@ class VarietyData(VarietyDataUI):
         else:
             data = reply.readAll().data()
             data = json.loads(data.decode("utf-8"))
-            self.sheet_table_show_contents(data["sheets"])
+            # 过滤掉私有的数据表
+            sheets = list(filter(lambda x: False if x.get('is_private', None) else True, data['sheets']))
+            self.sheet_table_show_contents(sheets)
 
     def sheet_table_show_contents(self, sheets):
         """ 数据列表显示 """
