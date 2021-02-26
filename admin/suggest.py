@@ -23,6 +23,9 @@ class SuggestWidget(QWidget):
         self.user.setObjectName('user')
         t_layout.addWidget(self.title)
         t_layout.addWidget(self.user)
+        self.links = QLabel(self)
+        self.links.setObjectName('links')
+        t_layout.addWidget(self.links)
         t_layout.addStretch()
         self.content = QLabel(self)
         self.content.setWordWrap(True)
@@ -37,6 +40,9 @@ class SuggestWidget(QWidget):
 
     def set_content(self, c):
         self.content.setText(c)
+
+    def set_links(self, c):
+        self.links.setText('联系方式:' + str(c))
 
 
 class SuggestAdmin(QScrollArea):
@@ -74,6 +80,7 @@ class SuggestAdmin(QScrollArea):
         for suggest_item in suggestions:
             s = SuggestWidget(self)
             s.set_title(suggest_item['create_time'], suggest_item['username'])
+            s.set_links(suggest_item['links'])
             s.set_content(suggest_item['content'])
             content_layout.addWidget(s)
         content_layout.addStretch()

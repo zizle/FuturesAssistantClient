@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from PyQt5.QtWidgets import (qApp, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QListWidget,
                              QStackedWidget, QGridLayout, QTableWidget, QFrame, QHeaderView, QTableWidgetItem,
-                             QAbstractItemView, QGraphicsDropShadowEffect, QTextEdit, QMessageBox)
+                             QAbstractItemView, QGraphicsDropShadowEffect, QTextEdit, QMessageBox, QLineEdit)
 from PyQt5.QtCore import Qt, QRect, QMargins, QSize, QUrl, QThread, pyqtSignal
 from PyQt5.QtGui import QPainter, QPixmap, QIcon, QImage, QBrush, QColor
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkAccessManager
@@ -392,7 +392,11 @@ class SuggestWidget(QWidget):
 
         self.text_edit = QTextEdit(self)
         self.text_edit.setMinimumHeight(300)
+        self.phone_edit = QLineEdit(self)
         layout.addWidget(self.text_edit)
+        title_label = QLabel('联系方式', self)
+        layout.addWidget(title_label)
+        layout.addWidget(self.phone_edit)
 
         self.submit_button = QPushButton('提交', self)
         self.submit_button.clicked.connect(self.submit_suggestion)
@@ -411,8 +415,8 @@ class SuggestWidget(QWidget):
         """ 提交意见反馈 """
         data = dict()
         data['content'] = self.text_edit.toHtml()
+        data['links'] = self.phone_edit.text()
         data['user_token'] = get_user_token(raw=True)
-        print(data)
         self.submit_button.setEnabled(False)
         # 发起请求
         url = SERVER_API + 'suggest/'
