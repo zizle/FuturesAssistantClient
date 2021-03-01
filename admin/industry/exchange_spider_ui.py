@@ -61,8 +61,6 @@ class ExchangeSpiderUI(QWidget):
         self.spider_start_button = QPushButton("开始爬取", self)
         spider_option.addWidget(self.spider_start_button)
 
-        self.czce_receipt_html_button = QPushButton('郑商所仓单HTML文件', self)
-        spider_option.addWidget(self.czce_receipt_html_button)
         spider_option.addStretch()
         spider_layout.addLayout(spider_option)
         self.spider_status = QLabel("等待开始爬取...", self)

@@ -332,8 +332,75 @@ class CZCEParser(QObject):
             data = json.loads(data.decode("utf-8"))
             self.parser_finished.emit(data["message"], True)
 
+    def parser_receipt_source_file(self):
+        """ 解析仓单日报源文件（只解析仓单数量和当日增减的总计）记20210225 """
+        file_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/receipt/{}.xls'.format(self.date.strftime("%Y-%m-%d")))
+        if not os.path.exists(file_path):
+            self.parser_finished.emit("没有发现郑商所{}的仓单日报源文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
+            return DataFrame()
+        # 读取文件
+        xls_df = read_excel(file_path)
+        xls_df = xls_df.fillna('')
+        variety_index_dict = dict()
+        variety_dict = dict()
+        variety_en = None  # 品种标记
+        pre_variety_en = None
+        for row_content in xls_df.itertuples():
+            info_for_match_ = full_width_to_half_width(row_content[1])
+            search_v = re.search(r'品种:(.*)\s单位.*', info_for_match_)  # 品种
+            total_count = re.search(r'总计', info_for_match_)
+            if search_v:  # 取得品种和品种的英文代码
+                pre_variety_en = variety_en
+                has_new_variety = True
+                zh_en_variety = search_v.group(1)
+                variety_name, variety_en = split_zh_en(zh_en_variety)
+                if variety_en == "PTA":
+                    variety_en = "TA"
+                variety_dict[variety_en] = variety_name
+                variety_index_dict[variety_en] = [row_content[0] + 1]
+            else:
+                has_new_variety = False
+            # 获取当前品种的数据表
+            if total_count and variety_en:
+                variety_index_dict[variety_en].append(row_content[0])
+            # 当没有总计时有上一个品种记录且找到了新品种，那么老品种结束行应该是找到新品种行的上一行
+            if not total_count and pre_variety_en and has_new_variety:  # 补充没有总计时无法添加结束行的问题，该问题与20191111日后的数据出现
+                variety_index_dict[pre_variety_en].append(row_content[0] - 1)
+
+        # 整理数据
+        data_list = []
+        for variety_en in variety_dict:
+            data_index_range = variety_index_dict[variety_en]  # 数据在dataFrame中的起终索引
+            variety_df = xls_df.iloc[data_index_range[0]:data_index_range[1] + 1, :]
+            item = self._parser_receipt_sub_df(variety_en, variety_df)
+            data_list.append(item)
+        result_df = DataFrame(data_list, columns=['variety_en', 'receipt', 'increase'])
+        int_date = int(self.date.timestamp())
+        result_df["date"] = [int_date for _ in range(result_df.shape[0])]
+        return result_df
+
+    @staticmethod
+    def _parser_receipt_sub_df(variety_en, variety_df):
+        """ 解析每个品种的仓单日报 """
+        # 20200220后的数据强筋小麦为机构简称和机构编号，仓单为‘确认书数量’
+        variety_df.columns = variety_df.iloc[0].replace('机构编号', '仓库编号').replace('机构简称', '仓库简称').replace(
+            '厂库编号', '仓库编号').replace('厂库简称', '仓库简称').replace('仓单数量(完税)', '仓单数量').replace('确认书数量', '仓单数量')  # 以第一行为列头
+        variety_df = variety_df.drop(variety_df.index[0])  # 删除第一行
+        variety_df = variety_df[~variety_df['仓库编号'].str.contains('总计|小计')]  # 选取不含有小计和总计的行
+        # 把仓库简称的列空置替换为NAN，并使用前一个进行填充
+        variety_df['仓库编号'] = variety_df['仓库编号'].replace('', np.nan).fillna(method='ffill')
+        variety_df['仓库简称'] = variety_df['仓库简称'].replace('', np.nan).fillna(method='ffill')
+        variety_df['仓单数量'] = variety_df['仓单数量'].replace('', np.nan).fillna(0)
+        # 将仓单数量列转为int
+        variety_df['仓单数量'] = variety_df['仓单数量'].apply(lambda x: int(x))  # 转为int计算
+        variety_df['当日增减'] = variety_df['当日增减'].apply(lambda x: int(x))
+        data = {'variety_en': variety_en, 'receipt': variety_df['仓单数量'].sum(), 'increase': variety_df['当日增减'].sum()}
+
+        return data
+
+
     def parser_receipt_source_file1(self):
-        """ 解析仓单日报源文件（excel文件格式无法使用,弃用,爬取方式改为spiders/cze_receipt.py内）记20210225 """
+        """ 解析仓单日报源文件（弃用）记20210225 """
         file_path = os.path.join(LOCAL_SPIDER_SRC, 'czce/receipt/{}.xls'.format(self.date.strftime("%Y-%m-%d")))
         if not os.path.exists(file_path):
             self.parser_finished.emit("没有发现郑商所{}的仓单日报源文件,请先抓取数据!".format(self.date.strftime("%Y-%m-%d")), True)
@@ -381,15 +448,11 @@ class CZCEParser(QObject):
         return result_df
 
     @staticmethod
-    def _parser_receipt_sub_df(variety_en, variety_df):
+    def _parser_receipt_sub_df1(variety_en, variety_df):
         """ 解析每个品种的仓单日报 """
         # 20200220后的数据强筋小麦为机构简称和机构编号，仓单为‘确认书数量’
-        variety_df.columns = variety_df.iloc[0].replace('机构编号',
-                                                        '仓库编号').replace('机构简称',
-                                                                        '仓库简称').replace('厂库编号',
-                                                                                        '仓库编号').replace('厂库简称',
-                                                                                                        '仓库简称').replace('仓单数量(完税)',
-                                                                                                                        '仓单数量').replace('确认书数量', '仓单数量')  # 以第一行为列头
+        variety_df.columns = variety_df.iloc[0].replace('机构编号', '仓库编号').replace('机构简称', '仓库简称').replace(
+            '厂库编号', '仓库编号').replace('厂库简称', '仓库简称').replace('仓单数量(完税)', '仓单数量').replace('确认书数量', '仓单数量')  # 以第一行为列头
         variety_df = variety_df.drop(variety_df.index[0])  # 删除第一行
         variety_df = variety_df[~variety_df['仓库编号'].str.contains('总计|小计')]  # 选取不含有小计和总计的行
         # 把仓库简称的列空置替换为NAN，并使用前一个进行填充
@@ -424,7 +487,7 @@ class CZCEParser(QObject):
         self.parser_finished.emit("开始保存郑商所{}仓单日报数据到服务器数据库...".format(self.date.strftime("%Y-%m-%d")), False)
         data_body = source_df.to_dict(orient="records")
         network_manager = getattr(qApp, "_network")
-        url = SERVER_API + "exchange/czce/receipt/?date=" + self.date.strftime("%Y-%m-%d")
+        url = SERVER_API + "exchange/czce/receipt/"
         request = QNetworkRequest(QUrl(url))
         request.setHeader(QNetworkRequest.ContentTypeHeader, "application/json;charset=utf-8")
 

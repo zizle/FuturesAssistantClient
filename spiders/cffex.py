@@ -122,6 +122,9 @@ class CFFEXSpider(QObject):
             self.spider_finished.emit(tip, False)
         self.event_loop.quit()
 
+    def get_receipt_source_file(self):
+        self.spider_finished.emit('中金所无需进行仓单日报的爬取!', True)
+
 
 class CFFEXParser(QObject):
     parser_finished = pyqtSignal(str, bool)
@@ -292,6 +295,10 @@ class CFFEXParser(QObject):
         else:
             data = json.loads(data.decode("utf-8"))
             self.parser_finished.emit(data["message"], True)
+
+    def parser_receipt_source_file(self):
+        self.parser_finished.emit('中金所无需进行仓单日报的解析!', True)
+        return DataFrame()
 
     def save_receipt_server(self, source_df):
         self.parser_finished.emit("中金所无需进行仓单日报的保存!", True)
