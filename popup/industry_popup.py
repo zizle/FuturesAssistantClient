@@ -560,6 +560,7 @@ class ChartWidget(QWidget):
         main_layout.setContentsMargins(QMargins(0, 0, 0, 0))
 
         self.chart_container = QWebEngineView(self)
+        self.chart_container.setContextMenuPolicy(Qt.NoContextMenu)
         self.chart_container.load(QUrl("file:///html/charts/custom_chart.html"))   # 加载页面
         # 设置与页面信息交互的通道
         channel_qt_obj = QWebChannel(self.chart_container.page())                  # 实例化qt信道对象,必须传入页面参数

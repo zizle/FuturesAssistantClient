@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QLabel
     QTableWidgetItem, QHeaderView, QAbstractItemView
 from PyQt5.QtCore import Qt, QMargins
 
-from settings import STATIC_URL
+from settings import STATIC_URL, ADMINISTRATOR
 from widgets import OptionWidget, Paginator, PDFContentPopup
 from apis.variety import VarietyAPI
 from apis.product import ReportsAPI
@@ -72,7 +72,7 @@ class ReportTable(QTableWidget):
             for col, col_key in enumerate(header_keys):
                 item = QTableWidgetItem(str(row_item[col_key]))
                 if col == 0:
-                    item.setData(Qt.UserRole, row_item["filepath"])
+                    item.setData(Qt.UserRole, {'filepath': row_item["filepath"], 'file_id': row_item['id']})
                 item.setTextAlignment(Qt.AlignCenter)
                 self.setItem(row, col, item)
 
@@ -82,8 +82,11 @@ class ReportTable(QTableWidget):
         """ 查看报告内容 """
         item = self.item(row, 0)
         title = self.item(row, 1).text()
-        file_url = STATIC_URL + item.data(Qt.UserRole)
+        file_data = item.data(Qt.UserRole)
+        file_url = STATIC_URL + file_data.get('filepath', '')
+        file_id = file_data.get('file_id', None)
         p = PDFContentPopup(file=file_url, title=title, parent=self)
+        p.set_file_id(file_id)
         p.exec_()
 
 
@@ -124,9 +127,11 @@ class MultiReport(QWidget):
         layout.addWidget(option_widget)
 
         self.report_table = ReportTable(self)
-        self.report_table.setColumnCount(4)
-        self.report_table.setHorizontalHeaderLabels(['相关品种', '标题', '类型', '日期'])
+        self.report_table.setColumnCount(5)
+        self.report_table.setHorizontalHeaderLabels(['相关品种', '标题', '类型', '日期', '阅读'])
         # self.report_table.setShowGrid(False)
+        if not ADMINISTRATOR:
+            self.report_table.horizontalHeader().setSectionHidden(4, True)
         self.report_table.horizontalHeader().setStyleSheet(HORIZONTAL_STYLE_NO_GRID)
         self.report_table.horizontalHeader().setDefaultSectionSize(150)
         self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
@@ -188,7 +193,7 @@ class MultiReport(QWidget):
 
     def reports_reply(self, data):
         """ 报告数据返回 """
-        header_keys = ['variety_zh', 'title', 'type_text', 'file_date']
+        header_keys = ['variety_zh', 'title', 'type_text', 'file_date', 'reading']
         self.report_table.show_report_contents(data['reports'], header_keys)
 
         self.paginator.setCurrentPage(data['page'])

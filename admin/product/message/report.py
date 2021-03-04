@@ -146,9 +146,9 @@ class ReportFileAdmin(QTabWidget):
         manager_option_layout.addStretch()
 
         self.manager_table = QTableWidget(self)
-        self.manager_table.setColumnCount(10)
+        self.manager_table.setColumnCount(11)
         self.manager_table.setHorizontalHeaderLabels([
-            "创建时间", "更新时间", "报告日期", "创建者", "关联品种", "标题", "类型", "相对路径", "公开", "删除"])
+            "创建时间", "更新时间", "报告日期", "创建者", "关联品种", "标题", "类型", "相对路径", "公开", "阅读量", "删除"])
         self.manager_table.horizontalHeader().setDefaultSectionSize(80)
         self.manager_table.horizontalHeader().setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.manager_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -461,10 +461,10 @@ class ReportFileAdmin(QTabWidget):
         self.manager_table.clearContents()
         self.manager_table.setRowCount(len(reports))
         col_keys = ['create_time', 'update_time', 'file_date', 'username', 'variety_en', 'title', 'type_text',
-                    'filepath', 'is_active']
+                    'filepath', 'is_active', 'reading']
         for row, row_item in enumerate(reports):
             for col, col_key in enumerate(col_keys):
-                text = row_item[col_key]
+                text = str(row_item[col_key])
                 if col_key == 'is_active':
                     text = '是' if row_item['is_active'] else '否'
                 item = QTableWidgetItem(text)
