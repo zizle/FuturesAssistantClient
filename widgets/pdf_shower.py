@@ -11,9 +11,10 @@ import requests
 from PyQt5.QtWidgets import qApp, QWidget, QLabel, QFrame, QScrollArea,QVBoxLayout, QDialog, QScrollBar, QDesktopWidget, QGraphicsDropShadowEffect
 from PyQt5.QtGui import QPixmap, QIcon, QImage, QPalette, QColor
 from PyQt5.QtCore import Qt, QMargins, QUrl, pyqtSignal
-from PyQt5.QtNetwork import QNetworkRequest
+from PyQt5.QtNetwork import QNetworkRequest, QNetworkAccessManager
 from popup.message import InformationPopup
 from utils.constant import HORIZONTAL_SCROLL_STYLE, VERTICAL_SCROLL_STYLE
+from settings import SERVER_API
 
 
 # PDF文件内容直显
@@ -96,6 +97,7 @@ class PDFContentPopup(QDialog):
         super(PDFContentPopup, self).__init__(*args, **kwargs)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowFlags(Qt.Dialog)
+        self.file_id = None
         self.file = file
         self.file_name = title
         # auth doc type
@@ -154,6 +156,9 @@ class PDFContentPopup(QDialog):
 
     def custom_scroller(self, value):
         self.scroll_bar.setValue(value)
+
+    def set_file_id(self, fid):
+        self.file_id = fid
 
     def add_pages(self):
         # 请求文件
@@ -216,6 +221,18 @@ class PDFContentPopup(QDialog):
         self.scroll_bar.setMinimum(self.scroll_area.verticalScrollBar().minimum())
         self.scroll_bar.setMaximum(self.scroll_area.verticalScrollBar().maximum())
         self.scroll_bar.setPageStep(self.scroll_area.verticalScrollBar().pageStep())
+
+        # 请求增加文章的阅读量
+        self.add_file_read_count()
+
+    def add_file_read_count(self):
+        # 增加文章的阅读量
+        if self.file_id:
+            network_manger = getattr(qApp, '_network', QNetworkAccessManager(self))
+            url = SERVER_API + 'report-file/{}/reading/'.format(self.file_id)
+            reply = network_manger.post(QNetworkRequest(QUrl(url)), None)
+            reply.finished.connect(reply.deleteLater)
+
 
 
 # PDF文件内容直接显示

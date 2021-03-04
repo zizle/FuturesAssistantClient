@@ -262,6 +262,7 @@ class SheetChartUI(QWidget):
         self.swap_tab.setDocumentMode(True)
         self.swap_tab.setTabPosition(QTabWidget.East)
         self.chart_container = QWebEngineView(self)
+        self.chart_container.setContextMenuPolicy(Qt.NoContextMenu)
 
         self.swap_tab.addTab(self.chart_container, "全\n览")
 

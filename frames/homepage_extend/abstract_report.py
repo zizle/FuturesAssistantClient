@@ -10,7 +10,7 @@ from PyQt5.QtCore import Qt, QRect, QUrl, QMargins
 from PyQt5.QtGui import QPixmap, QPainter
 from PyQt5.QtNetwork import QNetworkRequest
 from widgets import Paginator, PDFContentPopup
-from settings import STATIC_URL, SERVER_API
+from settings import STATIC_URL, SERVER_API, ADMINISTRATOR
 
 from frames.product.message_service import ReportTable
 
@@ -114,9 +114,12 @@ class ReportAbstract(QWidget):
 
     def show_report_content(self, reports):
         """ 显示报告 """
-        self.report_table.setColumnCount(4)
-        self.report_table.setHorizontalHeaderLabels(['相关品种', '标题', '类型', '日期'])
-        header_keys = ["variety_zh", "title", "type_text", "file_date"]
+        self.report_table.setColumnCount(5)
+        self.report_table.setHorizontalHeaderLabels(['相关品种', '标题', '类型', '日期', '阅读'])
+        header_keys = ["variety_zh", "title", "type_text", "file_date", "reading"]
         self.report_table.horizontalHeader().setDefaultSectionSize(150)
         self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        if not ADMINISTRATOR:
+            self.report_table.horizontalHeader().setSectionHidden(4, True)
         self.report_table.show_report_contents(reports, header_keys)
+
