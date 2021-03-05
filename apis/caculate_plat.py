@@ -31,3 +31,27 @@ class ExchangeRateAPI(QObject):
             data = json.loads(reply.readAll().data().decode('utf8'))
             self.exchange_rate_reply.emit(data)
         reply.deleteLater()
+
+
+class CorrelationAPI(QObject):
+    correlation_reply = pyqtSignal(dict)
+
+    def __init__(self, *args, **kwargs):
+        super(CorrelationAPI, self).__init__(*args, **kwargs)
+        self.network_manger = getattr(qApp, '_network', QNetworkAccessManager(self))
+
+    def get_correlations(self, st, et):
+        # 请求相关性计算的数据，st=开始日期,et=结束日期
+        url = SERVER_API + 'correlation/?ts={}&es={}'.format(st, et)
+        reply = self.network_manger.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.correlation_data_reply)
+
+    def correlation_data_reply(self):
+        reply = self.sender()
+        if reply.error():
+            logger.error('GET-Request Correlation Data Error:{}'.format(reply.error()))
+        else:
+            data = json.loads(reply.readAll().data().decode('utf8'))
+            self.correlation_reply.emit(data)
+        reply.deleteLater()
+
