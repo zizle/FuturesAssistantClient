@@ -6,9 +6,11 @@
 import json
 from datetime import datetime, timedelta
 import pandas as pd
+from xlsxwriter.exceptions import FileCreateError
 from PyQt5.QtWidgets import (qApp, QDesktopWidget, QDialog, QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QLabel,
                              QPushButton, QSplitter, QLineEdit, QSpinBox, QComboBox, QGroupBox, QTableWidget, QCheckBox,
-                             QListWidget, QListWidgetItem, QTableWidgetItem, QHeaderView, QMenu, QMessageBox)
+                             QListWidget, QListWidgetItem, QTableWidgetItem, QHeaderView, QMenu, QMessageBox,
+                             QFileDialog)
 from PyQt5.QtCore import Qt, pyqtSignal, QMargins, QUrl
 from PyQt5.QtGui import QBrush, QColor, QIntValidator
 from PyQt5.QtWebEngineWidgets import QWebEngineView
@@ -47,13 +49,19 @@ class UpdateFolderPopup(QDialog):
         main_layout.addWidget(QLabel("组别:"), 1, 0)
         main_layout.addWidget(QLabel(group_text), 1, 1)
 
-        main_layout.addWidget(QLabel("路径:"), 2, 0)
+        main_layout.addWidget(QLabel('类型:', self), 2, 0)
+        self.custom_index = QCheckBox(self)
+        self.custom_index.setText('日期序列数据')
+        self.custom_index.setCheckState(Qt.Checked)
+        main_layout.addWidget(self.custom_index, 2, 1)
+
+        main_layout.addWidget(QLabel("路径:"), 3, 0)
         self.folder_edit = FolderPathLineEdit(self)
-        main_layout.addWidget(self.folder_edit)
+        main_layout.addWidget(self.folder_edit, 3, 1)
 
         self.confirm_button = QPushButton("确定", self)
         self.confirm_button.clicked.connect(self.confirm_current_folder)
-        main_layout.addWidget(self.confirm_button, 3, 1, alignment=Qt.AlignRight)
+        main_layout.addWidget(self.confirm_button, 4, 1, alignment=Qt.AlignRight)
 
         self.setLayout(main_layout)
         self.setMinimumWidth(370)
@@ -65,11 +73,13 @@ class UpdateFolderPopup(QDialog):
         folder_path = self.folder_edit.text()
         if not folder_path:
             return
+        is_dated = 1 if self.custom_index.checkState() else 0
         body_data = {
             "client": get_client_uuid(),
             "folder_path": folder_path,
             "variety_en": self.variety_en,
-            "group_id": self.group_id
+            "group_id": self.group_id,
+            "is_dated": is_dated
         }
         network_manager = getattr(qApp, "_network")
         url = SERVER_API + "industry/user-folder/"
@@ -116,7 +126,8 @@ class UpdateFolderPopup(QDialog):
         if reply.error():
             self.successful_signal.emit("调整配置失败了!")
         else:
-            self.successful_signal.emit("调整配置成功!")
+            data = json.loads(reply.readAll().data().decode('utf8'))
+            self.successful_signal.emit(data.get('message', '调整配置成功!'))
         reply.deleteLater()
 
 
@@ -1098,5 +1109,137 @@ class AddSheetRecordPopup(QDialog):
         else:
             p = InformationPopup('添加新数据失败!', self)
             p.exec_()
+
+
+""" 导出指定表数据 """
+
+
+class ExportSheetPopup(QDialog):
+    def __init__(self, sheet_id, *args, **kwargs):
+        super(ExportSheetPopup, self).__init__(*args, **kwargs)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.header_keys = None
+        self.sheet_id = sheet_id
+        layout = QVBoxLayout()
+
+        self.export_button = QPushButton('立即导出', self)
+        self.export_button.clicked.connect(self.export_table_data)
+        layout.addWidget(self.export_button, alignment=Qt.AlignTop | Qt.AlignLeft)
+
+        # self.declare_label = QLabel(
+        #     '双击要修改的数据单元格后,写入新的数据,再点击对应行最后的确认按钮(√)进行修改,一次只能修改一行数据(编号日期不支持修改)。', self)
+        # layout.addWidget(self.declare_label, alignment=Qt.AlignTop | Qt.AlignLeft)
+        self.value_table = QTableWidget(self)
+        self.value_table.horizontalHeader().hide()
+        self.value_table.verticalHeader().hide()
+        layout.addWidget(self.value_table)
+
+        self.loading_cover = LoadingCover(self)  # 在此实现才能遮住之前的控件
+        self.resize(1080, 600)
+        self.loading_cover.resize(self.width(), self.height())
+        self.loading_cover.hide()
+
+        self.setLayout(layout)
+
+        # self.declare_label.setObjectName('declareLabel')
+        # self.setStyleSheet(
+        #     '#declareLabel{color:rgb(233,66,66);font-size:12px}'
+        # )
+
+        self.get_current_sheet_values()
+
+    def resizeEvent(self, event):
+        super(ExportSheetPopup, self).resizeEvent(event)
+        self.loading_cover.resize(self.width(), self.height())
+
+    def get_current_sheet_values(self):
+        """ 获取当前表的数据 """
+        self.loading_cover.show()
+        url = SERVER_API + 'sheet/{}/'.format(self.sheet_id)
+        network_manager = getattr(qApp, '_network')
+        reply = network_manager.get(QNetworkRequest(QUrl(url)))
+        reply.finished.connect(self.sheet_values_reply)
+
+    def sheet_values_reply(self):
+        """ 得到数据表 """
+        reply = self.sender()
+        if reply.error():
+            logger.error('获取具体表数据错误了{}'.format(reply.error()))
+        else:
+            data = json.loads(reply.readAll().data().decode('utf8'))
+            self.show_value_to_table(data['sheet_values'])
+        reply.deleteLater()
+        self.loading_cover.hide()
+
+    def show_value_to_table(self, sheet_values):
+        """ 将数据显示到表格中 """
+        if not sheet_values:
+            return
+        first_row = sheet_values[0]
+        value_keys = list(first_row.keys())
+        if self.header_keys is not None:
+            del self.header_keys
+            self.header_keys = None
+        self.header_keys = value_keys.copy()
+        self.value_table.setColumnCount(len(value_keys))
+        self.value_table.setRowCount(len(sheet_values))
+        for row, row_item in enumerate(sheet_values):
+            for col, col_key in enumerate(value_keys):
+                if col == 0:
+                    value = '%05d' % row_item[col_key]
+                    if row == 0:
+                        value = '编号'
+                else:
+                    value = str(row_item[col_key])
+                item = QTableWidgetItem(value)
+                item.setTextAlignment(Qt.AlignCenter)
+                self.value_table.setItem(row, col, item)
+
+    def get_value_table_data(self):
+        # 获取表格数据
+        header_list = []
+        value_list = []
+        row_count = self.value_table.rowCount()
+        col_count = self.value_table.columnCount()
+        for header_col in range(1, col_count):
+            item_value = self.value_table.item(0, header_col).text()
+            header_list.append(item_value)
+
+        for row in range(1, row_count):
+            row_list = []
+            for col in range(1, col_count):
+                item_value = self.value_table.item(row, col).text()
+                try:
+                    value = datetime.strptime(item_value, '%Y-%m-%d') if col == 0 else float(
+                        self.value_table.item(row, col).text().replace(',', ''))
+                except ValueError:
+                    value = item_value
+                row_list.append(value)
+            value_list.append(row_list)
+        return pd.DataFrame(value_list, columns=header_list)
+
+    def export_table_data(self):
+        # 导出表格数据
+        sheet_name = self.windowTitle()
+        filepath, _ = QFileDialog.getSaveFileName(self, '保存文件', sheet_name, 'EXCEL文件(*.xlsx *.xls)')
+        if filepath:
+            self.loading_cover.show('正在导出数据,请稍后...')
+            # 获取表格数据
+            sheet_df = self.get_value_table_data()
+            writer = pd.ExcelWriter(filepath, engine='xlsxwriter', datetime_format='YYYY-MM-DD')
+            # 多级表头默认会出现一个空行,需改pandas源码,这里不做处理
+            sheet_df.to_excel(writer, sheet_name=sheet_name, encoding='utf8', index=False,
+                              merge_cells=False)
+            work_sheets = writer.sheets[sheet_name]
+            book_obj = writer.book
+            format_obj = book_obj.add_format({'font_name': 'Arial', 'font_size': 9})
+            work_sheets.set_column('A:Z', None, cell_format=format_obj)
+            try:
+                writer.save()
+            except FileCreateError:
+                p = InformationPopup('请关闭已打开的文件再进行替换保存!', self)
+                p.exec_()
+            self.loading_cover.hide()
+
 
 
