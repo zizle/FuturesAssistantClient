@@ -94,23 +94,25 @@ class ConfigSourceUI(QWidget):
         self.config_table.setFocusPolicy(Qt.NoFocus)
         self.config_table.setFrameShape(QFrame.NoFrame)
         self.config_table.setAlternatingRowColors(True)
-        self.config_table.setColumnCount(5)
-        self.config_table.setHorizontalHeaderLabels(["编号", "品种", "组别", "更新路径", "操作"])
+        self.config_table.setColumnCount(6)
+        self.config_table.setHorizontalHeaderLabels(["编号", "品种", "组别", "日期序列", "更新路径", "操作"])
         self.config_table.verticalHeader().hide()
         self.config_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.config_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.config_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
         self.config_table.setWordWrap(True)
         main_layout.addWidget(self.config_table)
 
         self.config_table.setObjectName('configsTable')
 
         tips = "<p>1 点击右上角'更新配置'按钮，配置当前品种当前数据组更新文件所在的文件夹.</p>" \
+               "<p>1-1 非日期序列的文件夹路径显示为绿色;日期系列为金黄色." \
                "<p>2 '点击更新'让系统读取文件夹内的数据表自动上传.</p>" \
                "<p>2-1 文件夹内表格格式:</p>" \
                "<p>第1行：万得导出的表第一行不动;自己创建的表第一行须留空;</p>" \
                "<p>第2行：数据表表头;</p>" \
                "<p>第3行：不做限制,可填入单位等,也可直接留空.</p>" \
-               "<p>第4行：数据起始行,第一列为【日期】类型,非日期的行系统不会做读取.</p>" \
+               "<p>第4行：1 日期序列的数据起始行,第一列为【日期】类型,非日期的行系统不会做读取.</p>" \
+               "<p>第4行：2 非日期序列的数据起始行,数据列格式不做要求.</p>" \
                "<p>特别注意: 文件内以`Sheet`开头的表将不做读取.即不进行命名的表系统是忽略的."
 
         tips_label = QLabel(tips, self)

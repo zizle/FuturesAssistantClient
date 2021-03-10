@@ -15,7 +15,7 @@ from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
 from PyQt5.QtGui import QBrush, QColor, QCursor, QIcon
 from settings import SERVER_API, logger
 from utils.client import get_user_token, get_client_uuid
-from popup.industry_popup import UpdateFolderPopup, DisposeChartPopup, SheetWidgetPopup, AddSheetRecordPopup
+from popup.industry_popup import UpdateFolderPopup, DisposeChartPopup, SheetWidgetPopup, AddSheetRecordPopup, ExportSheetPopup
 from popup.sheet_charts import SheetChartsPopup, DeciphermentPopup, ChartPopup, EditChartOptionPopup
 from popup.message import InformationPopup, WarningPopup
 from widgets import OperateButton
@@ -28,11 +28,12 @@ class UpdatingSheetsThread(QThread):
     """ 更新数据表的线程 """
     single_finished = pyqtSignal(int)  # 单个完成的信号(2020-09-04预留更新进度条使用)
 
-    def __init__(self, variety_en, group_id, path_list, *args, **kwargs):
+    def __init__(self, variety_en, group_id, path_list, is_dated, *args, **kwargs):
         super(UpdatingSheetsThread, self).__init__(*args, **kwargs)
         self.variety_en = variety_en
         self.group_id = group_id
         self.path_list = path_list
+        self.is_dated = is_dated
         self.network_manager = getattr(qApp, '_network')
 
     def run(self):
@@ -47,8 +48,11 @@ class UpdatingSheetsThread(QThread):
                 if sheet_name.strip().lower().startswith("sheet"):
                     continue
                 time.sleep(0.03)
-                # converters参数 第0列为时间格式
-                sheet_df = excel_file.parse(sheet_name=sheet_name, skiprows=[0], converters={0: self.date_converter})
+                if self.is_dated:
+                    # converters参数 第0列为时间格式
+                    sheet_df = excel_file.parse(sheet_name=sheet_name, skiprows=[0], converters={0: self.date_converter})
+                else:
+                    sheet_df = excel_file.parse(sheet_name=sheet_name, skiprows=[0])
                 sheet_df.iloc[:1] = sheet_df.iloc[:1].fillna('')  # 替换第一行中有的nan
                 # 替换除第一列以外的nan为空(这里直接inplace=True填充失败(原因:未知))
                 sheet_df.iloc[:, 1:sheet_df.shape[1]] = sheet_df.iloc[:, 1:sheet_df.shape[1]].fillna('')
@@ -64,6 +68,7 @@ class UpdatingSheetsThread(QThread):
                 sheet_source = {
                     "variety_en": self.variety_en,
                     "group_id": self.group_id,
+                    "is_dated": self.is_dated,
                     "sheet_name": sheet_name.strip(),
                     "sheet_headers": sheet_headers,
                     "sheet_values": sheet_df.to_dict(orient="records")
@@ -281,6 +286,7 @@ class UserDataMaintain(UserDataMaintainUI):
         for row, row_item in enumerate(folder_list):
             item0 = QTableWidgetItem(str(row + 1))
             item0.setTextAlignment(Qt.AlignCenter)
+            item0.setData(Qt.UserRole, {'is_dated': row_item['is_dated']})
             self.source_config_widget.config_table.setItem(row, 0, item0)
 
             item1 = QTableWidgetItem(row_item["variety_name"])
@@ -291,14 +297,21 @@ class UserDataMaintain(UserDataMaintainUI):
             item2.setTextAlignment(Qt.AlignCenter)
             self.source_config_widget.config_table.setItem(row, 2, item2)
 
-            item3 = QTableWidgetItem(row_item["folder"])
+            date_index = '是' if row_item['is_dated'] else '否'
+            item3 = QTableWidgetItem(date_index)
             item3.setTextAlignment(Qt.AlignCenter)
             self.source_config_widget.config_table.setItem(row, 3, item3)
 
-            item4_button = OperateButton("media/icons/update.png", "media/icons/update_hover.png", "点击更新", self.source_config_widget.config_table)
-            setattr(item4_button, "row_index", row)
-            item4_button.clicked.connect(self.updating_sheets_of_folder)
-            self.source_config_widget.config_table.setCellWidget(row, 4, item4_button)
+            item4 = QTableWidgetItem(row_item["folder"])
+            item4.setTextAlignment(Qt.AlignCenter)
+            color = QColor(203, 104, 45) if row_item['is_dated'] else QColor(76, 114, 88)
+            item4.setForeground(QBrush(color))
+            self.source_config_widget.config_table.setItem(row, 4, item4)
+
+            item5_button = OperateButton("media/icons/update.png", "media/icons/update_hover.png", "点击更新", self.source_config_widget.config_table)
+            setattr(item5_button, "row_index", row)
+            item5_button.clicked.connect(self.updating_sheets_of_folder)
+            self.source_config_widget.config_table.setCellWidget(row, 5, item5_button)
 
     def updating_sheets_of_folder(self):
         """ 更新文件夹内的所有数据表 """
@@ -310,7 +323,9 @@ class UserDataMaintain(UserDataMaintainUI):
         self.source_config_widget.config_table.selectRow(current_row)
         variety_en = self.source_config_widget.variety_combobox.currentData()
         group_text = self.source_config_widget.config_table.item(current_row, 2).text()
-        folder_path = self.source_config_widget.config_table.item(current_row, 3).text()
+        folder_path = self.source_config_widget.config_table.item(current_row, 4).text()
+        row_data = self.source_config_widget.config_table.item(current_row, 0).data(Qt.UserRole)
+        is_dated = row_data.get('is_dated', 1)
         if not os.path.exists(folder_path):
             self.source_config_widget.tips_message.setText("文件夹路径不存在!")
             return
@@ -330,9 +345,9 @@ class UserDataMaintain(UserDataMaintainUI):
         self.source_config_widget.updating_process.setMaximum(0)
         self.source_config_widget.updating_process.setValue(0)
         self.source_config_widget.updating_process.show()
-        self.update_folder_sheets_to_server(variety_en, group_id, folder_path)
+        self.update_folder_sheets_to_server(variety_en, group_id, folder_path, is_dated)
 
-    def update_folder_sheets_to_server(self, variety_en, group_id, folder_path):
+    def update_folder_sheets_to_server(self, variety_en, group_id, folder_path, is_dated):
         """ 读取数据,更新数据到服务端 """
         file_path_list = list()
         for file_path in os.listdir(folder_path):
@@ -342,9 +357,10 @@ class UserDataMaintain(UserDataMaintainUI):
             if file_suffix in [".xlsx", '.xls']:
                 file_path_list.append(os.path.join(folder_path, file_path))
         if not file_path_list:
-            self.folder_update_finished(finished_status="没有获取到合法文件信息,无需更新!")
+            self.folder_update_finished(finished_text="没有获取到合法文件信息,无需更新!")
             return
-        self.source_config_widget.updating_thread = UpdatingSheetsThread(variety_en=variety_en, group_id=group_id, path_list=file_path_list)
+        self.source_config_widget.updating_thread = UpdatingSheetsThread(variety_en=variety_en, group_id=group_id,
+                                                                         path_list=file_path_list, is_dated=is_dated)
         self.source_config_widget.updating_thread.finished.connect(self.folder_update_finished)
         self.source_config_widget.updating_thread.single_finished.connect(self.source_config_widget.updating_process.setValue)
         self.source_config_widget.updating_thread.start()
@@ -448,7 +464,7 @@ class UserDataMaintain(UserDataMaintainUI):
         self.variety_sheet_widget.sheet_table.clear()
         self.variety_sheet_widget.sheet_table.setColumnCount(11)
         self.variety_sheet_widget.sheet_table.setHorizontalHeaderLabels(
-            ["编号", "创建日期", "创建人", "名称", "更新时间", "更新人", "增量", "图形", "上移", "可见", "删除"]
+            ["编号", "创建日期", "日期序列", "名称", "更新时间", "更新人", "增量", "图形", "上移", "可见", "删除"]
         )
         if self.variety_sheet_widget.only_me_check.checkState():
             self.variety_sheet_widget.sheet_table.setColumnHidden(9, False)  # 显示可见列
@@ -457,18 +473,23 @@ class UserDataMaintain(UserDataMaintainUI):
 
         self.variety_sheet_widget.sheet_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.variety_sheet_widget.sheet_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.variety_sheet_widget.sheet_table.horizontalHeader().setDefaultSectionSize(75)
+        self.variety_sheet_widget.sheet_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Interactive)
         self.variety_sheet_widget.sheet_table.setRowCount(len(sheets))
 
         for row, row_item in enumerate(sheets):
             item0 = QTableWidgetItem("%04d" % row_item["id"])
             item0.setTextAlignment(Qt.AlignCenter)
+            item0.setToolTip('创建者:{}'.format(row_item["creator"]))
+            item0.setData(Qt.UserRole, {"is_dated": row_item['is_dated']})
             self.variety_sheet_widget.sheet_table.setItem(row, 0, item0)
 
             item1 = QTableWidgetItem(row_item["create_date"])
             item1.setTextAlignment(Qt.AlignCenter)
             self.variety_sheet_widget.sheet_table.setItem(row, 1, item1)
 
-            item2 = QTableWidgetItem(row_item["creator"])
+            date_index = '是' if row_item['is_dated'] else '否'
+            item2 = QTableWidgetItem(date_index)
             item2.setTextAlignment(Qt.AlignCenter)
             self.variety_sheet_widget.sheet_table.setItem(row, 2, item2)
 
@@ -668,7 +689,23 @@ class UserDataMaintain(UserDataMaintainUI):
         add_action = r_menu.addAction('增加数据')
         add_action.setIcon(QIcon('media/icons/add.png'))
         add_action.triggered.connect(self.to_add_sheet_records)
+        export_action = r_menu.addAction('导出数据')
+        export_action.setIcon(QIcon('media/icons/export.png'))
+        export_action.triggered.connect(self.to_export_data)
         r_menu.exec_(QCursor.pos())
+
+    def to_export_data(self):
+        # 导出表数据
+        current_row = self.variety_sheet_widget.sheet_table.currentRow()
+        if current_row < 0:
+            return
+        # 弹窗显示数据表实际内容,并提供修改
+        sheet_id = self.variety_sheet_widget.sheet_table.item(current_row, 0).text()
+        sheet_title = self.variety_sheet_widget.sheet_table.item(current_row, 3).text()
+        export_sheet_popup = ExportSheetPopup(sheet_id, self)
+        export_sheet_popup.setWindowTitle(sheet_title)
+        export_sheet_popup.setWindowIcon(QIcon('media/icons/export.png'))
+        export_sheet_popup.show()
 
     def edit_sheet_values_popup(self):
         current_row = self.variety_sheet_widget.sheet_table.currentRow()
@@ -689,6 +726,7 @@ class UserDataMaintain(UserDataMaintainUI):
         # 弹窗提供增加数据表入口
         sheet_id = self.variety_sheet_widget.sheet_table.item(current_row, 0).text()
         sheet_title = self.variety_sheet_widget.sheet_table.item(current_row, 3).text()
+        sheet_title += " [{}]".format(self.variety_sheet_widget.sheet_table.item(current_row, 2).text())
         add_popup = AddSheetRecordPopup(self)
         add_popup.set_sheet_id(sheet_id)
         add_popup.setWindowTitle(sheet_title)
