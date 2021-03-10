@@ -592,12 +592,12 @@ class ChartWidget(QWidget):
 
         save_button = QPushButton("保存图形", self)
         save_menu = QMenu(save_button)
-        chart_action = save_menu.addAction("普通图形")
-        setattr(chart_action, "chart_type", "normal")
-        chart_action.triggered.connect(self.save_chart_option)
-        season_action = save_menu.addAction("季节图形")
-        setattr(season_action, "chart_type", "season")
-        season_action.triggered.connect(self.save_chart_option)
+        self.chart_action = save_menu.addAction("普通图形")
+        setattr(self.chart_action, "chart_type", "normal")
+        self.chart_action.triggered.connect(self.save_chart_option)
+        self.season_action = save_menu.addAction("季节图形")
+        setattr(self.season_action, "chart_type", "season")
+        self.season_action.triggered.connect(self.save_chart_option)
         save_button.setMenu(save_menu)
         other_layout.addWidget(save_button)
         main_layout.addLayout(other_layout)
@@ -624,6 +624,7 @@ class DisposeChartPopup(QDialog):
     def __init__(self, variety_en, sheet_id, *args, **kwargs):
         super(DisposeChartPopup, self).__init__(*args, **kwargs)
         self.source_dataframe = None
+        self.is_dated = 1
 
         # 更多配置弹窗
         self.more_dispose_popup = MoreDisposePopup(self)
@@ -698,6 +699,15 @@ class DisposeChartPopup(QDialog):
         reply = network_manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(self.sheet_values_reply)
 
+    def set_range_enabled(self, enable):
+        self.option_widget.range_check.setEnabled(enable)
+        self.option_widget.start_year.setEnabled(enable)
+        self.option_widget.end_year.setEnabled(enable)
+
+    def remove_season_chart(self, enable):
+        self.option_widget.season_drawer.setEnabled(enable)
+        self.chart_widget.season_action.setEnabled(enable)
+
     def sheet_values_reply(self):
         reply = self.sender()
         if reply.error():
@@ -706,6 +716,12 @@ class DisposeChartPopup(QDialog):
             data = reply.readAll().data()
             data = json.loads(data.decode("utf-8"))
             self.cover_widget.show(text="正在处理数据 ")
+            is_dated = data['is_dated']
+            # 处理取数范围可用与否
+            if not is_dated:
+                self.set_range_enabled(False)
+                self.remove_season_chart(False)
+            self.is_dated = is_dated
             # 使用pandas处理数据到弹窗相应参数中
             self.handler_sheet_values(data["sheet_values"])
 
@@ -739,16 +755,17 @@ class DisposeChartPopup(QDialog):
             self.option_widget.end_year.addItem(str(year))
 
         sheet_headers.insert(0, "编号")                                         # 还原id列
+
+        table_show_df = value_df.iloc[1:]
+        if self.is_dated:  # 日期序列做排序
+            table_show_df = table_show_df.sort_values(by="column_0")
+        table_show_df.reset_index(inplace=True)                                  # 重置索引,让排序生效(赋予row正确的值)
         self.sheet_table.setColumnCount(len(sheet_headers))
         self.sheet_table.setHorizontalHeaderLabels(sheet_headers)
-        self.sheet_table.setRowCount(value_df.shape[0] - 1)
+        self.sheet_table.setRowCount(table_show_df.shape[0])
         self.sheet_table.horizontalHeader().setDefaultSectionSize(150)
         self.sheet_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.sheet_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-
-        table_show_df = value_df.iloc[1:]
-        table_show_df = table_show_df.sort_values(by="column_0")
-        table_show_df.reset_index(inplace=True)                                  # 重置索引,让排序生效(赋予row正确的值)
         for row, row_item in table_show_df.iterrows():                           # 遍历数据(填入表格显示)
             for col, col_key in enumerate(col_index_list):
                 # print(row_item[col_key], end=' ')
@@ -874,14 +891,17 @@ class DisposeChartPopup(QDialog):
                 # 以下的去0方式较单一,0.00就无法去除,且数据会被裁剪
                 # values_df = values_df[values_df[column_index] != "0"]
                 # values_df = values_df[values_df[column_index] != "0.0"]  # 去除计算出来是0.0的数据
-        values_df = values_df.sort_values(by="column_0")  # 最后进行数据从小到大的时间排序
+        # 日期序列进行排序
+        if self.is_dated:
+            values_df = values_df.sort_values(by="column_0")  # 最后进行数据从小到大的时间排序
         # table_show_df.reset_index(inplace=True)  # 重置索引,让排序生效(赋予row正确的值。可不操作,转为json后,索引无用处了)
         #
         # 普通图形返回结果数据
         if chart_type == "normal":
-            # 处理横轴的格式
-            date_length = base_option["x_axis"]["date_length"]
-            values_df["column_0"] = values_df["column_0"].apply(lambda x: x[:date_length])
+            # 日期序列处理横轴的格式
+            if self.is_dated:
+                date_length = base_option["x_axis"]["date_length"]
+                values_df["column_0"] = values_df["column_0"].apply(lambda x: x[:date_length])
             values_json = values_df.to_dict(orient="record")
         elif chart_type == "season":    # 季节图形将数据分为{year1: values1, year2: values2}型
             values_json = self.get_season_chart_source(values_df.copy())
@@ -928,6 +948,7 @@ class AddSheetRecordPopup(QDialog):
     def __init__(self, *args, **kwargs):
         super(AddSheetRecordPopup, self).__init__(*args, **kwargs)
         self.sheet_id = None
+        self.is_dated = 1
 
         # 初始化大小
         available_size = QDesktopWidget().availableGeometry()  # 用户的桌面信息,来改变自身窗体大小
@@ -936,9 +957,10 @@ class AddSheetRecordPopup(QDialog):
 
         layout = QVBoxLayout()
         self.tip_label = QLabel(self)
-        self.tip_label.setText('【第一行为当前表中最近日期数据】手动添加一行后,在对应位置双击录入数据。'
-                               '\n使用Ctrl+V粘贴,粘贴后可双击修改,确认无误后点击右侧保存!其中第一列格式需为yyyy-mm-dd\n'
-                               '移除一行有选中行移除选中行,无选中行移除末尾行。')
+        self.tip_label.setText('1.标题`[]`内表示是否为日期序列的数据，日期序列要求同类型才能粘贴数据!'
+                               '\n2.【第一行为当前表中最近日期数据】手动添加一行后,在对应位置双击录入数据。'
+                               '\n3.使用Ctrl+V粘贴,粘贴后可双击修改,确认无误后点击右侧保存!其中第一列格式需为yyyy-mm-dd\n'
+                               '4.移除一行有选中行移除选中行,无选中行移除末尾行。')
         self.tip_label.setStyleSheet('color:rgb(204, 95, 45)')
         layout.addWidget(self.tip_label)
         top_layout = QHBoxLayout()
@@ -990,13 +1012,16 @@ class AddSheetRecordPopup(QDialog):
             self.handle_clipboard()
 
     def handle_date_column(self, date_str):
-        try:
-            next_date = (datetime.strptime(date_str, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
-        except Exception:
-            p = InformationPopup('第一列日期格式有误!', self)
-            p.exec_()
-            return None
-        return next_date
+        if self.is_dated:
+            try:
+                next_date = (datetime.strptime(date_str, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+            except Exception:
+                p = InformationPopup('第一列日期格式有误!', self)
+                p.exec_()
+                return None
+            return next_date
+        else:
+            return date_str
 
     def handle_value_column(self, value):
         if not value:
@@ -1034,7 +1059,8 @@ class AddSheetRecordPopup(QDialog):
         for row_text in row_list:
             new_data.append(row_text.split('\t'))
         # 处理一下数据
-        new_data = list(map(self.handle_row_data, new_data))
+        if self.is_dated:
+            new_data = list(map(self.handle_row_data, new_data))
         new_data = list(filter(lambda x: len(x) > 0, new_data))
         # 填充数据
         col_count = self.paste_table.columnCount()
@@ -1058,6 +1084,7 @@ class AddSheetRecordPopup(QDialog):
         # 显示到表格中且设置不可编辑
         last_row = data.get('last_row', None)
         header_row = data.get('header_row', None)
+        self.is_dated = data.get('is_dated', 1)
         if not header_row:
             return
         del header_row['id']

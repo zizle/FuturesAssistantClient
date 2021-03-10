@@ -464,7 +464,7 @@ class UserDataMaintain(UserDataMaintainUI):
         self.variety_sheet_widget.sheet_table.clear()
         self.variety_sheet_widget.sheet_table.setColumnCount(11)
         self.variety_sheet_widget.sheet_table.setHorizontalHeaderLabels(
-            ["编号", "创建日期", "创建人", "名称", "更新时间", "更新人", "增量", "图形", "上移", "可见", "删除"]
+            ["编号", "创建日期", "日期序列", "名称", "更新时间", "更新人", "增量", "图形", "上移", "可见", "删除"]
         )
         if self.variety_sheet_widget.only_me_check.checkState():
             self.variety_sheet_widget.sheet_table.setColumnHidden(9, False)  # 显示可见列
@@ -473,18 +473,23 @@ class UserDataMaintain(UserDataMaintainUI):
 
         self.variety_sheet_widget.sheet_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.variety_sheet_widget.sheet_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.variety_sheet_widget.sheet_table.horizontalHeader().setDefaultSectionSize(75)
+        self.variety_sheet_widget.sheet_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Interactive)
         self.variety_sheet_widget.sheet_table.setRowCount(len(sheets))
 
         for row, row_item in enumerate(sheets):
             item0 = QTableWidgetItem("%04d" % row_item["id"])
             item0.setTextAlignment(Qt.AlignCenter)
+            item0.setToolTip('创建者:{}'.format(row_item["creator"]))
+            item0.setData(Qt.UserRole, {"is_dated": row_item['is_dated']})
             self.variety_sheet_widget.sheet_table.setItem(row, 0, item0)
 
             item1 = QTableWidgetItem(row_item["create_date"])
             item1.setTextAlignment(Qt.AlignCenter)
             self.variety_sheet_widget.sheet_table.setItem(row, 1, item1)
 
-            item2 = QTableWidgetItem(row_item["creator"])
+            date_index = '是' if row_item['is_dated'] else '否'
+            item2 = QTableWidgetItem(date_index)
             item2.setTextAlignment(Qt.AlignCenter)
             self.variety_sheet_widget.sheet_table.setItem(row, 2, item2)
 
@@ -721,6 +726,7 @@ class UserDataMaintain(UserDataMaintainUI):
         # 弹窗提供增加数据表入口
         sheet_id = self.variety_sheet_widget.sheet_table.item(current_row, 0).text()
         sheet_title = self.variety_sheet_widget.sheet_table.item(current_row, 3).text()
+        sheet_title += " [{}]".format(self.variety_sheet_widget.sheet_table.item(current_row, 2).text())
         add_popup = AddSheetRecordPopup(self)
         add_popup.set_sheet_id(sheet_id)
         add_popup.setWindowTitle(sheet_title)
