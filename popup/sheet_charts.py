@@ -6,8 +6,10 @@
 """ 表的图形弹窗 """
 import json
 import pandas as pd
-from PyQt5.QtWidgets import (qApp, QWidget,QTableWidget, QTableWidgetItem, QSplitter, QDialog, QVBoxLayout, QDesktopWidget, QAbstractItemView,
-                             QHeaderView, QTextEdit, QPushButton, QMessageBox, QComboBox, QLabel, QLineEdit, QGridLayout)
+from PyQt5.QtWidgets import (qApp, QWidget, QTableWidget, QTableWidgetItem, QSplitter, QDialog, QVBoxLayout,
+                             QDesktopWidget, QAbstractItemView,
+                             QHeaderView, QTextEdit, QPushButton, QMessageBox, QComboBox, QLabel, QLineEdit,
+                             QGridLayout, QCheckBox)
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QIcon, QIntValidator, QDoubleValidator
 from PyQt5.QtWebEngineWidgets import QWebEngineView
@@ -220,7 +222,7 @@ class EditChartOptionPopup(QDialog):
         double_validate = QDoubleValidator(self)
 
         main_layout = QGridLayout()
-        title_label = QLabel('左轴调整:', self)
+        title_label = QLabel('左轴:', self)
         title_label.setObjectName('titleLabel')
         main_layout.addWidget(title_label, 0, 0, 1, 6)
 
@@ -238,7 +240,7 @@ class EditChartOptionPopup(QDialog):
         self.left_max_edit.setValidator(double_validate)
         main_layout.addWidget(self.left_max_edit, 1, 5)
 
-        title_label = QLabel('右轴调整:', self)
+        title_label = QLabel('右轴:', self)
         title_label.setObjectName('titleLabel')
         main_layout.addWidget(title_label, 2, 0, 1, 6)
 
@@ -256,7 +258,7 @@ class EditChartOptionPopup(QDialog):
         self.right_max_edit.setValidator(double_validate)
         main_layout.addWidget(self.right_max_edit, 3, 5)
 
-        title_label = QLabel('横轴调整(范围仅限输入年份,为0时表示不限制)', self)
+        title_label = QLabel('横轴(范围仅限输入年份,为0时表示不限制)', self)
         title_label.setObjectName('titleLabel')
         main_layout.addWidget(title_label, 4, 0, 1, 6)
 
@@ -276,17 +278,27 @@ class EditChartOptionPopup(QDialog):
         self.end_year_edit.setValidator(integer_validate)
         main_layout.addWidget(self.end_year_edit, 5, 5)
 
-        title_label = QLabel('解说编辑:', self)
+        # 水印
+        title_label = QLabel('水印:', self)
         title_label.setObjectName('titleLabel')
         main_layout.addWidget(title_label, 6, 0, 1, 6)
+        self.check_water_graph = QCheckBox(self)
+        self.check_water_graph.setText('水印')
+        self.water_graph_text = QLineEdit(self)
+        main_layout.addWidget(self.check_water_graph, 7, 0, 1, 1)
+        main_layout.addWidget(self.water_graph_text, 7, 1, 1, 5)
+
+        title_label = QLabel('解说编辑:', self)
+        title_label.setObjectName('titleLabel')
+        main_layout.addWidget(title_label, 8, 0, 1, 6)
         self.decipherment_edit = QTextEdit(self)
         self.decipherment_edit.setMaximumHeight(50)
-        main_layout.addWidget(self.decipherment_edit, 7, 0, 1, 0)
+        main_layout.addWidget(self.decipherment_edit, 8, 0, 1, 0)
 
         # 确定按钮
         self.confirm_button = QPushButton("确定")
         self.confirm_button.clicked.connect(self.confirm_modify_option)
-        main_layout.addWidget(self.confirm_button, 8, 5)
+        main_layout.addWidget(self.confirm_button, 9, 5)
         self.setLayout(main_layout)
         self.setMaximumWidth(520)
         self.setStyleSheet(
@@ -331,6 +343,12 @@ class EditChartOptionPopup(QDialog):
         self.start_year_edit.setText(default_option['start_year'])
         self.end_year_edit.setText(default_option['end_year'])
         self.decipherment_edit.setText(default_option['decipherment'])
+        if default_option['watermark']:
+            self.water_graph_text.setText(default_option['watermark'])
+            self.check_water_graph.setCheckState(Qt.Checked)
+        else:
+            self.check_water_graph.setCheckState(Qt.Unchecked)
+            self.water_graph_text.setText('瑞达期货研究院')
 
     def get_options(self):
         """ 获取修改后的配置 """
@@ -344,7 +362,8 @@ class EditChartOptionPopup(QDialog):
             'date_length': self.x_axis_format_combobox.currentData(),
             'start_year': self.start_year_edit.text().strip(),
             'end_year': self.end_year_edit.text().strip(),
-            'decipherment': self.decipherment_edit.toPlainText().strip()
+            'decipherment': self.decipherment_edit.toPlainText().strip(),
+            'watermark': self.water_graph_text.text().strip() if self.check_water_graph.checkState() else ''
         }
 
     def confirm_modify_option(self):

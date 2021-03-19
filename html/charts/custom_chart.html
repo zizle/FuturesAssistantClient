@@ -78,22 +78,24 @@ function calculateLegendRowCount(legendData){
 function generateGraphic(watermark){
     if(watermark === '' || watermark === undefined){return null}
     else{
-        return {
+        return [{
             type: 'group',
             rotation: Math.PI / 4,
             bounding: 'raw',
-            right: 80,
-            bottom: 80,
+            // right: 80,
+            // bottom: 80,
+            left: '35%',
+            top: '25%',
             z: -100,
             children: [
-                {
-                    type: 'rect',
-                    left: 'center',
-                    top: 'center',
-                    z:-100,
-                    shape:{width: 400, height: 35},
-                    style:{fill: 'rgba(0,0,0,0.4)'}
-                },
+                // {
+                //     type: 'rect',
+                //     left: 'center',
+                //     top: 'center',
+                //     z:-100,
+                //     shape:{width: 400, height: 35},
+                //     style:{fill: 'rgba(0,0,0,0.4)'}
+                // },
                 {
                     type: 'text',
                     left: 'center',
@@ -102,11 +104,42 @@ function generateGraphic(watermark){
                     style: {
                         fill: 'rgba(255,255,255,0.9)',
                         text: watermark,
-                        font: 'bold 22px Microsoft YaHei'
+                        font: '22px Microsoft YaHei'
                     }
                 }
             ]
-        }
+        }, {
+            type: 'group',
+            rotation: Math.PI / 4,
+            bounding: 'raw',
+            // right: 80,
+            // bottom: 80,
+            right: '35%',
+            top: '50%',
+            z: -100,
+            children: [
+                // {
+                //     type: 'rect',
+                //     left: 'center',
+                //     top: 'center',
+                //     z:-100,
+                //     shape:{width: 400, height: 35},
+                //     style:{fill: 'rgba(0,0,0,0.4)'}
+                // },
+                    {
+                        type: 'text',
+                        left: 'center',
+                        top: 'center',
+                        z: -100,
+                        style: {
+                            fill: 'rgba(255,255,255,0.9)',
+                            text: watermark,
+                            font: '22px Microsoft YaHei'
+                        }
+                    }
+                ]
+            }
+        ]
     }
 }
 
