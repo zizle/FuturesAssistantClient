@@ -10,12 +10,134 @@
 </head>
 <style>
 html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
-#chartBox{width: 90%; height:100%;background-color: rgb(252,252,252);margin: 0 auto}
+#chartBox{width: 70%; height:100%;background-color: rgb(255,255,255);margin: 0 auto}
 </style>
 <body>
     <div id="chartBox"></div>
 </body>
 <script>
+    function generateGraphic() {
+        return [
+            // 标题
+            {
+                type: 'text',
+                left: 'center',
+                top: '15%',
+                z: 0,
+                draggable:true,
+                style: {
+                    fill: '#fdfe03',
+                    text: '瑞达期货研究院',
+                    font: '28px Microsoft YaHei',
+                    bold: 700
+                }
+            },
+            // 公众号二维码
+            {
+                type: 'group',
+                right: '20%',
+                bottom: '18%',
+                draggable: true,
+                children: [
+                    {
+                        type: 'text',
+                        draggable: true,
+                        left: 0,
+                        top:8,
+                        style: {
+                            fill: '#c00000',
+                            text: '扫\n码\n关\n注',
+                            font: 'bolder 16px Microsoft YaHei',
+                        }
+                    },
+                    {
+                        type: 'image',
+                        left: 16,
+                        draggable: true,
+                        style: {
+                            image: 'srccode.png',
+                            width: 80,
+                            height:80
+                        }
+                    }
+                ]
+            },
+            // 图例
+            {
+               type: 'group',
+               left: '15%',
+               bottom: '18%',
+               width:100,
+               height: 80,
+               draggable: true,
+               children: [
+                   // 底
+                   {
+                        type: 'rect',
+                        z:0,
+                       draggable: true,
+                        shape:{width: 120, height: 45},
+                        style:{fill: 'rgba(255,255,255,1)',lineWidth:1}
+                    },
+                   {
+                       type: 'group',
+                       left: 5,
+                       top: 8,
+                       draggable: true,
+                       children: [
+                           {
+                               type: 'rect',
+                               top: 2,
+                               draggable: true,
+                               shape: {
+                                   width: 25,
+                                   height: 8,
+                               },
+                               style: {
+                                   fill: '#993366',
+                                   lineWidth: 5
+                               }
+                           },
+                           {
+                               type: 'text',
+                               draggable: true,
+                               left: 28,
+                               style: {
+                                    fill: '#000',
+                                    text: '持仓增减幅度%',
+                                    font: '12px Microsoft YaHei',
+                                }
+                           }
+                       ]
+                   },
+                   {
+                       type: 'group',
+                       left: 5,
+                       top: 28,
+                       children: [
+                           {
+                               type: 'line',
+                               draggable: true,
+                               top: 5,
+                               shape:{x2: 25},
+                               style: {fill: '#040883'}
+                           },
+                           {
+                               type: 'text',
+                               left: 28,
+                               draggable: true,
+                               style: {
+                                    fill: '#000',
+                                    text: '涨跌幅度%',
+                                    font: '12px Microsoft YaHei',
+                                }
+                           }
+                       ]
+                   }
+               ]
+            }
+        ]
+    }
 // 实例化echarts option的函数
 function generateChartOption(sourceData, baseOption){
     return {
@@ -45,7 +167,7 @@ function generateChartOption(sourceData, baseOption){
             axisLabel: {
                 rotate: 90,
                 fontSize: 11,
-                color: '#222',
+                color: '#000',
                 interval: 0
             },
 
@@ -65,24 +187,40 @@ function generateChartOption(sourceData, baseOption){
                 position:'left',
                 splitLine:{
                     show: false
-                }
+                },
+                // max: function (value) {
+                //     return value.max + 10
+                // },
+                // min: function (value) {
+                //     return value.min - 10
+                // }
+                boundaryGap: ['8%', '12%']
             },
             {
                 type: "value",
                 name: "指数涨跌(%)",
+                scale: true,
                 // nameLocation: 'top',
                 position:'right',
+                minInterval: 1,
                 splitLine:{
                     show: false
-                }
+                },
+                // max: function (value) {
+                //     return value.max + 2
+                // },
+                // min: function (value) {
+                //     return value.min - 2
+                // }
+                boundaryGap: ['8%', '12%']
             },
         ],
-        tooltip:{
-            trigger: 'axis',
-            axisPointer: {
-                type: 'cross',
-            }
-        },
+        // tooltip:{
+        //     trigger: 'axis',
+        //     axisPointer: {
+        //         type: 'cross',
+        //     }
+        // },
         series: [
             {
                 type: "bar",
@@ -108,33 +246,41 @@ function generateChartOption(sourceData, baseOption){
                 data: sourceData.map(item=>{return Math.round(item.wp_increase * 100, 2)})
             },
         ],
-        legend:[
-            {
-                type: 'plain',
-                left: 60,
-                bottom:70,
-                itemHeight: 10,
-                orient: 'vertical',
-                data: [
-                    {name: '持仓涨跌(%)', icon: 'rect'},
-                ],
-            },
-            {
-                type: 'plain',
-                itemHeight: 2,
-                left: 170,
-                bottom:70,
-                orient: 'vertical',
-                data: [
-                    {name: '指数涨跌(%)', icon: 'rect'},
-                ],
-            }
-        ]
+        // legend:[
+        //     {
+        //         type: 'plain',
+        //         left: 70,
+        //         bottom:70,
+        //         itemHeight: 10,
+        //         z:1,
+        //         orient: 'horizontal',
+        //         data: [
+        //             {name: '持仓涨跌(%)', icon: 'rect'},
+        //         ],
+        //         // backgroundColor: '#fff',
+        //         // borderColor: '#000',
+        //         textStyle: {color: '#fff'}
+        //     },
+        //     {
+        //         type: 'plain',
+        //         itemHeight: 2,
+        //         left: 175,
+        //         bottom:70,
+        //         orient: 'vertical',
+        //         data: [
+        //             {name: '指数涨跌(%)', icon: 'rect'},
+        //         ],
+        //         // backgroundColor: '#fff',
+        //         // borderColor: '#000',
+        //         textStyle: {color: '#fff'}
+        //     }
+        // ],
+        graphic: generateGraphic()
     }
 }
 // 主入口函数
 $(function () {
-    let chartObj = echarts.init(document.getElementById('chartBox'));
+    let chartObj = echarts.init(document.getElementById('chartBox'),null, {renderer: 'svg'});
     // 与UI界面通讯的实例
     new QWebChannel(qt.webChannelTransport, function(channel)
         {
@@ -147,7 +293,7 @@ $(function () {
             });
             // 传入重置大小
             pageContact.chartResize.connect(function (cWidth, cHeight) {
-                chartObj.resize({width: cWidth * 0.9, height: cHeight});
+                chartObj.resize({width: cWidth * 0.7, height: cHeight});
             });
         }
     );

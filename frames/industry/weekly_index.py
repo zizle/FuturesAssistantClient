@@ -78,7 +78,7 @@ class WeeklyPositionPrice(QWidget):
         self.table.horizontalHeader().setStyleSheet(BLUE_STYLE_HORIZONTAL_STYLE)
         self.table.verticalScrollBar().setStyleSheet(VERTICAL_SCROLL_STYLE)
         splitter.addWidget(self.table)
-        splitter.setSizes([self.parent().height() * 0.6, self.parent().height() * 0.4])
+        splitter.setSizes([self.parent().height() * 0.7, self.parent().height() * 0.3])
 
         layout.addWidget(splitter)
 
