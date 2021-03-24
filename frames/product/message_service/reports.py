@@ -130,8 +130,9 @@ class MultiReport(QWidget):
         self.report_table.setColumnCount(5)
         self.report_table.setHorizontalHeaderLabels(['相关品种', '标题', '类型', '日期', '阅读'])
         # self.report_table.setShowGrid(False)
-        if not ADMINISTRATOR:
-            self.report_table.horizontalHeader().setSectionHidden(4, True)
+
+        self.report_table.horizontalHeader().setSectionHidden(4, True)  #20210312更新追加的；20210324决定不显示了，没人读
+
         self.report_table.horizontalHeader().setStyleSheet(HORIZONTAL_STYLE_NO_GRID)
         self.report_table.horizontalHeader().setDefaultSectionSize(150)
         self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)

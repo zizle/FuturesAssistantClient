@@ -9,7 +9,7 @@ import time
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from PyQt5.QtWidgets import qApp, QListWidgetItem, QTableWidgetItem, QHeaderView, QMenu
+from PyQt5.QtWidgets import qApp, QListWidgetItem, QTableWidgetItem, QHeaderView, QMenu, QMessageBox
 from PyQt5.QtCore import Qt, QUrl, QThread, pyqtSignal
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
 from PyQt5.QtGui import QBrush, QColor, QCursor, QIcon
@@ -119,6 +119,8 @@ class UserDataMaintain(UserDataMaintainUI):
         super(UserDataMaintain, self).__init__(*args, **kwargs)
 
         self.is_ready = False  # 左侧菜单选择时是否请求品种下的数据组
+
+        self.private_deep = False
 
         for menu_item in [
             {"name": "数据源配置", "name_en": "source_config"},
@@ -286,7 +288,7 @@ class UserDataMaintain(UserDataMaintainUI):
         for row, row_item in enumerate(folder_list):
             item0 = QTableWidgetItem(str(row + 1))
             item0.setTextAlignment(Qt.AlignCenter)
-            item0.setData(Qt.UserRole, {'is_dated': row_item['is_dated']})
+            item0.setData(Qt.UserRole, {'is_dated': row_item['is_dated'], 'id': row_item['id']})
             self.source_config_widget.config_table.setItem(row, 0, item0)
 
             item1 = QTableWidgetItem(row_item["variety_name"])
@@ -312,6 +314,11 @@ class UserDataMaintain(UserDataMaintainUI):
             setattr(item5_button, "row_index", row)
             item5_button.clicked.connect(self.updating_sheets_of_folder)
             self.source_config_widget.config_table.setCellWidget(row, 5, item5_button)
+
+            item6_button = OperateButton('media/icons/delete.png', 'media/icons/delete_hover.png', self.source_config_widget.config_table)
+            setattr(item6_button, 'row_index', row)
+            item6_button.clicked.connect(self.delete_sheets_of_folder)
+            self.source_config_widget.config_table.setCellWidget(row, 6, item6_button)
 
     def updating_sheets_of_folder(self):
         """ 更新文件夹内的所有数据表 """
@@ -346,6 +353,27 @@ class UserDataMaintain(UserDataMaintainUI):
         self.source_config_widget.updating_process.setValue(0)
         self.source_config_widget.updating_process.show()
         self.update_folder_sheets_to_server(variety_en, group_id, folder_path, is_dated)
+
+    def delete_sheets_of_folder(self):
+        button_clicked = self.sender()
+        current_row = getattr(button_clicked, "row_index")
+        row_data = self.source_config_widget.config_table.item(current_row, 0).data(Qt.UserRole)
+        cid = row_data.get('id', 0)
+        network_manager = getattr(qApp, '_network', None)
+        if not network_manager:
+            return
+        url = SERVER_API + 'industry/user-folder/{}/'.format(cid)
+        r = QNetworkRequest(QUrl(url))
+        r.setRawHeader("Authorization".encode("utf-8"), get_user_token().encode("utf-8"))
+        reply = network_manager.deleteResource(r)
+        reply.finished.connect(self.delete_folder_config_reply)
+
+    def delete_folder_config_reply(self):
+        reply = self.sender()
+        m = '删除失败!' if reply.error() else '删除成功!'
+        p = InformationPopup(m, self)
+        p.exec_()
+        self.show_groups_folder_list()
 
     def update_folder_sheets_to_server(self, variety_en, group_id, folder_path, is_dated):
         """ 读取数据,更新数据到服务端 """
@@ -585,14 +613,24 @@ class UserDataMaintain(UserDataMaintainUI):
         if col == 9:  # 发起修改私有化数据表的请求
             sheet_id = self.variety_sheet_widget.sheet_table.item(row, 0).text()
             is_private = 1 if self.variety_sheet_widget.sheet_table.item(row, col).checkState() else 0
-            self.request_sheet_private(sheet_id, is_private)
+            op_text = '私有化' if is_private else '公开展示'
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle('深度操作')
+            msg_box.setText(f'是否将此表关联的数据图形也{op_text}？')
+            msg_box.setIcon(QMessageBox.Question)
+            msg_box.addButton('否', QMessageBox.AcceptRole)
+            msg_box.addButton('是', QMessageBox.AcceptRole)
+            is_deep = msg_box.exec()
 
-    def request_sheet_private(self, sheet_id, is_private):
+            self.request_sheet_private(sheet_id, is_private, is_deep)
+
+    def request_sheet_private(self, sheet_id, is_private, is_deep=0):
         """ 发请求sheet表私有化状态的改变 """
-        url = SERVER_API + "sheet/{}/public/".format(sheet_id)
+        url = SERVER_API + "sheet/{}/public/?is_deep={}".format(sheet_id, is_deep)
         user_token = get_user_token()
         network_manager = getattr(qApp, "_network")
         request = QNetworkRequest(QUrl(url))
+        request.setHeader(QNetworkRequest.ContentTypeHeader, 'application/json')
         request.setRawHeader("Authorization".encode('utf-8'), user_token.encode("utf-8"))
         reply = network_manager.post(request, json.dumps({"is_private": is_private}).encode("utf-8"))
         reply.finished.connect(self.modify_sheet_private_reply)

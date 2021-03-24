@@ -11,6 +11,7 @@ from PyQt5.QtCore import QCoreApplication, Qt
 import pandas
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from frames import WelcomePage, ClientMainApp
+from utils.hooks import exception_hook
 
 QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)  # 高分辨率DPI屏幕自动缩放
 
@@ -27,4 +28,5 @@ app.processEvents()  # non-blocking
 main_app = ClientMainApp()
 main_app.show()
 splash.finish(main_app)
+sys.excepthook = exception_hook
 sys.exit(app.exec_())

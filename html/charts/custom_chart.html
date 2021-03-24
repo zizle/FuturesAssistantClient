@@ -78,22 +78,24 @@ function calculateLegendRowCount(legendData){
 function generateGraphic(watermark){
     if(watermark === '' || watermark === undefined){return null}
     else{
-        return {
+        return [{
             type: 'group',
             rotation: Math.PI / 4,
             bounding: 'raw',
-            right: 80,
-            bottom: 80,
+            // right: 80,
+            // bottom: 80,
+            left: '35%',
+            top: '25%',
             z: -100,
             children: [
-                {
-                    type: 'rect',
-                    left: 'center',
-                    top: 'center',
-                    z:-100,
-                    shape:{width: 400, height: 35},
-                    style:{fill: 'rgba(0,0,0,0.4)'}
-                },
+                // {
+                //     type: 'rect',
+                //     left: 'center',
+                //     top: 'center',
+                //     z:-100,
+                //     shape:{width: 400, height: 35},
+                //     style:{fill: 'rgba(0,0,0,0.4)'}
+                // },
                 {
                     type: 'text',
                     left: 'center',
@@ -102,11 +104,42 @@ function generateGraphic(watermark){
                     style: {
                         fill: 'rgba(255,255,255,0.9)',
                         text: watermark,
-                        font: 'bold 22px Microsoft YaHei'
+                        font: '22px Microsoft YaHei'
                     }
                 }
             ]
-        }
+        }, {
+            type: 'group',
+            rotation: Math.PI / 4,
+            bounding: 'raw',
+            // right: 80,
+            // bottom: 80,
+            right: '35%',
+            top: '50%',
+            z: -100,
+            children: [
+                // {
+                //     type: 'rect',
+                //     left: 'center',
+                //     top: 'center',
+                //     z:-100,
+                //     shape:{width: 400, height: 35},
+                //     style:{fill: 'rgba(0,0,0,0.4)'}
+                // },
+                    {
+                        type: 'text',
+                        left: 'center',
+                        top: 'center',
+                        z: -100,
+                        style: {
+                            fill: 'rgba(255,255,255,0.9)',
+                            text: watermark,
+                            font: '22px Microsoft YaHei'
+                        }
+                    }
+                ]
+            }
+        ]
     }
 }
 
@@ -163,6 +196,10 @@ function generateOption(baseOption, sourceData, sheetHeaders){
     };
 }
 
+function getSeriesPoints(yearData,column_index) {
+    return yearData.map(item=>{return [item["column_0"], item[column_index]]})
+}
+
 // 获取图形序列和图例
 function getSeasonSeriesLegend(seriesData, sourceData){
     let optData = seriesData[0];
@@ -171,13 +208,24 @@ function getSeasonSeriesLegend(seriesData, sourceData){
     for(let yearKey in sourceData){
         if (yearKey === "xAxisData"){continue}
         let yearData = sourceData[yearKey];
+        let seriesPoints = getSeriesPoints(yearData, optData.column_index)
         let seriesOption = {
             type: "line",
             name: yearKey,
             yAxisIndex: 0,
             connectNulls: true,
-            data: yearData.map(item=>{return [item["column_0"], item[optData.column_index]]})
+            //data: yearData.map(item=>{return [item["column_0"], item[optData.column_index]]})
+            data: seriesPoints
         };
+        // 改为单点
+        if (seriesPoints.length === 1){
+            seriesOption = {
+                type: 'scatter',
+                name: yearKey,
+                yAxisIndex: 0,
+                data: seriesPoints
+            }
+        }
         seriesArray.push(seriesOption);
         legend.data.push(yearKey)
     }
