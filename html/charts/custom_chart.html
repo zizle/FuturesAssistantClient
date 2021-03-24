@@ -196,6 +196,10 @@ function generateOption(baseOption, sourceData, sheetHeaders){
     };
 }
 
+function getSeriesPoints(yearData,column_index) {
+    return yearData.map(item=>{return [item["column_0"], item[column_index]]})
+}
+
 // 获取图形序列和图例
 function getSeasonSeriesLegend(seriesData, sourceData){
     let optData = seriesData[0];
@@ -204,13 +208,24 @@ function getSeasonSeriesLegend(seriesData, sourceData){
     for(let yearKey in sourceData){
         if (yearKey === "xAxisData"){continue}
         let yearData = sourceData[yearKey];
+        let seriesPoints = getSeriesPoints(yearData, optData.column_index)
         let seriesOption = {
             type: "line",
             name: yearKey,
             yAxisIndex: 0,
             connectNulls: true,
-            data: yearData.map(item=>{return [item["column_0"], item[optData.column_index]]})
+            //data: yearData.map(item=>{return [item["column_0"], item[optData.column_index]]})
+            data: seriesPoints
         };
+        // 改为单点
+        if (seriesPoints.length === 1){
+            seriesOption = {
+                type: 'scatter',
+                name: yearKey,
+                yAxisIndex: 0,
+                data: seriesPoints
+            }
+        }
         seriesArray.push(seriesOption);
         legend.data.push(yearKey)
     }
