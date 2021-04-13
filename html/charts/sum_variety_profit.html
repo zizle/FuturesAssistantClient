@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>累计品种盈亏</title>
+    <script src="js/jquery-1.7.2.min.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/qwebchannel.js"></script>
+    <script src="js/public.js"></script>
+</head>
+<style>
+html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
+#chartBox{width: 100%; height:100%;background-color: rgb(252,252,252);margin: 0 auto}
+</style>
+<body>
+<div id="chartBox"></div>
+</body>
+<script>
+
+// 实例化echarts option的函数
+function generateChartOption(sourceData, baseOption){
+    return {
+        color: COLORS,
+        grid: {
+            bottom: 10,
+            containLabel: true
+        },
+        title:{
+            text: '累计品种盈亏',
+            textStyle: {fontSize: 22}
+        },
+        xAxis:{
+            type: 'category',
+            data: sourceData.map(item => {return item.variety_text}),
+        },
+        yAxis: [
+            {
+                type: "value",
+                name: '元',
+                scale: true,
+                position:'left'
+            },
+            {
+                type: "value",
+                name: '手',
+                scale: true,
+                position:'right'
+            }
+        ],
+        tooltip:{
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross',
+            }
+        },
+        toolbox:{
+            feature:{
+                dataZoom:{},
+                dataView:{},
+            }
+        },
+        series: [
+            {
+                type: "bar",
+                name: "盈利金额",
+                yAxisIndex: 0,
+                // connectNulls: true,
+                // lineStyle:{
+                //     width: 3
+                // },
+                // symbol:'none',
+                data: sourceData.map(item => {return item.yingli})
+            },
+            {
+                type: 'bar',
+                name: '亏损金额',
+                yAxisIndex: 0,
+                data: sourceData.map(item => {return item.kuisun})
+            },
+            {
+                type: "line",
+                name: "盈利手数",
+                yAxisIndex: 1,
+                connectNulls: true,
+                lineStyle:{
+                    width: 3
+                },
+                symbol:'none',
+                data: sourceData.map(item => {return item.yingli_count})
+            },
+            {
+                type: "line",
+                name: "亏损手数",
+                yAxisIndex: 1,
+                connectNulls: true,
+                lineStyle:{
+                    width: 3
+                },
+                symbol:'none',
+                data: sourceData.map(item => {return item.kuisun_count})
+            },
+
+        ],
+        legend:[
+            {
+                type: 'plain',
+                left: 'center',
+                // itemHeight: 2,
+                // orient: 'vertical',
+                data: [
+                    {name: '盈利金额'},
+                    {name: '亏损金额'},
+                    {name: '盈利手数'},
+                    {name: '亏损手数'}
+                ]
+            }
+        ]
+    };
+}
+
+// 主入口函数
+$(function () {
+    let chartObj = echarts.init(document.getElementById('chartBox'));
+    // 与UI界面通讯的实例
+    new QWebChannel(qt.webChannelTransport, function(channel)
+        {
+            let pageContact = channel.objects.pageContactChannel;
+            // 传入绘图数据
+            pageContact.chartSource.connect(function (sourceData, baseOption) {
+                let option = generateChartOption(JSON.parse(sourceData), JSON.parse(baseOption));
+                chartObj.clear();
+                chartObj.setOption(option, true)
+            });
+            // 传入重置大小
+            pageContact.chartResize.connect(function (cWidth, cHeight) {
+                chartObj.resize({width: cWidth, height: cHeight});
+            });
+            // 清除图形
+            // pageContact.clearChart.connect(function () {
+            //     chartObj.clear();
+            // })
+        }
+    );
+})
+</script>
+</html>
