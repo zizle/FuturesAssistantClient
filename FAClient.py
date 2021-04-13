@@ -5,6 +5,7 @@
 # Created: 2020-05-18
 # ---------------------------
 import sys
+from os import environ
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QCoreApplication, Qt
@@ -12,6 +13,17 @@ import pandas
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from frames import WelcomePage, ClientMainApp
 from utils.hooks import exception_hook
+
+# 去除警告
+# Warning: QT_DEVICE_PIXEL_RATIO is deprecated. Instead use:
+#    QT_AUTO_SCREEN_SCALE_FACTOR to enable platform plugin controlled per-screen factors.
+#    QT_SCREEN_SCALE_FACTORS to set per-screen factors.
+#    QT_SCALE_FACTOR to set the application global scale factor.
+environ["QT_DEVICE_PIXEL_RATIO"] = "0"
+environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+environ["QT_SCREEN_SCALE_FACTORS"] = "1"
+environ["QT_SCALE_FACTOR"] = "1"
+
 
 QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)  # 高分辨率DPI屏幕自动缩放
 
