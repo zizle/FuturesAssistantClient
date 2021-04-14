@@ -161,11 +161,12 @@ class CZCEParser(QObject):
         xls_df = read_excel(file_path, thousands=',', skiprows=[0])
         # xls_df.columns = xls_df.iloc[0]  # 第一行作为列头
         # xls_df = xls_df.drop(xls_df.index[0])  # 删除第一行
-        xls_df = xls_df[~xls_df['品种月份'].str.contains('总计|小计')]  # 选取品种月份不含有小计和总计的行
-        xls_df['品种代码'] = xls_df['品种月份'].apply(lambda x: x[:2])  # 变为品种
+        # xls_df = xls_df[~xls_df['品种月份'].str.contains('总计|小计')]  # 选取品种月份不含有小计和总计的行
+        xls_df = xls_df[~xls_df['合约代码'].str.contains('总计|小计')]  # 合约代码  2021.04.14变化
+        xls_df['品种代码'] = xls_df['合约代码'].apply(lambda x: x[:2])  # 变为品种
         # 2020-09-07 空盘量->持仓量
         if xls_df.columns.values.tolist() != [
-            '品种月份', '昨结算', '今开盘', '最高价', '最低价', '今收盘', '今结算', '涨跌1', '涨跌2', '成交量(手)', '持仓量', '增减量', '成交额(万元)', '交割结算价', '品种代码'
+            '合约代码', '昨结算', '今开盘', '最高价', '最低价', '今收盘', '今结算', '涨跌1', '涨跌2', '成交量(手)', '持仓量', '增减量', '成交额(万元)', '交割结算价', '品种代码'
         ]:
             self.parser_finished.emit("源数据文件格式有误,解析失败!", True)
             return DataFrame()
@@ -222,8 +223,10 @@ class CZCEParser(QObject):
         contract_en = None
         is_variety = True
         # 遍历每一行，取出每个品种的数据表
+        print(self.date)
         for row_content in xls_df.itertuples():
-            info_for_match_ = full_width_to_half_width(row_content[1])
+            print(row_content[1])
+            info_for_match_ = full_width_to_half_width(str(row_content[1]))
             search_variety = re.search(r'品种:(.*)\s日期.*', info_for_match_)  # 找到品种行开头
             search_contract = re.search(r'合约:(.*)\s日期.*', info_for_match_)  # 找到合约
             search_sum = re.search(r'合计', info_for_match_)
@@ -296,6 +299,7 @@ class CZCEParser(QObject):
         # sub_df = sub_df.reindex(columns=column_indexes)  # 重新调整列
         sub_df = sub_df.drop(sub_df.index[0])  # 删除第一行
         # 去除合计行
+        sub_df['名次'] = sub_df['名次'].apply(lambda x: str(x))
         sub_df = sub_df[~sub_df['名次'].str.contains('合计')]  # 选取不含有合计的行
         sub_df[['名次', '成交量', '成交增减', '买仓量', '买仓增减', '卖仓量', '卖仓增减']] = sub_df[['名次', '成交量', '成交增减', '买仓量', '买仓增减', '卖仓量', '卖仓增减']].replace('-', 0).astype(int)
         # 增加品种代码、合约两列
