@@ -312,9 +312,9 @@ class HandleBaseThread(QThread):
         # 提取出平仓明细表
         close_df = exchange_df[exchange_df['open_text'].str.contains('平')]
         close_df['ex_profit'] = close_df['ex_profit'].astype(float)
+        close_df['hands'] = close_df['hands'].astype(float)
         # 计算交易胜率 平仓利润为+ / 总笔数
         win_rate = close_df[close_df['ex_profit'] > 0].shape[0] / close_df.shape[0]
-        print(close_df)
         # 计算盈亏比
         profit_loss_rate = close_df[close_df['ex_profit'] > 0]['ex_profit'].sum() / close_df[close_df['ex_profit'] < 0]['ex_profit'].sum()
 
@@ -357,13 +357,47 @@ class HandleBaseThread(QThread):
             'min_daily_profit': round(account_df['daily_profit_rate'].min(), 4),  # 日收益率最小
             'expected_annual_rate': round(account_df['daily_profit_rate'].mean() * 250, 4),  # 预计年化收益率,
             'total_days': account_df.shape[0],
-            'profit_days': account_df[account_df['profit'] >= 0].shape[0],
-            'loss_days': account_df[account_df['profit'] < 0].shape[0],
+            'profit_days': account_df[account_df['profit'] > 0].shape[0],
+            'loss_days': account_df[account_df['profit'] <= 0].shape[0],
             'wining_rate': round(win_rate, 4),
             'profit_loss_rate': round(-profit_loss_rate, 4),
             'net_profit': round(charge_dv_profit, 4),  # 手续费/净利润
         }  # 基础数据
         time.sleep(1)
+
+        # 组织诊断分析的数据
+        # 获利的数据
+        yldf = close_df[close_df['ex_profit'] > 0]  # 盈利的交易
+        ksdf = close_df[close_df['ex_profit'] <= 0]  # 亏损的交易
+        drksdf = account_df[account_df['profit'] <= 0]  # 单日亏损的交易
+        yl_list, ks_list = [], []
+        yl_c, ks_c = 0, 0
+        for _, row in close_df.iterrows():
+            p = row['ex_profit']
+            if p > 0:
+                yl_c += 1
+                yl_list.append(yl_c)
+                ks_c = 0
+            if p <= 0:
+                ks_c += 1
+                ks_list.append(ks_c)
+                yl_c = 0
+        doctor_data = {
+            'jyk': base_data['accumulated_net_profit'],  # 净盈亏
+            'jybs': close_df.shape[0],  # 交易笔数
+            'ylbs': yldf.shape[0],  # 盈利笔数
+            'ksbs': ksdf.shape[0],  # 亏损笔数
+            'zghl': yldf['ex_profit'].max(),  # 单笔最高获利
+            'pjhl': yldf['ex_profit'].sum() / yldf.shape[0],  # 平均获利 = 获利和 ÷ 获利笔数
+            'zgks': ksdf['ex_profit'].min(),   # 单笔最高亏损
+            'pjks': ksdf['ex_profit'].sum() / ksdf.shape[0],  # 平均亏损 = 亏损的笔数 ÷ 亏损笔数
+            'drzgks': drksdf['profit'].min(),  # 单日最高亏损
+            'drpjks': round(drksdf['profit'].sum() / drksdf.shape[0], 2),  # 单日平均亏损
+            'lxyl': max(yl_list),  # 连续盈利笔数
+            'lxks': max(ks_list)
+        }
+        print(doctor_data)
+        base_data.update(doctor_data)  # 合并
         self.handle_finished.emit(base_data)
 
 
@@ -530,7 +564,7 @@ class VarietyPercentThread(QThread):
 # 统计多空盈亏(成交明细表=>平仓明细表=>统计多空)
 class ShortMoretThread(QThread):
 
-    handle_finished = pyqtSignal(list)
+    handle_finished = pyqtSignal(dict)
 
     def __init__(self, source, *args, **kwargs):
         super(ShortMoretThread, self).__init__(*args, **kwargs)
@@ -538,7 +572,6 @@ class ShortMoretThread(QThread):
 
     def run(self):
         # 根据传入的source处理出交易的多单和空单分别的盈利亏损占总额的比例
-        result = []
         df = pd.DataFrame(self.source)
         time.sleep(1)
         # 平 卖 就是做多的单，平 买 就是做空的单
@@ -546,7 +579,6 @@ class ShortMoretThread(QThread):
         df = df[df['open_text'].str.contains('平')]
         df['hands'] = df['hands'].astype(float)
         df['ex_profit'] = df['ex_profit'].astype(float)
-
         duo_df = df[df['sale_text'].str.contains('卖')]  # 做多的单
         kong_df = df[df['sale_text'].str.contains('买')]  # 做空的单
         duo_yingli = duo_df[duo_df['ex_profit'] >= 0]['ex_profit'].sum()
@@ -557,14 +589,34 @@ class ShortMoretThread(QThread):
         kong_yingli_count = kong_df[kong_df['ex_profit'] >= 0]['hands'].sum()
         kong_kuisun = kong_df[kong_df['ex_profit'] < 0]['ex_profit'].sum()
         kong_kuisun_count = kong_df[kong_df['ex_profit'] < 0]['hands'].sum()
-        print('多单盈利', duo_yingli)
-        print('多单亏损', duo_kuisun)
-        print('空单盈利', kong_yingli)
-        print('空单亏损', kong_kuisun)
+        # print('多单盈利', duo_yingli)
+        # print('多单亏损', duo_kuisun)
+        # print('空单盈利', kong_yingli)
+        # print('空单亏损', kong_kuisun)
+
+        # 盈亏分布
+        duo_list = duo_df.to_dict(orient='records')
+        kong_list = kong_df.to_dict(orient='records')
+        duo, kong = [], []
+        for index, item in enumerate(duo_list):
+            duo.append([index, item['ex_profit']])
+        for index, item in enumerate(kong_list):
+            kong.append([index, item['ex_profit']])
+
+        # for index, item in enumerate(range(1100)):
+        #     duo.append([index, random.randint(-3000, 5000)])
+        # for index, item in enumerate(range(1000)):
+        #     kong.append([index, random.randint(-2000, 2000)])
+
         result = [
             {'valueName': '多单盈利', 'value': duo_yingli, 'handName': '多单盈利手数', 'hands': duo_yingli_count},
             {'valueName': '多单亏损', 'value': duo_kuisun, 'handName': '多单亏损手数', 'hands': duo_kuisun_count},
             {'valueName': '空单盈利', 'value': kong_yingli, 'handName': '空单盈利手数', 'hands': kong_yingli_count},
             {'valueName': '空单亏损', 'value': kong_kuisun, 'handName': '空单亏损手数', 'hands': kong_kuisun_count}
         ]
-        self.handle_finished.emit(result)
+        d = {
+            'pieData': result,
+            'scatterSale': kong,  # 空单盈亏分布
+            'scatterBuy': duo  # 多单盈亏分布
+        }
+        self.handle_finished.emit(d)
