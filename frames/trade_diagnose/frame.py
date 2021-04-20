@@ -22,7 +22,7 @@ class S(QWidget):
             {'pid': 2, 'name': '诊断分析', 'logo': ''},
         ]},
         {'pid': -2, 'name': '盈利能力', 'logo': '',  'children': [
-            {'pid': 3, 'name': '累计收益率', 'logo': ''},
+            {'pid': 3, 'name': '累计净值变化', 'logo': ''},
             {'pid': 4, 'name': '累计净利润', 'logo': ''},
             {'pid': 5, 'name': '累计品种盈亏', 'logo': ''},
         ]},
@@ -87,7 +87,7 @@ class S(QWidget):
         self.load_data_page = None  # 导入数据窗口
         self.source_view = None  # 处理后的原始数据
         self.base_view = None  # 基本数据
-        self.profit_view = None  # 累计收益率
+        self.profit_view = None  # 累计净值
         self.net_profits = None  # 累计净利润
         self.sum_variety_profit = None  # 累计品种盈亏
         self.risk_view = None  # 风险度
@@ -144,7 +144,7 @@ class S(QWidget):
         if self.current_pid == 2:  # 基本指标
             self.show_base_view_data()
 
-        elif self.current_pid == 3:  # 累计收益率
+        elif self.current_pid == 3:  # 累计净值
             self.show_sum_profit_rate()
 
         elif self.current_pid == 4:  # 累计净利润
@@ -171,7 +171,7 @@ class S(QWidget):
         self.base_view = pages.BaseViewWidget(self)
         self.base_view.finished.connect(self.tip_popup.hide)
         self.stacked.addWidget(self.base_view)
-        # 累计收益率
+        # 累计净值
         self.profit_view = pages.ProfitViewWidget(self)
         self.profit_view.finished.connect(self.tip_popup.hide)
         self.stacked.addWidget(self.profit_view)
@@ -216,6 +216,7 @@ class S(QWidget):
 
     def handle_source_error(self, e):
         QMessageBox.warning(self, '错误', e)
+        self.tip_popup.hide()
 
     def has_got_source_data(self, source):
         # 得到原始数据

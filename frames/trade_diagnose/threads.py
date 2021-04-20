@@ -125,8 +125,15 @@ class HandleSourceThread(QThread):
         trade_df['ex_date'] = [ex_date for _ in range(trade_df.shape[0])]
         return trade_df.to_dict(orient='records')
 
-    def read_close_detail(self, close_df):  # 读取平仓明细表
-        close_date = None  # 交易日期
+    def read_close_detail(self, trades):  # 读取平仓明细表
+        df = pd.DataFrame(trades)
+        df = df[df['open_text'].str.contains('平')]
+        # 改一下列名，不再修改后面的程序
+        # ['contract', 'ex_number', 'sale_text', 'ex_price', 'hands', 'ex_money', 'open_text', 'ex_profit', 'ex_date']
+        df.columns = ['contract', 'ex_number', 'sale_text', 'ex_price', 'hands', 'ex_money', 'open_text', 'close_profit', 'close_date']
+        return df.to_dict(orient='records')
+
+        # close_date = None  # 交易日期
         # close_dict = {
         #     'contract': None,  # 合约
         #     'ex_number': None,  # 成交序号
@@ -195,6 +202,9 @@ class HandleSourceThread(QThread):
         if self.bill_type != 1:
             self.error_break.emit('暂不支持此账单类型分析!')
             return
+        if len(self.files) < 1:
+            self.error_break.emit('没有检测到账单文件!')
+            return
         account = []  # 账户资金数据
         trade = []  # 成交明细
         close_position = []  # 平仓明细
@@ -216,9 +226,8 @@ class HandleSourceThread(QThread):
             # 2 读取成交明细
             trade_df = excel_file.parse(sheet_name='成交明细')
             trade += self.read_exchange_detail(trade_df)
-            # 3 日账单多读取日平仓明细
-            close_df = excel_file.parse(sheet_name='平仓明细')
-            close_position += self.read_close_detail(close_df)
+            # 3 从成交明细中提取平仓明细
+            close_position += self.read_close_detail(trade)
 
         # 处理表关系,传出数据
         self.handle_targer_data(account, trade, close_position)
@@ -227,72 +236,6 @@ class HandleSourceThread(QThread):
             'position': close_position,
             'exchange': trade
         })
-        return
-
-        varieties = ['棕榈油', '橡胶', '豆油', 'PTA']
-        contracts = ['2009', '2101', '2105']
-        # 随机生成一些数据(3 个原始表： 账户表、品种明细表、多空明细表)
-        account = []  # 账户资金状况表
-        variety = []
-        shmore = []
-        close_position = []  # 平仓明细表
-        exchange = []  # 成交明细表
-        pre = round(random.uniform(50000, 250000), 2)
-        for d in self.generate_date():
-            p = round(random.uniform(-350, 500), 2)
-            # 账户资金状况表[上日结存,当日权益,入金,出金,当日盈亏,手续费,保证金]
-            account.append(
-                {'date': d,
-                 'pre_rights': round(pre, 2), 'rights': round(pre + p, 2),
-                 'profit': p, 'charge': round(random.uniform(0, 100), 2),
-                 'bail': round(random.uniform(300, 1000), 2),
-                 'in_cash': round(random.uniform(300, 1000), 2), 'out_cash': round(random.uniform(300, 1000), 2)}
-            )
-            pre += p
-            variety.append(
-                {'date': d,
-                 'variety': random.choice(['A', 'B', 'CU', 'PG', 'AP']), 'turnover': f'{round(random.uniform(0, 7000), 2)}'}
-            )
-            shmore.append(
-                {'date': d,
-                 'shmore': random.choice(['多', '空', '多']), 'profit': p}
-            )
-            # 平仓明细表[合约,成交价,开仓价,买卖,手数,平仓盈亏,日期]
-            for _ in range(random.randint(0, 4)):
-                close_position.append(
-                    {'contract': random.choice(varieties) + random.choice(contracts),
-                     'price': str(round(random.uniform(5000, 10000), 2)),
-                     'open_price': str(round(random.uniform(5000, 10000), 2)),
-                     'direction': random.choice(['多', '空']),
-                     'hand': str(random.randint(1, 4)),
-                     'profit': str(round(random.uniform(-700, 900), 2)),
-                     'date': d}
-                )
-            # 成交明细表[合约,开仓方向,开仓价格,手数,开仓日期,平仓方向,平仓价格,平仓日期,平仓盈亏,成交金额]
-            for _ in range(random.randint(0, 4)):
-                dire = random.choice(['多', '空'])
-                exchange.append(
-                    {'contract': random.choice(varieties) + random.choice(contracts),
-                     'o_direction': '开' + dire,
-                     'c_direction': '平' + dire,
-                     'o_price': str(round(random.uniform(5000, 10000), 2)),
-                     'c_price': str(round(random.uniform(5000, 10000), 2)),
-                     'hand': str(random.randint(1, 4)),
-                     'profit': str(round(random.uniform(-2000, 8000), 2)),
-                     'o_date': d,
-                     'c_date': (datetime.datetime.strptime(d, '%Y-%m-%d') + datetime.timedelta(days=(random.randint(0, 3)))).strftime('%Y-%m-%d'),
-                     'price': str(round(random.uniform(50000, 500000), 2))
-                     }
-                )
-            time.sleep(0.0001)
-        self.handle_finished.emit({
-            'account': account,
-            'variety': variety,
-            'shmore': shmore,
-            'position': close_position,
-            'exchange': exchange
-        })
-
 
 # 处理基本数据
 class HandleBaseThread(QThread):
@@ -409,23 +352,26 @@ class HandProfitThread(QThread):
         super(HandProfitThread, self).__init__(*args, **kwargs)
         self.source = source
 
-    def calculate_profit_rate(self, pr, r, cash):
-        if float(cash) <= 0:  # 出金
-            return round(((float(r) + abs(float(cash))) / float(pr)) - 1, 2)
-        else:  # 入金
-            return round((float(r) / (float(pr) + float(cash))) - 1, 2)
-
     def run(self):
         # 根据传入的source处理出累计收益数据
-        df = pd.DataFrame(self.source)
-        time.sleep(1)
-        # 计算每日的收益率
-        # df['profit_rate'] = ((df['rights'] + df['out_cash']) / (df['pre_rights'] + df['in_cash'])) - 1
-        df['profit_rate'] = df.apply(lambda x: self.calculate_profit_rate(x['pre_rights'], x['rights'], x['sum_in_out']), axis=1)
-        t = df[['exchange_date', 'profit_rate']]
-        t['cum_sum'] = df['profit_rate'].cumsum()
+        account_df = pd.DataFrame(self.source)
+        account_df['sum_in_out'] = account_df['sum_in_out'].astype(float)
+        account_df['pre_rights'] = account_df['pre_rights'].astype(float)
+        account_df['rights'] = account_df['rights'].astype(float)
+        account_df['charge'] = account_df['charge'].astype(float)
+        # 计算当日净值=(当日权益 - 当日存取)/上日权益
+        account_df['net_value'] = (account_df['rights'] - account_df['sum_in_out']) / account_df['pre_rights']
+        # # 计算日收益率
+        # account_df['daily_profit_rate'] = account_df['net_value'] - 1
+        # 当日累计净值=前日累计净值*当日净值
+        account_df['daily_net_value'] = account_df['net_value'].cumprod()
+
+        t = account_df[['exchange_date', 'net_value', 'daily_net_value']]
+        t.columns = ['exchange_date', 'profit_rate', 'cum_sum']
+
+        t['profit_rate'] = t['profit_rate'].apply(lambda x: round(x, 2))
         t['cum_sum'] = t['cum_sum'].apply(lambda x: round(x, 2))
-        del df
+        del account_df
         self.handle_finished.emit(t.to_dict(orient='records'))
 
 

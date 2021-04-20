@@ -6,9 +6,9 @@
 import math
 import json
 
-from PyQt5.QtGui import QPainter, QPixmap, QIcon, QBrush, QColor, QFont, QPalette
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QPushButton, QTabWidget, \
-    QFrame, QHBoxLayout, QButtonGroup, QRadioButton, QScrollArea, QHeaderView
+from PyQt5.QtGui import QPainter, QPixmap, QIcon, QBrush, QColor
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QPushButton, QTabWidget,
+                             QHBoxLayout, QRadioButton, QScrollArea, QHeaderView)
 from PyQt5.QtCore import Qt, pyqtSignal, QUrl, QObject, QRect
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtWebEngineWidgets import QWebEngineView
@@ -105,18 +105,12 @@ class SourceViewWidget(QWidget):
         # 1原始账户表
         self.account_table = QTableWidget(self)
         self.tab.addTab(self.account_table, '资金明细')
-        # 2 平仓明细表
-        self.position_table = QTableWidget(self)
-        self.tab.addTab(self.position_table,  '平仓明细')
         # 3 成交明细
         self.exchange_table = QTableWidget(self)
         self.tab.addTab(self.exchange_table, '成交明细')
-        # 4 原始品种统计表
-        # self.variety_table = QTableWidget(self)
-        # self.tab.addTab(self.variety_table, '品种明细')
-        # 5 原始多空行为表
-        # self.shmore_table = QTableWidget(self)  # short - do more than
-        # self.tab.addTab(self.shmore_table, '多空明细')
+        # 2 平仓明细表
+        self.position_table = QTableWidget(self)
+        self.tab.addTab(self.position_table,  '平仓明细')
 
         layout.addWidget(self.tab)
         self.setLayout(layout)
@@ -129,14 +123,10 @@ class SourceViewWidget(QWidget):
         if not self.is_shown:
             # 显示账户表
             self.show_account_table(source_data['account'])
-            # 平仓明细表
-            self.show_position_table(source_data['position'])
             # 成交明细表
             self.show_exchange_table(source_data['exchange'])
-            # # 显示品种明细表
-            # self.show_variety_table(source_data['variety'])
-            # # 显示多空 明细表
-            # self.show_shmore_table(source_data['shmore'])
+            # 平仓明细表
+            self.show_position_table(source_data['position'])
 
     def show_account_table(self, account_list):
         self.account_table.clear()
@@ -151,7 +141,7 @@ class SourceViewWidget(QWidget):
                     item.setForeground(QBrush(QColor(255,255,255)))
                 else:
                     item.setForeground(QBrush(QColor(66,233,233)))
-                if col == 5:
+                if col == 4:
                     color = QColor(233,66,66) if float(date_item[key]) > 0 else QColor(66, 233, 66)
                     item.setForeground(QBrush(color))
                 item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -160,19 +150,16 @@ class SourceViewWidget(QWidget):
     def show_position_table(self, position_list):
         self.position_table.clear()
         self.position_table.setRowCount(len(position_list))
-        self.position_table.setColumnCount(9)
-        self.position_table.setHorizontalHeaderLabels(['日期', '合约', '成交序号', '买/卖', '成交价', '开仓价', '手数', '平仓盈亏', '原成交序号'])
+        self.position_table.setColumnCount(7)
+        self.position_table.setHorizontalHeaderLabels(['日期', '合约', '成交序号', '买/卖', '成交价', '手数', '平仓盈亏'])
         for row, date_item in enumerate(position_list):
-            for col, key in enumerate(['close_date', 'contract', 'ex_number', 'sale_text', 'ex_price', 'open_price', 'hands', 'close_profit', 'old_exnum']):
+            for col, key in enumerate(['close_date', 'contract', 'ex_number', 'sale_text', 'ex_price', 'hands', 'close_profit']):
                 item = QTableWidgetItem(str(date_item[key]))
                 item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 if col == 0:
                     item.setForeground(QBrush(QColor(255,255,255)))
                 elif col == 1:
                     item.setForeground(QBrush(QColor(245,245,2)))
-                elif col == 4:
-                    color = QColor(233, 66, 66) if date_item[key] == '多' else QColor(66,233,66)
-                    item.setForeground(QBrush(color))
                 elif col == 6:
                     color = QColor(233, 66, 66) if float(date_item[key]) >= 0 else QColor(66, 233, 66)
                     item.setForeground(QBrush(color))
@@ -191,14 +178,12 @@ class SourceViewWidget(QWidget):
                 item = QTableWidgetItem(str(date_item[key]))
                 item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 if col == 0:
-                    item.setForeground(QBrush(QColor(245,245,2)))
-                elif col in [4, 7]:
                     item.setForeground(QBrush(QColor(255,255,255)))
                 elif col == 1:
-                    color = QColor(233, 66, 66) if date_item[key] == '开多' else QColor(66,233,66)
-                    item.setForeground(QBrush(color))
-                elif col == 5:
-                    color = QColor(233, 66, 66) if date_item[key] == '平多' else QColor(66, 233, 66)
+                    # color = QColor(233, 66, 66) if date_item[key] == '开多' else QColor(66,233,66)
+                    item.setForeground(QBrush(QColor(245,245,2)))
+                elif col == 8:
+                    color = QColor(233, 66, 66) if str(date_item[key]) >= '0' else QColor(66, 233, 66)
                     item.setForeground(QBrush(color))
                 else:
                     item.setForeground(QBrush(QColor(66, 233, 233)))
@@ -460,7 +445,7 @@ class BaseViewWidget(QScrollArea):
         self.text_label.setText(text)
 
 
-# 累计收益窗口
+# 累计净值窗口
 class ProfitViewWidget(QWidget):
     finished = pyqtSignal()
 
@@ -518,7 +503,7 @@ class ProfitViewWidget(QWidget):
     def table_show(self, profit_data):
         self.table.clear()
         self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(['日期', '当日收益率', '累计收益率'])
+        self.table.setHorizontalHeaderLabels(['日期', '当日净值', '累计净值'])
         self.table.setRowCount(len(profit_data))
         for row, row_item in enumerate(profit_data):
             for col, key in enumerate(['exchange_date', 'profit_rate', 'cum_sum']):
