@@ -250,7 +250,8 @@ class BaseViewWidget(QScrollArea):
         self.setObjectName('area')
         cw.setObjectName('cw')
         self.text_label.setObjectName('tl')
-        self.setStyleSheet('#area,#cw{background-color:rgb(159, 205, 254)}#tl{background-color:rgb(20,20,20);color:rgb(235,118,0);padding-top:15px}')
+        self.text_label.setStyleSheet('background-color:rgb(20,20,20);color:rgb(235,118,0);padding-top:15px')
+        self.setStyleSheet('#area,#cw{background-color:rgb(159, 205, 254)}')
 
         self.thread_ = None
         self.is_shown = False
@@ -456,6 +457,7 @@ class ProfitViewWidget(QWidget):
         # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
         self.chart.setMaximumHeight(430)
+        self.chart.setMinimumHeight(430)
         layout.addWidget(self.chart)
         self.table = QTableWidget(self)
         self.table.horizontalHeader().setDefaultSectionSize(156)
@@ -530,6 +532,7 @@ class NetProfitsWidget(QWidget):
         # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
         self.chart.setMaximumHeight(430)
+        self.chart.setMinimumHeight(430)
         layout.addWidget(self.chart)
         self.table = QTableWidget(self)
         self.table.horizontalHeader().setDefaultSectionSize(156)
@@ -597,6 +600,7 @@ class SumVarietyProfitWidget(QWidget):
         # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
         self.chart.setMaximumHeight(430)
+        self.chart.setMinimumHeight(430)
         layout.addWidget(self.chart)
         self.table = QTableWidget(self)
         self.table.horizontalHeader().setDefaultSectionSize(156)
@@ -665,6 +669,7 @@ class RiskViewWidget(QWidget):
         # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
         self.chart.setMaximumHeight(430)
+        self.chart.setMinimumHeight(430)
         layout.addWidget(self.chart)
         self.table = QTableWidget(self)
         self.table.horizontalHeader().setDefaultSectionSize(156)
@@ -732,7 +737,8 @@ class VarietyViewWidget(QWidget):
 
         # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
-        self.chart.setMaximumHeight(420)
+        self.chart.setMaximumHeight(430)
+        self.chart.setMinimumHeight(430)
         layout.addWidget(self.chart)
         self.table = QTableWidget(self)
         self.table.horizontalHeader().setDefaultSectionSize(156)
@@ -807,6 +813,7 @@ class ShortMoreViewWidget(QWidget):
         # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
         self.chart.setMaximumHeight(430)
+        self.chart.setMinimumHeight(430)
         layout.addWidget(self.chart)
         self.table = QTableWidget(self)
         self.table.horizontalHeader().setDefaultSectionSize(156)
