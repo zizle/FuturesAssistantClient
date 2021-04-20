@@ -316,7 +316,7 @@ class BaseViewWidget(QScrollArea):
 
     def show_data(self, base_data):
         self.show_base_data(base_data)
-        self.show_text()
+        self.show_text(base_data)
 
     def show_base_data(self, base_data):
         # 显示目标数据
@@ -372,16 +372,16 @@ class BaseViewWidget(QScrollArea):
             if r >= 3:
                 text = '您的资金管理和风险控制相当成功，已经达到了投资计划的目标位置。'
             elif 1 <= r <= 3:
-                text = '您的计划有大部分是成功的，您的风险控制也做的相当好，建议您进一步学习技术分析，提高胜率，继而提高账户的盈利水平。'
+                text = '您的计划有大部分是成功的，您的风险控制也做的相当好，建议您进一步学习技术分析，提高盈亏比，继而提高账户的盈利水平。'
             else:
-                text = '您往往喜欢规避风险，一旦微小获利就立即出场，相反，亏损情况下却犹豫不决或未及时止损，但您的运气不错，胜率较高，建议您正确认识风险，果断止损，做好风险的管理。'
+                text = '您往往喜欢规避风险，一旦微小获利就立即出场，相反，亏损情况下却犹豫不决或未及时止损，但您的运气不错，盈亏比较高，建议您正确认识风险，果断止损，做好风险的管理。'
         else:
             if r >= 3:
-                text = '您有较好的资金管理和风险控制，但是您的胜率不高，建议您加强技术分析的学习，提高胜率。'
+                text = '您有较好的资金管理和风险控制，但是您的盈亏比不高，建议您加强技术分析的学习，提高盈利能力。'
             elif 1 <= r <= 3:
-                text = '您的风险控制也做的比较好，但是胜率不高，建议您进一步学习技术分析，提高胜率，继而提高账户的盈利水平。'
+                text = '您的风险控制也做的比较好，但是盈亏比不高，建议您进一步学习技术分析，继而提高账户的盈利水平。'
             else:
-                text = '您往往喜欢规避风险，一旦微小获利就立即出场，相反，亏损情况下却犹豫不决或未及时止损，建议您正确认识风险，果断止损，做好风险的管理。同时加强技术分析的学习，提高胜率。'
+                text = '您往往喜欢规避风险，一旦微小获利就立即出场，相反，亏损情况下却犹豫不决或未及时止损，建议您正确认识风险，果断止损，做好风险的管理。同时加强技术分析的学习，提高盈利水平。'
         return text
 
     def get_lxykfx_text(self, a, b):
@@ -400,28 +400,27 @@ class BaseViewWidget(QScrollArea):
             t2 = '您一定是上帝的宠儿，积智慧和运气与一身。'
         return [t1, t2]
 
-    def show_text(self):  # 显示诊断结果
+    def show_text(self, base_data):  # 显示诊断结果
         class TextData(object):
             # 胜率分析
-            jyk = -1275.26  # 净盈亏
-            jybs = 57
-            ylbs = 28
-            ksbs = 29
-            cpbs = 0
+            jyk = base_data['jyk']  # 净盈亏
+            jybs = int(base_data['jybs'])  # 交易笔数
+            ylbs = int(base_data['ylbs'])  # 盈利笔数
+            ksbs = int(base_data['ksbs'])  # 亏损笔数
             slfx = ''  # 胜率分析
             # 单笔盈亏分析
-            zghl = 645  # 最高获利
-            pjhl = 210  # 平均获利
-            zgks = -456  # 最高亏损
-            pjks = -104  # 平均亏损
-            drzgks = -784  # 单日最高亏损
-            drpjks = -89  # 单日平均亏损
+            zghl = base_data['zghl']  # 最高获利
+            pjhl = base_data['pjhl']  # 平均获利
+            zgks = base_data['zgks']  # 最高亏损
+            pjks = base_data['pjks']  # 平均亏损
+            drzgks = base_data['drzgks']  # 单日最高亏损
+            drpjks = round(base_data['drpjks'], 2)  # 单日平均亏损
             ykfx = ''
             # 平均盈亏比分析
             pjykfx = ''
             # 连续盈亏次数
-            lxyl = 3  # 连续盈利笔数
-            lxks = 4  # 连续亏损笔数
+            lxyl = int(base_data['lxyl'])  # 连续盈利笔数
+            lxks = int(base_data['lxks'])  # 连续亏损笔数
             lxykfx = ['', '']  # 连续盈亏分析
 
 
@@ -864,7 +863,7 @@ class ShortMoreViewWidget(QWidget):
         # 加载图形
         self.contact_channel.chartSource.emit(json.dumps(profit_data), '{}')
         # 表格显示数据
-        self.table_show(profit_data)
+        self.table_show(profit_data['pieData'])
 
     def table_show(self, profit_data):
         self.table.clear()
