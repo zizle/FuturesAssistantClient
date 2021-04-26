@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>累计收益率</title>
+    <title>累计净值</title>
     <script src="js/jquery-1.7.2.min.js"></script>
     <script src="js/echarts.min.js"></script>
     <script src="js/qwebchannel.js"></script>
@@ -26,7 +26,7 @@ function generateChartOption(sourceData, baseOption){
             containLabel: true
         },
         title:{
-            text: '累计收益率',
+            text: '累计净值折线图',
             textStyle: {fontSize: 22}
         },
         xAxis:{
@@ -55,14 +55,14 @@ function generateChartOption(sourceData, baseOption){
         series: [
             {
                 type: "line",
-                name: "累计收益率",
+                name: "累计净值",
                 yAxisIndex: 0,
                 connectNulls: true,
                 lineStyle:{
                     width: 3
                 },
                 symbol:'none',
-                data: sourceData.map(item => {return (item.cum_sum * 100).toFixed(2)})
+                data: sourceData.map(item => {return item.cum_sum})
             }
         ],
         // legend:[
