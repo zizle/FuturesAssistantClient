@@ -19,20 +19,20 @@ class S(QWidget):
         {'pid': -1, 'name': '账户概况', 'logo': '', 'children': [
             # {'pid': 0, 'name': '数据概览', 'logo': ''}, 0为导入数据页
             {'pid': 1, 'name': '原始数据', 'logo': ''},
-            {'pid': 2, 'name': '诊断分析', 'logo': ''},
+            {'pid': 2, 'name': '账户基本统计', 'logo': ''},  # 诊断分析
         ]},
-        {'pid': -2, 'name': '盈利能力', 'logo': '',  'children': [
+        {'pid': -4, 'name': '交易分析', 'logo': '', 'children': [
+            {'pid': 7, 'name': '交易品种统计', 'logo': ''},
+            {'pid': 8, 'name': '多空行为统计', 'logo': ''}
+        ]},
+        {'pid': -2, 'name': '盈亏分析', 'logo': '',  'children': [
             {'pid': 3, 'name': '累计净值变化', 'logo': ''},
             {'pid': 4, 'name': '累计净利润', 'logo': ''},
             {'pid': 5, 'name': '累计品种盈亏', 'logo': ''},
         ]},
-        {'pid': -3, 'name': '风控能力', 'logo': '',  'children': [
+        {'pid': -3, 'name': '风控分析', 'logo': '',  'children': [
             {'pid': 6, 'name': '日风险度', 'logo': ''},
-        ]},
-        {'pid': -4, 'name': '交易行为', 'logo': '',  'children': [
-            {'pid': 7, 'name': '交易品种统计', 'logo': ''},
-            {'pid': 8, 'name': '多空行为统计', 'logo': ''}
-        ]},
+        ]}
     ]
 
     def __init__(self, *args, **kwargs):
@@ -104,7 +104,6 @@ class S(QWidget):
         self.tip_popup.show(text='正在加载模块...')
         layout.addWidget(self.splitter)
         self.setLayout(layout)
-
         # 处理原始数据的线程
         self.thread_ = None
         self.source_data = None
@@ -221,14 +220,14 @@ class S(QWidget):
     def has_got_source_data(self, source):
         # 得到原始数据
         self.source_data = source
-        self.source_view.show_source_data(self.source_data)
+        self.source_view.show_source_data(self.source_data['account'], self.source_data['trade_detail'])
         self.tip_popup.hide()
         self.stacked.setCurrentIndex(1)  # 跳转到原始数据页
 
     def show_base_view_data(self):
         # 显示基础数据
         self.tip_popup.show(text='正在处理数据,请稍后...')
-        self.base_view.handle_base_data(self.source_data)  # 传入所有3个原始表
+        self.base_view.handle_base_data(self.source_data['account'], self.source_data['trade_detail'])
 
     def show_sum_profit_rate(self):
         # 显示累计收益率页面及数据
