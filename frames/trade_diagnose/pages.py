@@ -238,10 +238,22 @@ class BaseViewWidget(QScrollArea):
         self.table.verticalHeader().hide()
         layout.addWidget(self.table)
 
+        # 注释说明
+        self.explain_label = QLabel(self)
+        # self.explain_label.setWordWrap(True)
+        layout.addWidget(self.explain_label)
+        explain_text = """
+        <div>
+            <p>写点文字看一下</p>
+        </div>
+        """
+        self.explain_label.setText(explain_text)
+
         # 总结语
         self.text_label = QLabel(self)
         self.text_label.setWordWrap(True)
         self.text_label.setAlignment(Qt.AlignTop)
+        self.text_label.hide()
         layout.addWidget(self.text_label)
         layout.setSpacing(0)
         cw.setLayout(layout)
@@ -251,11 +263,41 @@ class BaseViewWidget(QScrollArea):
         cw.setObjectName('cw')
         self.text_label.setObjectName('tl')
         self.text_label.setStyleSheet('background-color:rgb(20,20,20);color:rgb(235,118,0);padding-top:15px')
+        self.explain_label.setStyleSheet('background-color:rgb(159, 205, 254);color:rgb(235,118,0);padding-top:15px')
         self.setStyleSheet('#area,#cw{background-color:rgb(159, 205, 254)}')
 
         self.thread_ = None
         self.is_shown = False
         set_table_style([self.table])
+        self.table.setRowCount(12)
+        self.table.setColumnCount(4)
+
+        self.indicators_list = [
+            {'nkey': '开始日期',   'nrow': 0, 'ncol': 0, 'vkey': 'ksrq', 'vrow': 0, 'vcol': 1},
+            {'nkey': '结束日期',   'nrow': 0, 'ncol': 2, 'vkey': 'jsrq', 'vrow': 0, 'vcol': 3},
+            {'nkey': '期初权益',   'nrow': 1, 'ncol': 0, 'vkey': 'qcqy', 'vrow': 1, 'vcol': 1},
+            {'nkey': '期末权益',   'nrow': 1, 'ncol': 2, 'vkey': 'qmqy', 'vrow': 1, 'vcol': 3},
+            {'nkey': '交易天数',   'nrow': 2, 'ncol': 0, 'vkey': 'qjts', 'vrow': 2, 'vcol': 1},
+            {'nkey': '盈利天数',   'nrow': 2, 'ncol': 2, 'vkey': 'ylts', 'vrow': 2, 'vcol': 3},
+            {'nkey': '亏损天数',   'nrow': 3, 'ncol': 0, 'vkey': 'ksts', 'vrow': 3, 'vcol': 1},
+            {'nkey': '交易胜率',   'nrow': 3, 'ncol': 2, 'vkey': 'jysl', 'vrow': 3, 'vcol': 3},
+            {'nkey': '累计净入金', 'nrow': 4, 'ncol': 0, 'vkey': 'ljjrj', 'vrow': 4, 'vcol': 1},
+            {'nkey': '累计净值',   'nrow': 4, 'ncol': 2, 'vkey': 'ljjz', 'vrow': 4, 'vcol': 3},
+            {'nkey': '交易费用', 'nrow': 5, 'ncol': 0, 'vkey': 'jyfy', 'vrow': 5, 'vcol': 1},
+            {'nkey': '累计净利润', 'nrow': 5, 'ncol': 2, 'vkey': 'ljjlr', 'vrow': 5, 'vcol': 3},
+            {'nkey': '盈亏比', 'nrow': 6, 'ncol': 0, 'vkey': 'ykb', 'vrow': 6, 'vcol': 1},
+            {'nkey': '手续费/净利润', 'nrow': 6, 'ncol': 2, 'vkey': 'fjlrb', 'vrow': 6, 'vcol': 3},
+            {'nkey': '最大回撤时点', 'nrow': 7, 'ncol': 0, 'vkey': 'zdhcsd', 'vrow': 7, 'vcol': 1},
+            {'nkey': '手续费/净利润', 'nrow': 7, 'ncol': 2, 'vkey': 'zdhcqj', 'vrow': 7, 'vcol': 3},
+            {'nkey': '最大日收益率', 'nrow': 8, 'ncol': 0, 'vkey': 'zdrsyl', 'vrow': 8, 'vcol': 1},
+            {'nkey': '最小日收益率', 'nrow': 8, 'ncol': 2, 'vkey': 'zxrsyl', 'vrow': 8, 'vcol': 3},
+            {'nkey': '日收益率均值', 'nrow': 9, 'ncol': 0, 'vkey': 'pjrsyl', 'vrow': 9, 'vcol': 1},
+            {'nkey': '预计年化收益率', 'nrow': 9, 'ncol': 2, 'vkey': 'yjnhsyl', 'vrow': 9, 'vcol': 3},
+            {'nkey': '最大仓位比率', 'nrow': 10, 'ncol': 0, 'vkey': 'zdcwbl', 'vrow': 10, 'vcol': 1},
+            {'nkey': '最小仓位比率', 'nrow': 10, 'ncol': 2, 'vkey': 'zxcwbl', 'vrow': 10, 'vcol': 3},
+            {'nkey': '平均仓位比率', 'nrow': 11, 'ncol': 0, 'vkey': 'pjcwbl', 'vrow': 11, 'vcol': 1},
+            {'nkey': '空仓天数', 'nrow': 11, 'ncol': 2, 'vkey': 'kcts', 'vrow': 11, 'vcol': 3},
+        ]
 
     def clear_thread(self):
         if self.thread_:
@@ -266,62 +308,31 @@ class BaseViewWidget(QScrollArea):
         if self.is_shown:
             self.finished.emit()
             return
-        self.add_indicators()
         self.clear_thread()
         self.thread_ = threads.HandleBaseThread(account=account, trade_detail=trade_detail, parent=self)
         self.thread_.finished.connect(self.thread_.deleteLater)
         self.thread_.handle_finished.connect(self.show_data)
         self.thread_.start()
 
-    def add_indicators(self):
-        indicators = [
-            {'key': 'start_date', 'name': '开始日期'}, {'key': 'end_date', 'name': '结束日期'},
-            {'key': 'initial_equity', 'name': '期初权益'}, {'key': 'ending_equity', 'name': '期末权益'},
-            {'key': 'net_income', 'name': '累计净入金'}, {'key': 'accumulated_net', 'name': '累计净值'},
-            {'key': 'max_huiche_date', 'name': '最大回撤时点'}, {'key': 'max_huiche_range', 'name': '最大回撤区间'},
-            {'key': 'maxrrate', 'name': '最大回撤率'}, {'key': 'exchange_cost', 'name': '交易费用'},
-            {'key': 'accumulated_profit', 'name': '累计盈亏'}, {'key': 'average_daily', 'name': '日收益率均值'},
-            {'key': 'historical_maxp', 'name': '历史最大本金'},
-            {'key': 'max_daily_profit', 'name': '历史最高收益率'}, {'key': 'min_daily_profit', 'name': '历史最低收益率'},
-            {'key': 'expected_annual_rate', 'name': '预计年化收益率'}, {'key': 'total_days', 'name': '总交易天数'},
-            {'key': 'profit_days', 'name': '盈利天数'}, {'key': 'loss_days', 'name': '亏损天数'},
-            {'key': 'wining_rate', 'name': '交易胜率'}, {'key': 'profit_loss_rate', 'name': '盈亏比'},
-            {'key': 'net_profit', 'name': '手续费/净利润'},
-            {'key': 'zdckbl', 'name': '最大仓位比例'}, {'key': 'pjckbl', 'name': '平均仓位比例'},
-            {'key': 'kcts', 'name': '空仓天数'}, {'key': 'place', 'name': ''},
-        ]
-        self.table.setRowCount(math.ceil(len(indicators) / 2))
-        self.table.setFixedHeight(math.ceil(len(indicators) / 2) * 31)
-        self.table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        i = 0
-        for row in range(self.table.rowCount()):
-            for col in range(self.table.columnCount()):
-                if col % 2 == 0:
-                    item = QTableWidgetItem(indicators[i]['name'])
-                    item.setData(Qt.UserRole, indicators[i]['key'])
-                    item.setForeground(QBrush(QColor(66, 233, 233)))
-                    self.table.setItem(row, col, item)
-                    i += 1
-                else:
-                    self.table.setColumnWidth(col, 200)
-            self.table.setRowHeight(row, 31)
-
     def show_data(self, base_data):
         self.show_base_data(base_data)
-        self.show_text(base_data)
+        # self.show_text(base_data)
+        self.finished.emit()
 
     def show_base_data(self, base_data):
+        print(base_data)
+        self.table.setRowCount(math.ceil(len(self.indicators_list) / 2))
+        self.table.setFixedHeight(math.ceil(len(self.indicators_list) / 2) * 31)
         # 显示目标数据
-        # {k:v}
-        self.finished.emit()
-        for row in range(self.table.rowCount()):
-            for col in range(self.table.columnCount()):
-                if col % 2 == 0:
-                    item = self.table.item(row, col)
-                    data_key = item.data(Qt.UserRole)
-                    data_item = QTableWidgetItem(str(base_data.get(data_key, '1')))
-                    data_item.setForeground(QBrush(QColor(255, 255, 255)))
-                    self.table.setItem(row, col + 1, data_item)
+        for indicator in self.indicators_list:
+            item1 = QTableWidgetItem(str(indicator['nkey']))
+            item1.setForeground(QBrush(QColor(66, 233, 233)))
+            self.table.setItem(indicator['nrow'], indicator['ncol'], item1)
+            item2 = QTableWidgetItem(str(base_data[indicator['vkey']]))
+            item2.setForeground(QBrush(QColor(255, 255, 255)))
+            self.table.setItem(indicator['vrow'], indicator['vcol'], item2)
+            self.table.setColumnWidth(indicator['vcol'], 180)
+            self.table.setRowHeight(indicator['nrow'], 31)
 
         self.is_shown = True
 
