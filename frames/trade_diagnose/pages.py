@@ -6,7 +6,7 @@
 import math
 import json
 
-from PyQt5.QtGui import QPainter, QPixmap, QIcon, QBrush, QColor
+from PyQt5.QtGui import QPainter, QPixmap, QIcon, QBrush, QColor, QPalette
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QPushButton, QTabWidget,
                              QHBoxLayout, QRadioButton, QScrollArea, QHeaderView)
 from PyQt5.QtCore import Qt, pyqtSignal, QUrl, QObject, QRect
@@ -230,6 +230,7 @@ class BaseViewWidget(QScrollArea):
         self.title = QLabel('交易诊断分析', self)
         self.title.setFixedHeight(35)
         self.title.setAlignment(Qt.AlignCenter)
+        self.title.hide()
         layout.addWidget(self.title)
         self.table = QTableWidget(self)
         self.table.setColumnCount(4)
@@ -242,12 +243,6 @@ class BaseViewWidget(QScrollArea):
         self.explain_label = QLabel(self)
         # self.explain_label.setWordWrap(True)
         layout.addWidget(self.explain_label)
-        explain_text = """
-        <div>
-            <p>写点文字看一下</p>
-        </div>
-        """
-        self.explain_label.setText(explain_text)
 
         # 总结语
         self.text_label = QLabel(self)
@@ -262,14 +257,16 @@ class BaseViewWidget(QScrollArea):
         self.setObjectName('area')
         cw.setObjectName('cw')
         self.text_label.setObjectName('tl')
-        self.text_label.setStyleSheet('background-color:rgb(20,20,20);color:rgb(235,118,0);padding-top:15px')
-        self.explain_label.setStyleSheet('background-color:rgb(159, 205, 254);color:rgb(235,118,0);padding-top:15px')
+        set_table_style([self.table])
+        # self.text_label.setStyleSheet('background-color:rgb(20,20,20);color:rgb(235,118,0);padding-top:15px')
+        # self.explain_label.setAttribute(Qt.WA_StyledBackground, True)
+        self.explain_label.setStyleSheet('background-color:#2b2b2b;color:#bbbbbb;padding-top:15px')
         self.setStyleSheet('#area,#cw{background-color:rgb(159, 205, 254)}')
 
         self.thread_ = None
         self.is_shown = False
-        set_table_style([self.table])
-        self.table.setRowCount(12)
+
+        self.table.setRowCount(13)
         self.table.setColumnCount(4)
 
         self.indicators_list = [
@@ -288,7 +285,7 @@ class BaseViewWidget(QScrollArea):
             {'nkey': '盈亏比', 'nrow': 6, 'ncol': 0, 'vkey': 'ykb', 'vrow': 6, 'vcol': 1},
             {'nkey': '手续费/净利润', 'nrow': 6, 'ncol': 2, 'vkey': 'fjlrb', 'vrow': 6, 'vcol': 3},
             {'nkey': '最大回撤时点', 'nrow': 7, 'ncol': 0, 'vkey': 'zdhcsd', 'vrow': 7, 'vcol': 1},
-            {'nkey': '手续费/净利润', 'nrow': 7, 'ncol': 2, 'vkey': 'zdhcqj', 'vrow': 7, 'vcol': 3},
+            {'nkey': '最大回撤区间', 'nrow': 7, 'ncol': 2, 'vkey': 'zdhcqj', 'vrow': 7, 'vcol': 3},
             {'nkey': '最大日收益率', 'nrow': 8, 'ncol': 0, 'vkey': 'zdrsyl', 'vrow': 8, 'vcol': 1},
             {'nkey': '最小日收益率', 'nrow': 8, 'ncol': 2, 'vkey': 'zxrsyl', 'vrow': 8, 'vcol': 3},
             {'nkey': '日收益率均值', 'nrow': 9, 'ncol': 0, 'vkey': 'pjrsyl', 'vrow': 9, 'vcol': 1},
@@ -297,6 +294,8 @@ class BaseViewWidget(QScrollArea):
             {'nkey': '最小仓位比率', 'nrow': 10, 'ncol': 2, 'vkey': 'zxcwbl', 'vrow': 10, 'vcol': 3},
             {'nkey': '平均仓位比率', 'nrow': 11, 'ncol': 0, 'vkey': 'pjcwbl', 'vrow': 11, 'vcol': 1},
             {'nkey': '空仓天数', 'nrow': 11, 'ncol': 2, 'vkey': 'kcts', 'vrow': 11, 'vcol': 3},
+            {'nkey': '夏普比率', 'nrow': 12, 'ncol': 0, 'vkey': 'xpbl', 'vrow': 12, 'vcol': 1},
+            {'nkey': '卡玛比率', 'nrow': 12, 'ncol': 2, 'vkey': 'kmbl', 'vrow': 12, 'vcol': 3},
         ]
 
     def clear_thread(self):
@@ -317,10 +316,35 @@ class BaseViewWidget(QScrollArea):
     def show_data(self, base_data):
         self.show_base_data(base_data)
         # self.show_text(base_data)
+        self.show_explain_text(base_data)
         self.finished.emit()
 
+    def show_explain_text(self, base_data):
+        explain_text = f"""
+        <div style='color:#42e9e9'>
+            <p>平仓盈利前五品种：<span style=color:'#dc2835'>{base_data['ylqwpz']}</span>；平仓亏损前五品种：<span style=color:'#15bc3e'>{base_data['ksqwpz']}</span></p>
+            <p>交易手数前五品种：<span style=color:'#ffffff'>{base_data['shqwpz']}</span>；交易金额前五品种：<span style=color:'#ffffff'>{base_data['jeqwpz']}</span></p>
+        </div>
+        <div>
+            <p>其中:</p>
+            <p>交易天数:账户资金记录的日期总天数  盈利天数:账户资金表中当日盈亏为正的天数  亏损天数:账户资金表中当日盈亏不为正的天数</p>
+            <p>交易胜率:平仓盈利的交易手数 / 总平仓手数</p>
+            <p>累计净值P=P1*P2*P3.....*Pn，其中P为累计净值，Pn为当日净值；Pn=(当日权益 - 当日存取)/上日权益</p>
+            <p>累计净利润：平仓交易净盈亏 - 交易费用，其中交易费用为手续费加和</p>
+            <p>盈亏比：平仓交易盈利加和 / 平仓交易亏损加和 * 100%</p>
+            <p>最大回撤时点：最大回撤区间开始时的时点，其中最大回撤区间为诊断的日期内的区间</p>
+            <p>日收益率=当日净值Pn - 1，预计年化收益率：平均日收益率 x 250</p>
+            <p>仓位比率(风险度) = 当日保证金占用 / 当日权益 * 100%</p>
+            <p>空仓天数：账户中保证金占用为0的天数</p>
+            <p>夏普比率：(年化收益率 - 无风险利率) / 收益率标准差; 其中无风险利率：2%</p>
+            <p>卡玛比率：(年化收益率 - 无风险利率) / 最大回撤率; 其中无风险利率：2%</p>
+            <p>最大回撤率:区间最高累计净值 - 当日的累计净值) / 区间最高累计净值，取最大值</p>
+        </div>
+        """
+        self.explain_label.setText(explain_text)
+        self.explain_label.setAlignment(Qt.AlignTop)
+
     def show_base_data(self, base_data):
-        print(base_data)
         self.table.setRowCount(math.ceil(len(self.indicators_list) / 2))
         self.table.setFixedHeight(math.ceil(len(self.indicators_list) / 2) * 31)
         # 显示目标数据
@@ -461,6 +485,60 @@ class BaseViewWidget(QScrollArea):
                 f'说明：该分析系统仅从客户客观交易的数据统计而得，所提建议具有一定的主观性，并非完全客观，不当之处，敬请见谅！</p>'
 
         self.text_label.setText(text)
+
+
+# 交易分析 - 手数金额
+class HandsPriceWidget(QScrollArea):
+    finished = pyqtSignal()
+
+    def __init__(self, *args, **kwargs):
+        super(HandsPriceWidget, self).__init__(*args, **kwargs)
+        cw = QWidget(self)  # center widget
+
+        self.layout = QVBoxLayout()
+        self.chart = ChartEngineView(self)
+        # 加载图形页面html
+        self.chart.page().load(QUrl('file:///html/charts/handPrice.html'))
+        # 设置与页面信息交互的通道
+        channel_qt_obj = QWebChannel(self.chart.page())  # 实例化qt信道对象,必须传入页面参数
+        self.contact_channel = ChartDataObj(self)  # 页面信息交互通道
+        self.chart.page().setWebChannel(channel_qt_obj)
+        channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道,只能注册一个
+
+        self.layout.addWidget(self.chart)
+
+        cw.setLayout(self.layout)
+        self.setWidgetResizable(True)
+        self.setWidget(cw)
+        self.thread_ = None
+        self.is_shown = False
+
+    def resizeEvent(self, event):
+        super(HandsPriceWidget, self).resizeEvent(event)
+        print('窗口大小：')
+        self.contact_channel.chartResize.emit(self.chart.width(), self.chart.height())
+
+    def clear_thread(self):
+        if self.thread_:
+            del self.thread_
+            self.thread_ = None
+
+    def handle_data(self, trade_detail):
+        if self.is_shown:
+            self.finished.emit()
+            return
+        self.clear_thread()
+        self.thread_ = threads.HandlePriceHandsThread(trade_detail, parent=self)
+        self.thread_.finished.connect(self.thread_.deleteLater)
+        self.thread_.handle_finished.connect(self.data_show)
+        self.thread_.start()
+
+    def data_show(self, data):
+        print('显示数据', data)
+        # 传入数据到页面显示图形
+        self.contact_channel.chartSource.emit(json.dumps(data), '')
+
+        self.finished.emit()
 
 
 # 累计净值窗口

@@ -21,17 +21,9 @@ class S(QWidget):
             {'pid': 1, 'name': '原始数据', 'logo': ''},
             {'pid': 2, 'name': '账户基本统计', 'logo': ''},  # 诊断分析
         ]},
-        {'pid': -4, 'name': '交易分析', 'logo': '', 'children': [
-            {'pid': 7, 'name': '交易品种统计', 'logo': ''},
-            {'pid': 8, 'name': '多空行为统计', 'logo': ''}
-        ]},
-        {'pid': -2, 'name': '盈亏分析', 'logo': '',  'children': [
-            {'pid': 3, 'name': '累计净值变化', 'logo': ''},
-            {'pid': 4, 'name': '累计净利润', 'logo': ''},
-            {'pid': 5, 'name': '累计品种盈亏', 'logo': ''},
-        ]},
-        {'pid': -3, 'name': '风控分析', 'logo': '',  'children': [
-            {'pid': 6, 'name': '日风险度', 'logo': ''},
+        {'pid': -2, 'name': '交易分析', 'logo': '', 'children': [
+            {'pid': 3, 'name': '手数-金额', 'logo': ''},
+
         ]}
     ]
 
@@ -87,12 +79,15 @@ class S(QWidget):
         self.load_data_page = None  # 导入数据窗口
         self.source_view = None  # 处理后的原始数据
         self.base_view = None  # 基本数据
-        self.profit_view = None  # 累计净值
-        self.net_profits = None  # 累计净利润
-        self.sum_variety_profit = None  # 累计品种盈亏
-        self.risk_view = None  # 风险度
-        self.variety_view = None  # 交易品种统计
-        self.shmore_view = None  # 多空盈亏统计
+        self.hands_price_view = None  # 交易分析 - 手数金额
+
+        #
+        # self.profit_view = None  # 累计净值
+        # self.net_profits = None  # 累计净利润
+        # self.sum_variety_profit = None  # 累计品种盈亏
+        # self.risk_view = None  # 风险度
+        # self.variety_view = None  # 交易品种统计
+        # self.shmore_view = None  # 多空盈亏统计
 
         # 左侧菜单点击事件
         self.tree_list.expandAll()
@@ -138,24 +133,29 @@ class S(QWidget):
         if not self.source_data:
             QMessageBox.information(self, '提示', '请导入原始数据后再进行诊断...')
             return
-        self.stacked.setCurrentIndex(self.current_pid)
+
         # 根据页面处理需要显示的数据并进行显示
         if self.current_pid == 2:  # 基本指标
             self.show_base_view_data()
 
-        elif self.current_pid == 3:  # 累计净值
-            self.show_sum_profit_rate()
+        elif self.current_pid == 3:  # 交易分析 - 手数金额
+            self.show_hands_price()
 
-        elif self.current_pid == 4:  # 累计净利润
-            self.show_net_profits()
-        elif self.current_pid == 5:   # 累计品种盈亏
-            self.show_sum_variety_profit()
-        elif self.current_pid == 6:  # 日风险度
-            self.show_risk_percent()
-        elif self.current_pid == 7:  # 交易品种统计
-            self.show_variety_percent()
-        elif self.current_pid == 8:  # 多空行为统计
-            self.show_shmore_percent()
+        #     self.show_sum_profit_rate()
+        #
+        # elif self.current_pid == 4:  # 累计净利润
+        #     self.show_net_profits()
+        # elif self.current_pid == 5:   # 累计品种盈亏
+        #     self.show_sum_variety_profit()
+        # elif self.current_pid == 6:  # 日风险度
+        #     self.show_risk_percent()
+        # elif self.current_pid == 7:  # 交易品种统计
+        #     self.show_variety_percent()
+        # elif self.current_pid == 8:  # 多空行为统计
+        #     self.show_shmore_percent()
+        else:
+            return
+        self.stacked.setCurrentIndex(self.current_pid)
 
     def set_all_pages(self):
         # 设置添加各页面的GUI
@@ -170,30 +170,36 @@ class S(QWidget):
         self.base_view = pages.BaseViewWidget(self)
         self.base_view.finished.connect(self.tip_popup.hide)
         self.stacked.addWidget(self.base_view)
-        # 累计净值
-        self.profit_view = pages.ProfitViewWidget(self)
-        self.profit_view.finished.connect(self.tip_popup.hide)
-        self.stacked.addWidget(self.profit_view)
-        # 累计净利润
-        self.net_profits = pages.NetProfitsWidget(self)
-        self.net_profits.finished.connect(self.tip_popup.hide)
-        self.stacked.addWidget(self.net_profits)
-        # 累计品种盈亏
-        self.sum_variety_profit = pages.SumVarietyProfitWidget(self)
-        self.sum_variety_profit.finished.connect(self.tip_popup.hide)
-        self.stacked.addWidget(self.sum_variety_profit)
-        # 风险度
-        self.risk_view = pages.RiskViewWidget(self)
-        self.risk_view.finished.connect(self.tip_popup.hide)
-        self.stacked.addWidget(self.risk_view)
-        # 交易品种统计
-        self.variety_view = pages.VarietyViewWidget(self)
-        self.variety_view.finished.connect(self.tip_popup.hide)
-        self.stacked.addWidget(self.variety_view)
-        # 多空盈亏统计
-        self.shmore_view = pages.ShortMoreViewWidget(self)
-        self.shmore_view.finished.connect(self.tip_popup.hide)
-        self.stacked.addWidget(self.shmore_view)
+        # 交易分析 - 手数金额
+        self.hands_price_view = pages.HandsPriceWidget(self)
+        self.hands_price_view.finished.connect(self.tip_popup.hide)
+        self.stacked.addWidget(self.hands_price_view)
+
+
+        # # 累计净值
+        # self.profit_view = pages.ProfitViewWidget(self)
+        # self.profit_view.finished.connect(self.tip_popup.hide)
+        # self.stacked.addWidget(self.profit_view)
+        # # 累计净利润
+        # self.net_profits = pages.NetProfitsWidget(self)
+        # self.net_profits.finished.connect(self.tip_popup.hide)
+        # self.stacked.addWidget(self.net_profits)
+        # # 累计品种盈亏
+        # self.sum_variety_profit = pages.SumVarietyProfitWidget(self)
+        # self.sum_variety_profit.finished.connect(self.tip_popup.hide)
+        # self.stacked.addWidget(self.sum_variety_profit)
+        # # 风险度
+        # self.risk_view = pages.RiskViewWidget(self)
+        # self.risk_view.finished.connect(self.tip_popup.hide)
+        # self.stacked.addWidget(self.risk_view)
+        # # 交易品种统计
+        # self.variety_view = pages.VarietyViewWidget(self)
+        # self.variety_view.finished.connect(self.tip_popup.hide)
+        # self.stacked.addWidget(self.variety_view)
+        # # 多空盈亏统计
+        # self.shmore_view = pages.ShortMoreViewWidget(self)
+        # self.shmore_view.finished.connect(self.tip_popup.hide)
+        # self.stacked.addWidget(self.shmore_view)
 
         self.tip_popup.hide()
 
@@ -229,32 +235,39 @@ class S(QWidget):
         self.tip_popup.show(text='正在处理数据,请稍后...')
         self.base_view.handle_base_data(self.source_data['account'], self.source_data['trade_detail'])
 
-    def show_sum_profit_rate(self):
-        # 显示累计收益率页面及数据
-        self.tip_popup.show(text='正在处理数据，请稍后...')
-        self.profit_view.handle_profit_data(self.source_data['account'])
+    def show_hands_price(self):
+        # 显示交易分析 - 金额手数分析
+        self.tip_popup.show(text='正在处理数据,请稍后...')
+        self.hands_price_view.handle_data(self.source_data['trade_detail'])
 
-    def show_net_profits(self):
-        # 显示累计净利润页面及数据
-        self.tip_popup.show(text='正在处理数据，请稍后...')
-        self.net_profits.handle_net_profits(self.source_data['account'])
 
-    def show_sum_variety_profit(self):
-        # 显示累计品种盈亏页面及数据
-        self.tip_popup.show(text='正在处理数据，请稍后...')
-        self.sum_variety_profit.handle_sum_variety_profit(self.source_data['exchange'])
 
-    def show_risk_percent(self):
-        # 显示风险度
-        self.tip_popup.show(text='正在处理数据，请稍后...')
-        self.risk_view.handle_risk_percent(self.source_data['account'])
-
-    def show_variety_percent(self):
-        # 显示品种交易额数据(各品种交易额饼图,交易手数饼图)
-        self.tip_popup.show(text='正在处理数据，请稍后...')
-        self.variety_view.handle_variety_percent(self.source_data['exchange'])
-
-    def show_shmore_percent(self):
-        # 显示多空盈亏统计数
-        self.tip_popup.show(text='正在处理数据，请稍后...')
-        self.shmore_view.handle_short_more(self.source_data['exchange'])
+    # def show_sum_profit_rate(self):
+    #     # 显示累计收益率页面及数据
+    #     self.tip_popup.show(text='正在处理数据，请稍后...')
+    #     self.profit_view.handle_profit_data(self.source_data['account'])
+    #
+    # def show_net_profits(self):
+    #     # 显示累计净利润页面及数据
+    #     self.tip_popup.show(text='正在处理数据，请稍后...')
+    #     self.net_profits.handle_net_profits(self.source_data['account'])
+    #
+    # def show_sum_variety_profit(self):
+    #     # 显示累计品种盈亏页面及数据
+    #     self.tip_popup.show(text='正在处理数据，请稍后...')
+    #     self.sum_variety_profit.handle_sum_variety_profit(self.source_data['exchange'])
+    #
+    # def show_risk_percent(self):
+    #     # 显示风险度
+    #     self.tip_popup.show(text='正在处理数据，请稍后...')
+    #     self.risk_view.handle_risk_percent(self.source_data['account'])
+    #
+    # def show_variety_percent(self):
+    #     # 显示品种交易额数据(各品种交易额饼图,交易手数饼图)
+    #     self.tip_popup.show(text='正在处理数据，请稍后...')
+    #     self.variety_view.handle_variety_percent(self.source_data['exchange'])
+    #
+    # def show_shmore_percent(self):
+    #     # 显示多空盈亏统计数
+    #     self.tip_popup.show(text='正在处理数据，请稍后...')
+    #     self.shmore_view.handle_short_more(self.source_data['exchange'])

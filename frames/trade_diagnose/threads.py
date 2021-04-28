@@ -211,8 +211,8 @@ class HandleSourceThread(QThread):
         # 取成交明细表中的开仓记录
         exchange_df = exchange_df[exchange_df['open_text'].str.contains('开')]
 
-        # 取成交明细表需要的列[合约,开仓日期,买/卖,开仓价,开仓手数,平仓日期,平仓价,平仓手数,平仓盈亏]
-        exchange_df = exchange_df[['contract', 'ex_date', 'sale_text', 'ex_price', 'hands', 'close_date', 'close_price', 'close_hands']]
+        # 取成交明细表需要的列[合约,开仓日期,买/卖,开仓价,开仓手数,平仓日期,平仓价,平仓手数,成交金额,平仓盈亏]
+        exchange_df = exchange_df[['contract', 'ex_date', 'sale_text', 'ex_price', 'hands', 'close_date', 'close_price', 'ex_money','close_hands']]
         exchange_df.rename(columns={'ex_date': 'open_date', 'ex_price': 'open_price', 'hands': 'open_hands'}, inplace=True)
         exchange_df['is_long'] = exchange_df['sale_text'].apply(lambda x: 1 if '买' in x else 0)
         exchange_df['variety_en'] = exchange_df['contract'].apply(lambda x: split_number_en(x)[0])
@@ -302,7 +302,7 @@ class HandleBaseThread(QThread):
         del trade_detail['index']
         # 处理目标数据
         account_df = self.float_column_number(account_df, ['profit', 'charge', 'sum_in_out', 'pre_rights', 'rights', 'bail'])
-        trade_detail = self.float_column_number(trade_detail, ['close_profit', 'close_hands'])
+        trade_detail = self.float_column_number(trade_detail, ['close_profit', 'close_hands', 'ex_money'])
         ksrq = account_df.at[0, 'exchange_date']  # 开始日期
         jsrq = account_df.at[account_df.shape[0] - 1, 'exchange_date']  # 结束日期
         # 计算区间总天数
@@ -340,6 +340,38 @@ class HandleBaseThread(QThread):
         min_huiche = min_huiche.at[0, 'exchange_date']
         # 仓位比例（保证金 / 权益）
         account_df['risk_rate'] = account_df['bail'] / account_df['rights']
+        ### 交易品种统计
+        # 盈利前五品种(品种分组盈利求和)、亏损前五品种(品种分组亏损求和)，交易手数排名前五(品种分组手数求和)，交易金额排名前五(品种分组金额求和)
+        # 取盈利的数据
+        p_yingli = trade_detail[trade_detail['close_profit'] > 0]
+        p_kuisun = trade_detail[trade_detail['close_profit'] < 0]
+        group_sum1 = p_yingli.groupby(by=['variety_en'], as_index=False)['close_profit'].agg({'sum_close_profit': 'sum'})
+        group_sum2 = p_kuisun.groupby(by=['variety_en'], as_index=False)['close_profit'].agg({'sum_close_profit': 'sum'})
+        # 排序取结果
+        group_sum1.sort_values(by=['sum_close_profit'], ascending=False, inplace=True)  # 正数倒序
+        group_sum2.sort_values(by=['sum_close_profit'], inplace=True)  # 负数升序
+        group_sum1['variety_text'] = group_sum1['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
+        group_sum2['variety_text'] = group_sum2['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
+        ylqwpz = group_sum1.head(5)['variety_text'].to_list()  # 盈利前五品种
+        ksqwpz = group_sum2.head(5)['variety_text'].to_list()
+        # 交易手数排名
+        group_sum = trade_detail.groupby(by=['variety_en'], as_index=False)['close_hands'].agg({'sum_hands': 'sum'})
+        group_sum.sort_values(by=['sum_hands'], ascending=False, inplace=True)
+        group_sum['variety_text'] = group_sum1['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
+        shqwpz = group_sum.head(5)['variety_text'].to_list()
+        # 交易金额排名
+        group_sum = trade_detail.groupby(by=['variety_en'], as_index=False)['ex_money'].agg({'sum_ex_money': 'sum'})
+        group_sum.sort_values(by=['sum_ex_money'], ascending=False, inplace=True)
+        group_sum['variety_text'] = group_sum1['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
+        jeqwpz = group_sum.head(5)['variety_text'].to_list()
+        # 夏普比例 = (年化收益率 - 无风险利率(2%)) / 收益率标准差
+        yjnhsyl = account_df["daily_profit_rate"].mean() * 250  # 预计年化收益率
+        print('日收益率标准方差:', account_df['daily_profit_rate'].std())
+        xpbl = (yjnhsyl - 0.02) / account_df['daily_profit_rate'].std()
+        # 卡玛比率 = (年化收益率 - 无风险利率(2%)) / 最大回撤率
+        print('最大回撤率：', account_df['retracement'].max())
+        kmbl = (yjnhsyl - 0.02) / account_df['retracement'].max()
+
 
         base_data = dict()
         base_data['ksrq'] = ksrq  # 开始日期
@@ -361,126 +393,156 @@ class HandleBaseThread(QThread):
         base_data['zdrsyl'] = f'{round(account_df["daily_profit_rate"].max() * 100, 2)}%'  # 最大日收益率
         base_data['zxrsyl'] = f'{round(account_df["daily_profit_rate"].min() * 100, 2)}%'  # 最小日收益率
         base_data['pjrsyl'] = f'{round(account_df["daily_profit_rate"].mean() * 100, 2)}%'  # 平均日收益率
-        base_data['yjnhsyl'] = f'{round(account_df["daily_profit_rate"].mean() * 250 * 100, 2)}%'  # 预计年化收益率
+        base_data['yjnhsyl'] = f'{round( yjnhsyl * 100, 2)}%'  # 预计年化收益率
         base_data['zdcwbl'] = f'{round(account_df["risk_rate"].max() * 100, 2)}%'  # 最大仓位比率(风险度)
         base_data['zxcwbl'] = f'{round(account_df["risk_rate"].min() * 100, 2)}%'  # 最小仓位比率(风险度)
         base_data['pjcwbl'] = f'{round(account_df["risk_rate"].mean() * 100, 2)}%'  # 平均仓位比率(风险度)
         base_data['kcts'] = f'{account_df[account_df["bail"] == 0].shape[0]}'  # 空仓天数
-
+        base_data['ylqwpz'] = ','.join(ylqwpz)  # 从所有平仓盈利的交易中取盈利和前五的品种
+        base_data['ksqwpz'] = ','.join(ksqwpz)  # 从所有平仓亏损的交易中去亏损和前五的品种
+        base_data['shqwpz'] = ','.join(shqwpz)  # 平仓手数排名
+        base_data['jeqwpz'] = ','.join(jeqwpz)  # 平仓成交金额排名
+        base_data['xpbl'] = f'{round(xpbl, 2)}'  # 夏普比率
+        base_data['kmbl'] = f'{round(kmbl, 2)}'  # 卡玛比率
         self.handle_finished.emit(base_data)
-        return
+        # return
+        #
+        #
+        #
+        #
+        # # 提取出平仓明细表
+        # close_df = exchange_df[exchange_df['open_text'].str.contains('平')]
+        # close_df['ex_profit'] = close_df['ex_profit'].astype(float)
+        # close_df['hands'] = close_df['hands'].astype(float)
+        # # 计算交易胜率 平仓利润为+ / 总笔数
+        # win_rate = close_df[close_df['ex_profit'] > 0].shape[0] / close_df.shape[0]
+        # # 计算盈亏比
+        # profit_loss_rate = close_df[close_df['ex_profit'] > 0]['ex_profit'].sum() / close_df[close_df['ex_profit'] < 0]['ex_profit'].sum()
+        #
+        # # 排序资金明细表
+        # account_df.sort_values(by=['exchange_date'], inplace=True)
+        # # 当日存取转为float计算净出入金
+        # account_df['sum_in_out'] = account_df['sum_in_out'].astype(float)
+        # account_df['pre_rights'] = account_df['pre_rights'].astype(float)
+        # account_df['rights'] = account_df['rights'].astype(float)
+        # account_df['bail'] = account_df['bail'].astype(float)
+        # account_df['profit'] = account_df['profit'].astype(float)
+        # account_df['charge'] = account_df['charge'].astype(float)
+        # # 计算当日净值=(当日权益 - 当日存取)/上日权益
+        # account_df['net_value'] = (account_df['rights'] - account_df['sum_in_out']) / account_df['pre_rights']
+        # # 计算日收益率
+        # account_df['daily_profit_rate'] = account_df['net_value'] - 1
+        # # 当日累计净值=前日累计净值*当日净值
+        # account_df['daily_net_value'] = account_df['net_value'].cumprod()
+        # # 计算最高回撤率=(最高累计净值-当日的累计净值)/最高累计净值，取最大者
+        # max_cumprod = account_df['daily_net_value'].max()
+        # account_df['retracement'] = (max_cumprod - account_df['daily_net_value']) / max_cumprod  # 计算每日的回撤率
+        # # 取最大回撤时点(回撤率最小时),回撤区间(回撤率最小-最大时的区间)
+        # max_huiche = account_df[account_df['retracement'] == account_df['retracement'].min()].copy()
+        # min_huiche = account_df[account_df['retracement'] == account_df['retracement'].max()].copy()
+        # max_huiche.reset_index(inplace=True)
+        # min_huiche.reset_index(inplace=True)
+        # max_huiche = max_huiche.at[0, 'exchange_date']
+        # min_huiche = min_huiche.at[0, 'exchange_date']
+        #
+        # # 计算累计净利润 净利润 = 当日盈亏 - 手续费
+        # account_df['net_profit'] = account_df['profit'] - account_df['charge']
+        # # 历史最大本金
+        # history_maxp = (account_df['rights'] - account_df['sum_in_out']).max()
+        # cum_net_profit = account_df.at[account_df.shape[0] - 1, 'daily_net_value']
+        # # 计算手续费/净利润
+        # charge_dv_profit = account_df['charge'].sum() / account_df['net_profit'].sum()
+        # # 计算仓位比例(风险度=保证金/当日权益)
+        # account_df['risk_rate'] = account_df['bail'] / account_df['rights']
+        #
+        # base_data = {
+        #     'start_date': account_df.at[0, 'exchange_date'],
+        #     'end_date': account_df.at[account_df.shape[0] - 1, 'exchange_date'],
+        #     'initial_equity': account_df.at[0, 'rights'],  # 期初权益
+        #     'ending_equity': account_df.at[account_df.shape[0] - 1, 'rights'],  # 期末权益
+        #     'net_income': account_df['sum_in_out'].sum(),  # 累计净入金
+        #     'max_huiche_date': max_huiche,  # 最大回撤时点
+        #     'max_huiche_range': f'{max_huiche} ~ {min_huiche}',  # 最大回撤区间
+        #     'accumulated_net': round(cum_net_profit, 3),  # 累计净利润
+        #     'maxrrate': '{}%'.format(round(account_df['retracement'].max() * 100, 2)),  # 最大回撤率
+        #     'accumulated_profit': round(account_df['profit'].sum(), 2),
+        #     'average_daily': round(account_df['daily_profit_rate'].mean(), 4),  # 日收益率均值
+        #     'exchange_cost': round(account_df['charge'].sum(), 2),  # 交易费用
+        #     'historical_maxp': round(history_maxp, 2),  # 历史最大本金
+        #     'max_daily_profit': '{}%'.format(round(account_df['daily_profit_rate'].max() * 100, 2)),  # 历史最高收益率
+        #     'min_daily_profit': '{}%'.format(round(account_df['daily_profit_rate'].min() * 100, 2)),  # 历史最低收益率
+        #     'expected_annual_rate': round(account_df['daily_profit_rate'].mean() * 250, 4),  # 预计年化收益率,
+        #     'total_days': account_df.shape[0],
+        #     'profit_days': account_df[account_df['profit'] > 0].shape[0],
+        #     'loss_days': account_df[account_df['profit'] <= 0].shape[0],
+        #     'wining_rate': round(win_rate, 4),
+        #     'profit_loss_rate': round(-profit_loss_rate, 4),
+        #     'net_profit': round(charge_dv_profit, 4),  # 手续费/净利润，
+        #     'zdckbl': round(account_df['risk_rate'].max() * 100, 2),  # 最大持仓仓位比例
+        #     'pjckbl': round(account_df['risk_rate'].mean() * 100, 2),  # 平均持仓仓位比例
+        #     'kcts': account_df[account_df['profit'] == 0].shape[0],  # 空仓天数(当日盈亏为0的天数)
+        #     'place': ''
+        # }  # 基础数据
+        # time.sleep(1)
+        # # 组织诊断分析的数据
+        # # 获利的数据
+        # yldf = close_df[close_df['ex_profit'] > 0]  # 盈利的交易
+        # ksdf = close_df[close_df['ex_profit'] <= 0]  # 亏损的交易
+        # drksdf = account_df[account_df['profit'] <= 0]  # 单日亏损的交易
+        # yl_list, ks_list = [], []
+        # yl_c, ks_c = 0, 0
+        # for _, row in close_df.iterrows():
+        #     p = row['ex_profit']
+        #     if p > 0:
+        #         yl_c += 1
+        #         yl_list.append(yl_c)
+        #         ks_c = 0
+        #     if p <= 0:
+        #         ks_c += 1
+        #         ks_list.append(ks_c)
+        #         yl_c = 0
+        # doctor_data = {
+        #     'jyk': round(account_df['net_profit'].sum(), 2),  # 净盈亏
+        #     'jybs': close_df.shape[0],  # 交易笔数
+        #     'ylbs': yldf.shape[0],  # 盈利笔数
+        #     'ksbs': ksdf.shape[0],  # 亏损笔数
+        #     'zghl': yldf['ex_profit'].max(),  # 单笔最高获利
+        #     'pjhl': yldf['ex_profit'].sum() / yldf.shape[0],  # 平均获利 = 获利和 ÷ 获利笔数
+        #     'zgks': ksdf['ex_profit'].min(),   # 单笔最高亏损
+        #     'pjks': ksdf['ex_profit'].sum() / ksdf.shape[0],  # 平均亏损 = 亏损的笔数 ÷ 亏损笔数
+        #     'drzgks': drksdf['profit'].min(),  # 单日最高亏损
+        #     'drpjks': round(drksdf['profit'].sum() / drksdf.shape[0], 2),  # 单日平均亏损
+        #     'lxyl': max(yl_list),  # 连续盈利笔数
+        #     'lxks': max(ks_list)  # 连续亏损笔数
+        # }
+        # print(doctor_data)
+        # base_data.update(doctor_data)  # 合并
+        # self.handle_finished.emit(base_data)
 
 
+# 处理交易分析 - 手数金额数据
+class HandlePriceHandsThread(QThread):
+    handle_finished = pyqtSignal(dict)
 
+    def __init__(self, trade_detail, *args, **kwargs):
+        super(HandlePriceHandsThread, self).__init__(*args, **kwargs)
+        self.trade_detail = trade_detail
 
-        # 提取出平仓明细表
-        close_df = exchange_df[exchange_df['open_text'].str.contains('平')]
-        close_df['ex_profit'] = close_df['ex_profit'].astype(float)
-        close_df['hands'] = close_df['hands'].astype(float)
-        # 计算交易胜率 平仓利润为+ / 总笔数
-        win_rate = close_df[close_df['ex_profit'] > 0].shape[0] / close_df.shape[0]
-        # 计算盈亏比
-        profit_loss_rate = close_df[close_df['ex_profit'] > 0]['ex_profit'].sum() / close_df[close_df['ex_profit'] < 0]['ex_profit'].sum()
-
-        # 排序资金明细表
-        account_df.sort_values(by=['exchange_date'], inplace=True)
-        # 当日存取转为float计算净出入金
-        account_df['sum_in_out'] = account_df['sum_in_out'].astype(float)
-        account_df['pre_rights'] = account_df['pre_rights'].astype(float)
-        account_df['rights'] = account_df['rights'].astype(float)
-        account_df['bail'] = account_df['bail'].astype(float)
-        account_df['profit'] = account_df['profit'].astype(float)
-        account_df['charge'] = account_df['charge'].astype(float)
-        # 计算当日净值=(当日权益 - 当日存取)/上日权益
-        account_df['net_value'] = (account_df['rights'] - account_df['sum_in_out']) / account_df['pre_rights']
-        # 计算日收益率
-        account_df['daily_profit_rate'] = account_df['net_value'] - 1
-        # 当日累计净值=前日累计净值*当日净值
-        account_df['daily_net_value'] = account_df['net_value'].cumprod()
-        # 计算最高回撤率=(最高累计净值-当日的累计净值)/最高累计净值，取最大者
-        max_cumprod = account_df['daily_net_value'].max()
-        account_df['retracement'] = (max_cumprod - account_df['daily_net_value']) / max_cumprod  # 计算每日的回撤率
-        # 取最大回撤时点(回撤率最小时),回撤区间(回撤率最小-最大时的区间)
-        max_huiche = account_df[account_df['retracement'] == account_df['retracement'].min()].copy()
-        min_huiche = account_df[account_df['retracement'] == account_df['retracement'].max()].copy()
-        max_huiche.reset_index(inplace=True)
-        min_huiche.reset_index(inplace=True)
-        max_huiche = max_huiche.at[0, 'exchange_date']
-        min_huiche = min_huiche.at[0, 'exchange_date']
-
-        # 计算累计净利润 净利润 = 当日盈亏 - 手续费
-        account_df['net_profit'] = account_df['profit'] - account_df['charge']
-        # 历史最大本金
-        history_maxp = (account_df['rights'] - account_df['sum_in_out']).max()
-        cum_net_profit = account_df.at[account_df.shape[0] - 1, 'daily_net_value']
-        # 计算手续费/净利润
-        charge_dv_profit = account_df['charge'].sum() / account_df['net_profit'].sum()
-        # 计算仓位比例(风险度=保证金/当日权益)
-        account_df['risk_rate'] = account_df['bail'] / account_df['rights']
-
-        base_data = {
-            'start_date': account_df.at[0, 'exchange_date'],
-            'end_date': account_df.at[account_df.shape[0] - 1, 'exchange_date'],
-            'initial_equity': account_df.at[0, 'rights'],  # 期初权益
-            'ending_equity': account_df.at[account_df.shape[0] - 1, 'rights'],  # 期末权益
-            'net_income': account_df['sum_in_out'].sum(),  # 累计净入金
-            'max_huiche_date': max_huiche,  # 最大回撤时点
-            'max_huiche_range': f'{max_huiche} ~ {min_huiche}',  # 最大回撤区间
-            'accumulated_net': round(cum_net_profit, 3),  # 累计净利润
-            'maxrrate': '{}%'.format(round(account_df['retracement'].max() * 100, 2)),  # 最大回撤率
-            'accumulated_profit': round(account_df['profit'].sum(), 2),
-            'average_daily': round(account_df['daily_profit_rate'].mean(), 4),  # 日收益率均值
-            'exchange_cost': round(account_df['charge'].sum(), 2),  # 交易费用
-            'historical_maxp': round(history_maxp, 2),  # 历史最大本金
-            'max_daily_profit': '{}%'.format(round(account_df['daily_profit_rate'].max() * 100, 2)),  # 历史最高收益率
-            'min_daily_profit': '{}%'.format(round(account_df['daily_profit_rate'].min() * 100, 2)),  # 历史最低收益率
-            'expected_annual_rate': round(account_df['daily_profit_rate'].mean() * 250, 4),  # 预计年化收益率,
-            'total_days': account_df.shape[0],
-            'profit_days': account_df[account_df['profit'] > 0].shape[0],
-            'loss_days': account_df[account_df['profit'] <= 0].shape[0],
-            'wining_rate': round(win_rate, 4),
-            'profit_loss_rate': round(-profit_loss_rate, 4),
-            'net_profit': round(charge_dv_profit, 4),  # 手续费/净利润，
-            'zdckbl': round(account_df['risk_rate'].max() * 100, 2),  # 最大持仓仓位比例
-            'pjckbl': round(account_df['risk_rate'].mean() * 100, 2),  # 平均持仓仓位比例
-            'kcts': account_df[account_df['profit'] == 0].shape[0],  # 空仓天数(当日盈亏为0的天数)
-            'place': ''
-        }  # 基础数据
-        time.sleep(1)
-        # 组织诊断分析的数据
-        # 获利的数据
-        yldf = close_df[close_df['ex_profit'] > 0]  # 盈利的交易
-        ksdf = close_df[close_df['ex_profit'] <= 0]  # 亏损的交易
-        drksdf = account_df[account_df['profit'] <= 0]  # 单日亏损的交易
-        yl_list, ks_list = [], []
-        yl_c, ks_c = 0, 0
-        for _, row in close_df.iterrows():
-            p = row['ex_profit']
-            if p > 0:
-                yl_c += 1
-                yl_list.append(yl_c)
-                ks_c = 0
-            if p <= 0:
-                ks_c += 1
-                ks_list.append(ks_c)
-                yl_c = 0
-        doctor_data = {
-            'jyk': round(account_df['net_profit'].sum(), 2),  # 净盈亏
-            'jybs': close_df.shape[0],  # 交易笔数
-            'ylbs': yldf.shape[0],  # 盈利笔数
-            'ksbs': ksdf.shape[0],  # 亏损笔数
-            'zghl': yldf['ex_profit'].max(),  # 单笔最高获利
-            'pjhl': yldf['ex_profit'].sum() / yldf.shape[0],  # 平均获利 = 获利和 ÷ 获利笔数
-            'zgks': ksdf['ex_profit'].min(),   # 单笔最高亏损
-            'pjks': ksdf['ex_profit'].sum() / ksdf.shape[0],  # 平均亏损 = 亏损的笔数 ÷ 亏损笔数
-            'drzgks': drksdf['profit'].min(),  # 单日最高亏损
-            'drpjks': round(drksdf['profit'].sum() / drksdf.shape[0], 2),  # 单日平均亏损
-            'lxyl': max(yl_list),  # 连续盈利笔数
-            'lxks': max(ks_list)  # 连续亏损笔数
+    def run(self):
+        trade_df = pd.DataFrame(self.trade_detail)
+        # 交易手数分布(分品种统计交易手数)
+        group_sum = trade_df.groupby(by=['variety_en'], as_index=False)['close_hands'].agg({'sum_hands': 'sum'})
+        group_sum['variety_text'] = group_sum['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
+        jyshfb = group_sum.to_dict(orient='records')  # 交易手数分布
+        # 交易金额分布
+        group_sum = trade_df.groupby(by=['variety_en'], as_index=False)['ex_money'].agg({'sum_ex_money': 'sum'})
+        group_sum['variety_text'] = group_sum['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
+        jyjefb = group_sum.to_dict(orient='records')  # 交易金额分布
+        data = {
+            'jyshfb': jyshfb,
+            'jyjefb': jyjefb
         }
-        print(doctor_data)
-        base_data.update(doctor_data)  # 合并
-        self.handle_finished.emit(base_data)
+        self.handle_finished.emit(data)
 
 
 # 处理累计收益率数据

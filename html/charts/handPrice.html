@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>交易手数-金额</title>
+    <script src="js/jquery-1.7.2.min.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/qwebchannel.js"></script>
+    <script src="js/public.js"></script>
+</head>
+<style>
+html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
+#chart1{width: 100vw; height:300px;background-color: rgb(252,252,252);margin: 0 auto}
+#chart2{width: 500px; height:300px;background-color: rgb(252,252,252);margin: 0 auto}
+</style>
+<body>
+<div>
+    <div id="chart1"></div>
+    <div id="chart2"></div>
+</div>
+</body>
+<script>
+function getOption1(){
+  return {
+    title:{text:'试试能不能显示'},
+  }
+}
+// 主入口函数
+$(function () {
+    let chart1 = echarts.init(document.getElementById('chart1'));
+    let chart2 = echarts.init(document.getElementById('chart2'));
+    // 与UI界面通讯的实例
+    new QWebChannel(qt.webChannelTransport, function(channel)
+        {
+            let pageContact = channel.objects.pageContactChannel;
+            // 传入绘图数据
+            pageContact.chartSource.connect(function (sourceData) {
+                let source = JSON.parse(sourceData)
+                let option1 = getOption1(source.jyshfb)  // 交易手数分布jyshfb
+                chart1.clear();
+                chart1.setOption(option1, true)
+            });
+            // 传入重置大小
+            pageContact.chartResize.connect(function (cWidth, cHeight) {
+                chart1.resize({width: cWidth, height: cHeight / 2});
+            });
+            // 清除图形
+            // pageContact.clearChart.connect(function () {
+            //     chartObj.clear();
+            // })
+        }
+    );
+})
+</script>
+</html>
