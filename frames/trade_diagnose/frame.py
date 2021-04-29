@@ -23,7 +23,12 @@ class S(QWidget):
         ]},
         {'pid': -2, 'name': '交易分析', 'logo': '', 'children': [
             {'pid': 3, 'name': '手数-金额', 'logo': ''},
-
+            {'pid': 4, 'name': '日内与隔夜', 'logo': ''},
+            {'pid': 5, 'name': '交易费用', 'logo': ''},
+        ]},
+        {'pid': -3, 'name': '盈亏分析', 'logo': '', 'children': [
+            {'pid': 6, 'name': '净值图', 'logo': ''},
+            {'pid': 7, 'name': '品种盈亏分析', 'logo': ''},
         ]}
     ]
 
@@ -80,8 +85,13 @@ class S(QWidget):
         self.source_view = None  # 处理后的原始数据
         self.base_view = None  # 基本数据
         self.hands_price_view = None  # 交易分析 - 手数金额
+        self.pass_night_view = None  # 交易分析 - 日内隔夜
+        self.exchange_charge_view = None  # 交易分析 - 交易费用
+        self.net_value_view = None  # 净值图
+        self.variety_profit_view = None  # 品种盈亏分析
 
-        #
+
+
         # self.profit_view = None  # 累计净值
         # self.net_profits = None  # 累计净利润
         # self.sum_variety_profit = None  # 累计品种盈亏
@@ -133,7 +143,9 @@ class S(QWidget):
         if not self.source_data:
             QMessageBox.information(self, '提示', '请导入原始数据后再进行诊断...')
             return
-
+        if self.current_pid == 1: # 原始数据
+            self.stacked.setCurrentIndex(self.current_pid)
+            return
         # 根据页面处理需要显示的数据并进行显示
         if self.current_pid == 2:  # 基本指标
             self.show_base_view_data()
@@ -141,18 +153,18 @@ class S(QWidget):
         elif self.current_pid == 3:  # 交易分析 - 手数金额
             self.show_hands_price()
 
-        #     self.show_sum_profit_rate()
-        #
-        # elif self.current_pid == 4:  # 累计净利润
-        #     self.show_net_profits()
-        # elif self.current_pid == 5:   # 累计品种盈亏
-        #     self.show_sum_variety_profit()
-        # elif self.current_pid == 6:  # 日风险度
-        #     self.show_risk_percent()
-        # elif self.current_pid == 7:  # 交易品种统计
-        #     self.show_variety_percent()
-        # elif self.current_pid == 8:  # 多空行为统计
-        #     self.show_shmore_percent()
+        elif self.current_pid == 4: # 交易分析 - 日内与隔夜
+            self.show_pass_night()
+
+        elif self.current_pid == 5:  # 交易分析 - 交易费用
+            self.show_exchange_charge()
+
+        elif self.current_pid == 6:  # 盈亏分析 - 净值图
+            self.show_net_value()
+
+        elif self.current_pid == 7:  # 盈亏分析 - 品种盈亏分析
+            self.show_variety_profit()
+
         else:
             return
         self.stacked.setCurrentIndex(self.current_pid)
@@ -174,32 +186,23 @@ class S(QWidget):
         self.hands_price_view = pages.HandsPriceWidget(self)
         self.hands_price_view.finished.connect(self.tip_popup.hide)
         self.stacked.addWidget(self.hands_price_view)
+        # 交易分析 - 日内隔夜
+        self.pass_night_view = pages.PassNightWidget(self)
+        self.pass_night_view.finished.connect(self.tip_popup.hide)
+        self.stacked.addWidget(self.pass_night_view)
+        # 交易分析 - 交易费用
+        self.exchange_charge_view = pages.ExchangeChargeWidget(self)
+        self.exchange_charge_view.finished.connect(self.tip_popup.hide)
+        self.stacked.addWidget(self.exchange_charge_view)
+        # 盈亏分析 - 净值图
+        self.net_value_view = pages.NetValueWidget(self)
+        self.net_value_view.finished.connect(self.tip_popup.hide)
+        self.stacked.addWidget(self.net_value_view)
+        # 盈亏分析- 品种盈亏分析
+        self.variety_profit_view = pages.VarietyProfitWidget(self)
+        self.variety_profit_view.finished.connect(self.tip_popup.hide)
+        self.stacked.addWidget(self.variety_profit_view)
 
-
-        # # 累计净值
-        # self.profit_view = pages.ProfitViewWidget(self)
-        # self.profit_view.finished.connect(self.tip_popup.hide)
-        # self.stacked.addWidget(self.profit_view)
-        # # 累计净利润
-        # self.net_profits = pages.NetProfitsWidget(self)
-        # self.net_profits.finished.connect(self.tip_popup.hide)
-        # self.stacked.addWidget(self.net_profits)
-        # # 累计品种盈亏
-        # self.sum_variety_profit = pages.SumVarietyProfitWidget(self)
-        # self.sum_variety_profit.finished.connect(self.tip_popup.hide)
-        # self.stacked.addWidget(self.sum_variety_profit)
-        # # 风险度
-        # self.risk_view = pages.RiskViewWidget(self)
-        # self.risk_view.finished.connect(self.tip_popup.hide)
-        # self.stacked.addWidget(self.risk_view)
-        # # 交易品种统计
-        # self.variety_view = pages.VarietyViewWidget(self)
-        # self.variety_view.finished.connect(self.tip_popup.hide)
-        # self.stacked.addWidget(self.variety_view)
-        # # 多空盈亏统计
-        # self.shmore_view = pages.ShortMoreViewWidget(self)
-        # self.shmore_view.finished.connect(self.tip_popup.hide)
-        # self.stacked.addWidget(self.shmore_view)
 
         self.tip_popup.hide()
 
@@ -239,6 +242,27 @@ class S(QWidget):
         # 显示交易分析 - 金额手数分析
         self.tip_popup.show(text='正在处理数据,请稍后...')
         self.hands_price_view.handle_data(self.source_data['trade_detail'])
+
+    def show_pass_night(self):
+        # 显示交易分析 - 日内与隔夜
+        self.tip_popup.show(text='正在处理数据,请稍后...')
+        self.pass_night_view.handle_data(self.source_data['trade_detail'])
+
+    def show_exchange_charge(self):
+        # 显示交易分析 - 交易费用
+        self.tip_popup.show(text='正在处理数据,请稍后...')
+        self.exchange_charge_view.handle_data(self.source_data['account'])
+
+    def show_net_value(self):
+        # 盈亏分析 - 净值图
+        self.tip_popup.show(text='正在处理数据,请稍后...')
+        self.net_value_view.handle_data(self.source_data['account'])
+
+    def show_variety_profit(self):
+        # 盈亏分析 - 品种盈亏分析
+        self.tip_popup.show(text='正在处理数据,请稍后...')
+        self.variety_profit_view.handle_data(self.source_data['trade_detail'])
+
 
 
 

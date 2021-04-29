@@ -366,10 +366,10 @@ class HandleBaseThread(QThread):
         jeqwpz = group_sum.head(5)['variety_text'].to_list()
         # 夏普比例 = (年化收益率 - 无风险利率(2%)) / 收益率标准差
         yjnhsyl = account_df["daily_profit_rate"].mean() * 250  # 预计年化收益率
-        print('日收益率标准方差:', account_df['daily_profit_rate'].std())
+        # print('日收益率标准方差:', account_df['daily_profit_rate'].std())
         xpbl = (yjnhsyl - 0.02) / account_df['daily_profit_rate'].std()
         # 卡玛比率 = (年化收益率 - 无风险利率(2%)) / 最大回撤率
-        print('最大回撤率：', account_df['retracement'].max())
+        # print('最大回撤率：', account_df['retracement'].max())
         kmbl = (yjnhsyl - 0.02) / account_df['retracement'].max()
 
 
@@ -405,119 +405,7 @@ class HandleBaseThread(QThread):
         base_data['xpbl'] = f'{round(xpbl, 2)}'  # 夏普比率
         base_data['kmbl'] = f'{round(kmbl, 2)}'  # 卡玛比率
         self.handle_finished.emit(base_data)
-        # return
-        #
-        #
-        #
-        #
-        # # 提取出平仓明细表
-        # close_df = exchange_df[exchange_df['open_text'].str.contains('平')]
-        # close_df['ex_profit'] = close_df['ex_profit'].astype(float)
-        # close_df['hands'] = close_df['hands'].astype(float)
-        # # 计算交易胜率 平仓利润为+ / 总笔数
-        # win_rate = close_df[close_df['ex_profit'] > 0].shape[0] / close_df.shape[0]
-        # # 计算盈亏比
-        # profit_loss_rate = close_df[close_df['ex_profit'] > 0]['ex_profit'].sum() / close_df[close_df['ex_profit'] < 0]['ex_profit'].sum()
-        #
-        # # 排序资金明细表
-        # account_df.sort_values(by=['exchange_date'], inplace=True)
-        # # 当日存取转为float计算净出入金
-        # account_df['sum_in_out'] = account_df['sum_in_out'].astype(float)
-        # account_df['pre_rights'] = account_df['pre_rights'].astype(float)
-        # account_df['rights'] = account_df['rights'].astype(float)
-        # account_df['bail'] = account_df['bail'].astype(float)
-        # account_df['profit'] = account_df['profit'].astype(float)
-        # account_df['charge'] = account_df['charge'].astype(float)
-        # # 计算当日净值=(当日权益 - 当日存取)/上日权益
-        # account_df['net_value'] = (account_df['rights'] - account_df['sum_in_out']) / account_df['pre_rights']
-        # # 计算日收益率
-        # account_df['daily_profit_rate'] = account_df['net_value'] - 1
-        # # 当日累计净值=前日累计净值*当日净值
-        # account_df['daily_net_value'] = account_df['net_value'].cumprod()
-        # # 计算最高回撤率=(最高累计净值-当日的累计净值)/最高累计净值，取最大者
-        # max_cumprod = account_df['daily_net_value'].max()
-        # account_df['retracement'] = (max_cumprod - account_df['daily_net_value']) / max_cumprod  # 计算每日的回撤率
-        # # 取最大回撤时点(回撤率最小时),回撤区间(回撤率最小-最大时的区间)
-        # max_huiche = account_df[account_df['retracement'] == account_df['retracement'].min()].copy()
-        # min_huiche = account_df[account_df['retracement'] == account_df['retracement'].max()].copy()
-        # max_huiche.reset_index(inplace=True)
-        # min_huiche.reset_index(inplace=True)
-        # max_huiche = max_huiche.at[0, 'exchange_date']
-        # min_huiche = min_huiche.at[0, 'exchange_date']
-        #
-        # # 计算累计净利润 净利润 = 当日盈亏 - 手续费
-        # account_df['net_profit'] = account_df['profit'] - account_df['charge']
-        # # 历史最大本金
-        # history_maxp = (account_df['rights'] - account_df['sum_in_out']).max()
-        # cum_net_profit = account_df.at[account_df.shape[0] - 1, 'daily_net_value']
-        # # 计算手续费/净利润
-        # charge_dv_profit = account_df['charge'].sum() / account_df['net_profit'].sum()
-        # # 计算仓位比例(风险度=保证金/当日权益)
-        # account_df['risk_rate'] = account_df['bail'] / account_df['rights']
-        #
-        # base_data = {
-        #     'start_date': account_df.at[0, 'exchange_date'],
-        #     'end_date': account_df.at[account_df.shape[0] - 1, 'exchange_date'],
-        #     'initial_equity': account_df.at[0, 'rights'],  # 期初权益
-        #     'ending_equity': account_df.at[account_df.shape[0] - 1, 'rights'],  # 期末权益
-        #     'net_income': account_df['sum_in_out'].sum(),  # 累计净入金
-        #     'max_huiche_date': max_huiche,  # 最大回撤时点
-        #     'max_huiche_range': f'{max_huiche} ~ {min_huiche}',  # 最大回撤区间
-        #     'accumulated_net': round(cum_net_profit, 3),  # 累计净利润
-        #     'maxrrate': '{}%'.format(round(account_df['retracement'].max() * 100, 2)),  # 最大回撤率
-        #     'accumulated_profit': round(account_df['profit'].sum(), 2),
-        #     'average_daily': round(account_df['daily_profit_rate'].mean(), 4),  # 日收益率均值
-        #     'exchange_cost': round(account_df['charge'].sum(), 2),  # 交易费用
-        #     'historical_maxp': round(history_maxp, 2),  # 历史最大本金
-        #     'max_daily_profit': '{}%'.format(round(account_df['daily_profit_rate'].max() * 100, 2)),  # 历史最高收益率
-        #     'min_daily_profit': '{}%'.format(round(account_df['daily_profit_rate'].min() * 100, 2)),  # 历史最低收益率
-        #     'expected_annual_rate': round(account_df['daily_profit_rate'].mean() * 250, 4),  # 预计年化收益率,
-        #     'total_days': account_df.shape[0],
-        #     'profit_days': account_df[account_df['profit'] > 0].shape[0],
-        #     'loss_days': account_df[account_df['profit'] <= 0].shape[0],
-        #     'wining_rate': round(win_rate, 4),
-        #     'profit_loss_rate': round(-profit_loss_rate, 4),
-        #     'net_profit': round(charge_dv_profit, 4),  # 手续费/净利润，
-        #     'zdckbl': round(account_df['risk_rate'].max() * 100, 2),  # 最大持仓仓位比例
-        #     'pjckbl': round(account_df['risk_rate'].mean() * 100, 2),  # 平均持仓仓位比例
-        #     'kcts': account_df[account_df['profit'] == 0].shape[0],  # 空仓天数(当日盈亏为0的天数)
-        #     'place': ''
-        # }  # 基础数据
-        # time.sleep(1)
-        # # 组织诊断分析的数据
-        # # 获利的数据
-        # yldf = close_df[close_df['ex_profit'] > 0]  # 盈利的交易
-        # ksdf = close_df[close_df['ex_profit'] <= 0]  # 亏损的交易
-        # drksdf = account_df[account_df['profit'] <= 0]  # 单日亏损的交易
-        # yl_list, ks_list = [], []
-        # yl_c, ks_c = 0, 0
-        # for _, row in close_df.iterrows():
-        #     p = row['ex_profit']
-        #     if p > 0:
-        #         yl_c += 1
-        #         yl_list.append(yl_c)
-        #         ks_c = 0
-        #     if p <= 0:
-        #         ks_c += 1
-        #         ks_list.append(ks_c)
-        #         yl_c = 0
-        # doctor_data = {
-        #     'jyk': round(account_df['net_profit'].sum(), 2),  # 净盈亏
-        #     'jybs': close_df.shape[0],  # 交易笔数
-        #     'ylbs': yldf.shape[0],  # 盈利笔数
-        #     'ksbs': ksdf.shape[0],  # 亏损笔数
-        #     'zghl': yldf['ex_profit'].max(),  # 单笔最高获利
-        #     'pjhl': yldf['ex_profit'].sum() / yldf.shape[0],  # 平均获利 = 获利和 ÷ 获利笔数
-        #     'zgks': ksdf['ex_profit'].min(),   # 单笔最高亏损
-        #     'pjks': ksdf['ex_profit'].sum() / ksdf.shape[0],  # 平均亏损 = 亏损的笔数 ÷ 亏损笔数
-        #     'drzgks': drksdf['profit'].min(),  # 单日最高亏损
-        #     'drpjks': round(drksdf['profit'].sum() / drksdf.shape[0], 2),  # 单日平均亏损
-        #     'lxyl': max(yl_list),  # 连续盈利笔数
-        #     'lxks': max(ks_list)  # 连续亏损笔数
-        # }
-        # print(doctor_data)
-        # base_data.update(doctor_data)  # 合并
-        # self.handle_finished.emit(base_data)
+
 
 
 # 处理交易分析 - 手数金额数据
@@ -545,225 +433,106 @@ class HandlePriceHandsThread(QThread):
         self.handle_finished.emit(data)
 
 
-# 处理累计收益率数据
-class HandProfitThread(QThread):
-    handle_finished = pyqtSignal(list)
-
-    def __init__(self, source, *args, **kwargs):
-        super(HandProfitThread, self).__init__(*args, **kwargs)
-        self.source = source
-
-    def run(self):
-        # 根据传入的source处理出累计收益数据
-        account_df = pd.DataFrame(self.source)
-        account_df['sum_in_out'] = account_df['sum_in_out'].astype(float)
-        account_df['pre_rights'] = account_df['pre_rights'].astype(float)
-        account_df['rights'] = account_df['rights'].astype(float)
-        account_df['charge'] = account_df['charge'].astype(float)
-        # 计算当日净值=(当日权益 - 当日存取)/上日权益
-        account_df['net_value'] = (account_df['rights'] - account_df['sum_in_out']) / account_df['pre_rights']
-        # # 计算日收益率
-        # account_df['daily_profit_rate'] = account_df['net_value'] - 1
-        # 当日累计净值=前日累计净值*当日净值
-        account_df['daily_net_value'] = account_df['net_value'].cumprod()
-
-        t = account_df[['exchange_date', 'net_value', 'daily_net_value']]
-        t.columns = ['exchange_date', 'profit_rate', 'cum_sum']
-
-        t['profit_rate'] = t['profit_rate'].apply(lambda x: round(x, 2))
-        t['cum_sum'] = t['cum_sum'].apply(lambda x: round(x, 2))
-        del account_df
-        self.handle_finished.emit(t.to_dict(orient='records'))
-
-
-# 处理累计净利润
-class HandNetProfitsThread(QThread):
-
-    handle_finished = pyqtSignal(list)
-
-    def __init__(self, source, *args, **kwargs):
-        super(HandNetProfitsThread, self).__init__(*args, **kwargs)
-        self.source = source
-
-    def run(self):
-        # 根据传入的source处理出累计收益数据
-        df = pd.DataFrame(self.source)
-        time.sleep(1)
-        # 计算每日的净利润
-        df['profit'] = df['profit'].apply(lambda x: float(x.replace(',', '')))
-        df['charge'] = df['charge'].apply(lambda x: float(x.replace(',', '')))
-        df['net_profit'] = df['profit'] - df['charge']
-        t = df[['exchange_date', 'net_profit']]
-        t['net_profit_cumsum'] = df['net_profit'].cumsum()
-        t['net_profit_cumsum'] = t['net_profit_cumsum'].apply(lambda x: round(x, 2))
-        del df
-        self.handle_finished.emit(t.to_dict(orient='records'))
-
-
-# 使用成交明细表统计累计品种盈亏数据
-class HandleSumVarietyProfitThread(QThread):
-    handle_finished = pyqtSignal(list)
-
-    def __init__(self, source, *args, **kwargs):
-        super(HandleSumVarietyProfitThread, self).__init__(*args, **kwargs)
-        self.source = source
-
-    def run(self):
-        # 根据传入的source处理出累计品种盈亏数据(分品种计算各盈利金额，亏损金额，盈利手数，亏损手数)
-        df = pd.DataFrame(self.source)
-        time.sleep(1)
-        # 选取平仓的数据
-        df = df[df['open_text'].str.contains('平')]
-        # 交易收益转为float
-        df['ex_profit'] = df['ex_profit'].astype(float)
-        df['hands'] = df['hands'].astype(float)
-        # 解析出品种英文代码
-        df['variety_en'] = df['contract'].apply(lambda x: split_number_en(x)[0])
-        # 品种分组计算目标数据
-        varieties = list(df.groupby(by=['variety_en']).groups.keys())
-        result = []
-        for v_name in varieties:
-            variety_dict = {
-                'variety_en': v_name,
-                'variety_text': CH_VARIETY.get(v_name, v_name),
-                'yingli': 0,
-                'kuisun': 0,
-                'yingli_count': 0,
-                'kuisun_count': 0
-            }
-            cur_vdf = df[df['variety_en'] == v_name]
-            # 统计这个品种的盈利和亏损
-            variety_dict['yingli'] = cur_vdf[cur_vdf['ex_profit'] >= 0]['ex_profit'].sum()
-            variety_dict['yingli_count'] = cur_vdf[cur_vdf['ex_profit'] >= 0]['hands'].sum()
-            variety_dict['kuisun'] = cur_vdf[cur_vdf['ex_profit'] < 0]['ex_profit'].sum()
-            variety_dict['kuisun_count'] = cur_vdf[cur_vdf['ex_profit'] < 0]['hands'].sum()
-            result.append(variety_dict)
-        result.sort(key=lambda x: x['yingli'], reverse=True)
-        self.handle_finished.emit(result)
-
-
-# 处理风险度
-class RiskThread(QThread):
-
-    handle_finished = pyqtSignal(list)
-
-    def __init__(self, source, *args, **kwargs):
-        super(RiskThread, self).__init__(*args, **kwargs)
-        self.source = source
-
-    def run(self):
-        # 根据传入的source处理出累计收益数据
-        df = pd.DataFrame(self.source)
-        # 返回每日的风险度
-        # df['risk_percent'] = df['bail'] / df['rights']
-        t = df[['exchange_date', 'risk']]
-        t['risk'] = t['risk'].apply(lambda x: float(x.replace('%', '').replace(',','')))
-        del df
-        self.handle_finished.emit(t.to_dict(orient='records'))
-
-
-# 统计交易品种
-class VarietyPercentThread(QThread):
-
-    handle_finished = pyqtSignal(list)
-
-    def __init__(self, source, *args, **kwargs):
-        super(VarietyPercentThread, self).__init__(*args, **kwargs)
-        self.source = source
-
-    def run(self):
-        # 根据传入的source处理出交易品种饼图需要的数据，各品种交易额占总交易额的比例
-        df = pd.DataFrame(self.source)
-        time.sleep(1)
-        # 分组品种，计算交易额,交易手数
-        # 交易收益转为float
-        df['ex_money'] = df['ex_money'].astype(float)
-        df['hands'] = df['hands'].astype(float)
-        # 解析出品种英文代码
-        df['variety_en'] = df['contract'].apply(lambda x: split_number_en(x)[0])
-        # 品种分组计算目标数据
-        varieties = list(df.groupby(by=['variety_en']).groups.keys())
-        result = []
-        for v_name in varieties:
-            variety_dict = {
-                'variety_en': v_name,
-                'variety_text': CH_VARIETY.get(v_name, v_name),
-                'ex_money': 0,
-                'hands': 0
-            }
-            cur_vdf = df[df['variety_en'] == v_name]
-            # 统计这个品种
-            variety_dict['ex_money'] = cur_vdf['ex_money'].sum()
-            variety_dict['hands'] = cur_vdf['hands'].sum()
-            result.append(variety_dict)
-        result.sort(key=lambda x: x['ex_money'], reverse=True)
-
-        # df['turnover'] = df['turnover'].astype(float)
-        # t = df.groupby(by=['variety'])['turnover'].sum()
-        # del df
-        # t = pd.DataFrame({'variety': t.index, 'value': t.values})
-        # sum_value = t['value'].sum()
-        # t['percent'] = t['value'] / sum_value
-        # print(t)
-        self.handle_finished.emit(result)
-
-
-# 统计多空盈亏(成交明细表=>平仓明细表=>统计多空)
-class ShortMoretThread(QThread):
-
+# 处理交易分析 - 日内隔夜交易分析
+class HandlePassNightThread(QThread):
     handle_finished = pyqtSignal(dict)
 
-    def __init__(self, source, *args, **kwargs):
-        super(ShortMoretThread, self).__init__(*args, **kwargs)
-        self.source = source
+    def __init__(self, trade_detail, *args, **kwargs):
+        super(HandlePassNightThread, self).__init__(*args, **kwargs)
+        self.trade_detail = trade_detail
 
     def run(self):
-        # 根据传入的source处理出交易的多单和空单分别的盈利亏损占总额的比例
-        df = pd.DataFrame(self.source)
-        time.sleep(1)
-        # 平 卖 就是做多的单，平 买 就是做空的单
-        # 选取平仓的数据
-        df = df[df['open_text'].str.contains('平')]
-        df['hands'] = df['hands'].astype(float)
-        df['ex_profit'] = df['ex_profit'].astype(float)
-        duo_df = df[df['sale_text'].str.contains('卖')]  # 做多的单
-        kong_df = df[df['sale_text'].str.contains('买')]  # 做空的单
-        duo_yingli = duo_df[duo_df['ex_profit'] >= 0]['ex_profit'].sum()
-        duo_yingli_count = duo_df[duo_df['ex_profit'] >= 0]['hands'].sum()
-        duo_kuisun = duo_df[duo_df['ex_profit'] < 0]['ex_profit'].sum()
-        duo_kuisun_count = duo_df[duo_df['ex_profit'] < 0]['hands'].sum()
-        kong_yingli = kong_df[kong_df['ex_profit'] >= 0]['ex_profit'].sum()
-        kong_yingli_count = kong_df[kong_df['ex_profit'] >= 0]['hands'].sum()
-        kong_kuisun = kong_df[kong_df['ex_profit'] < 0]['ex_profit'].sum()
-        kong_kuisun_count = kong_df[kong_df['ex_profit'] < 0]['hands'].sum()
-        # print('多单盈利', duo_yingli)
-        # print('多单亏损', duo_kuisun)
-        # print('空单盈利', kong_yingli)
-        # print('空单亏损', kong_kuisun)
-
-        # 盈亏分布
-        duo_list = duo_df.to_dict(orient='records')
-        kong_list = kong_df.to_dict(orient='records')
-        duo, kong = [], []
-        for index, item in enumerate(duo_list):
-            duo.append([index, item['ex_profit']])
-        for index, item in enumerate(kong_list):
-            kong.append([index, item['ex_profit']])
-
-        # for index, item in enumerate(range(1100)):
-        #     duo.append([index, random.randint(-3000, 5000)])
-        # for index, item in enumerate(range(1000)):
-        #     kong.append([index, random.randint(-2000, 2000)])
-
-        result = [
-            {'valueName': '多单盈利', 'value': duo_yingli, 'handName': '多单盈利手数', 'hands': duo_yingli_count},
-            {'valueName': '多单亏损', 'value': duo_kuisun, 'handName': '多单亏损手数', 'hands': duo_kuisun_count},
-            {'valueName': '空单盈利', 'value': kong_yingli, 'handName': '空单盈利手数', 'hands': kong_yingli_count},
-            {'valueName': '空单亏损', 'value': kong_kuisun, 'handName': '空单亏损手数', 'hands': kong_kuisun_count}
-        ]
-        d = {
-            'pieData': result,
-            'scatterSale': kong,  # 空单盈亏分布
-            'scatterBuy': duo  # 多单盈亏分布
+        trade_df = pd.DataFrame(self.trade_detail)
+        trade_df['ex_money'] = trade_df['ex_money'].astype(float)
+        # 日内隔夜交易分析
+        # 取日内交易数据
+        rinei_df = trade_df[trade_df['open_date'] == trade_df['close_date']]
+        # 取隔夜交易数据
+        geye_df = trade_df[trade_df['open_date'] != trade_df['close_date']]
+        # 日内隔夜交易金额占比
+        rngyjezb = {'rinei': round(rinei_df['ex_money'].sum(), 2), 'geye': round(geye_df['ex_money'].sum(), 2)}
+        # 日内品种交易金额占比
+        group_sum = rinei_df.groupby(by=['variety_en'], as_index=False)['ex_money'].agg({'sum_ex_money': 'sum'})
+        group_sum['variety_text'] = group_sum['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
+        rnpzjyzb = group_sum.to_dict(orient='records')  # 日内品种交易金额占比
+        # 隔夜品种交易金额占比
+        group_sum = geye_df.groupby(by=['variety_en'], as_index=False)['ex_money'].agg({'sum_ex_money': 'sum'})
+        group_sum['variety_text'] = group_sum['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
+        gepzjyzb = group_sum.to_dict(orient='records')  # 隔夜品种交易金额占比
+        data = {
+            'rngyjezb': rngyjezb,  # 日内隔夜金额占比
+            'rnpzjyzb': rnpzjyzb,  # 日内品种交易占比,
+            'gypzjyzb': gepzjyzb   # 隔夜品种交易占比
         }
-        self.handle_finished.emit(d)
+        self.handle_finished.emit(data)
+
+
+class HandleExChargeThread(QThread):
+    handle_finished = pyqtSignal(dict)
+
+    def __init__(self, account, *args, **kwargs):
+        super(HandleExChargeThread, self).__init__(*args, **kwargs)
+        self.account = account
+
+    def run(self):
+        account_df = pd.DataFrame(self.account)
+        account_df['charge'] = account_df['charge'].astype(float)
+        data = {
+            'jyfy': account_df[['exchange_date', 'charge']].to_dict(orient='records')
+        }
+        self.handle_finished.emit(data)
+
+
+class HandleNetValueThread(QThread):
+    handle_finished = pyqtSignal(dict)
+
+    def __init__(self, account, *args, **kwargs):
+        super(HandleNetValueThread, self).__init__(*args, **kwargs)
+        self.account = account
+
+    def run(self):
+        account_df = pd.DataFrame(self.account)
+        for key in ['rights', 'sum_in_out', 'pre_rights', 'profit']:
+            account_df[key] = account_df[key].astype(float)
+        # 计算当日净值=(当日权益 - 当日存取)/上日权益
+        account_df['net_value'] = (account_df['rights'] - account_df['sum_in_out']) / account_df['pre_rights']
+        # 当日累计净值=前日累计净值*当日净值
+        account_df['daily_net_value'] = account_df['net_value'].cumprod()
+        data = {
+            'jzsj': account_df[['exchange_date', 'daily_net_value', 'profit']].to_dict(orient='record')  # 净值数据
+        }
+        self.handle_finished.emit(data)
+
+
+class HandleVarietyProfitThread(QThread):
+    handle_finished = pyqtSignal(dict)
+
+    def __init__(self, trade_detail, *args, **kwargs):
+        super(HandleVarietyProfitThread, self).__init__(*args, **kwargs)
+        self.trade_detail = trade_detail
+
+    def run(self):
+        data = dict()
+        trade_df = pd.DataFrame(self.trade_detail)
+        for key in ['close_profit', 'close_hands']:
+            trade_df[key] = trade_df[key].astype(float)
+        yingli_df = trade_df[trade_df['close_profit'] > 0]  # 取盈利的单
+        kuisun_df = trade_df[trade_df['close_profit'] <= 0]   # 取亏损的单
+        # 盈利金额、手数品种分布
+        yingli_group = yingli_df.groupby(by=['variety_en'], as_index=False)
+        yingli_jefb = yingli_group['close_profit'].agg({'sum_close_profit': 'sum'})
+        yingli_shfb = yingli_group['close_hands'].agg({'sum_hands': 'sum'})
+        # 合并
+        group = pd.merge(yingli_jefb, yingli_shfb, on=['variety_en'], how='outer')
+        group['variety_text'] = group['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
+        data['yingli'] = group.to_dict(orient='records')  # 盈利品种对应盈利金额和盈利手数
+
+        # 亏损金额、手数品种分布
+        kuisun_group = kuisun_df.groupby(by=['variety_en'], as_index=False)
+        kuisun_jefb = kuisun_group['close_profit'].agg({'sum_close_profit': 'sum'})
+        kuisun_shfb = kuisun_group['close_hands'].agg({'sum_hands': 'sum'})
+        # 合并
+        group = pd.merge(kuisun_jefb, kuisun_shfb, on=['variety_en'], how='outer')
+        group['variety_text'] = group['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
+        data['kuisun'] = group.to_dict(orient='records')  # 亏损品种对应盈利金额和盈利手数
+        self.handle_finished.emit(data)
