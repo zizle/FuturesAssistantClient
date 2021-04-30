@@ -29,6 +29,9 @@ class S(QWidget):
         {'pid': -3, 'name': '盈亏分析', 'logo': '', 'children': [
             {'pid': 6, 'name': '净值图', 'logo': ''},
             {'pid': 7, 'name': '品种盈亏分析', 'logo': ''},
+        ]},
+        {'pid': -4, 'name': '风控分析', 'logo': '', 'children': [
+            {'pid': 8, 'name': '账户风控', 'logo': ''},
         ]}
     ]
 
@@ -89,15 +92,7 @@ class S(QWidget):
         self.exchange_charge_view = None  # 交易分析 - 交易费用
         self.net_value_view = None  # 净值图
         self.variety_profit_view = None  # 品种盈亏分析
-
-
-
-        # self.profit_view = None  # 累计净值
-        # self.net_profits = None  # 累计净利润
-        # self.sum_variety_profit = None  # 累计品种盈亏
-        # self.risk_view = None  # 风险度
-        # self.variety_view = None  # 交易品种统计
-        # self.shmore_view = None  # 多空盈亏统计
+        self.risk_control_view = None  # 风控分析 - 账户风控
 
         # 左侧菜单点击事件
         self.tree_list.expandAll()
@@ -165,6 +160,9 @@ class S(QWidget):
         elif self.current_pid == 7:  # 盈亏分析 - 品种盈亏分析
             self.show_variety_profit()
 
+        elif self.current_pid == 8:
+            self.show_account_risk()  # 风控分析 - 账户风控
+
         else:
             return
         self.stacked.setCurrentIndex(self.current_pid)
@@ -202,6 +200,10 @@ class S(QWidget):
         self.variety_profit_view = pages.VarietyProfitWidget(self)
         self.variety_profit_view.finished.connect(self.tip_popup.hide)
         self.stacked.addWidget(self.variety_profit_view)
+        # 风控分析 - 账户风控
+        self.risk_control_view = pages.RiskControlWidget(self)
+        self.risk_control_view.finished.connect(self.tip_popup.hide)
+        self.stacked.addWidget(self.risk_control_view)
 
 
         self.tip_popup.hide()
@@ -263,7 +265,10 @@ class S(QWidget):
         self.tip_popup.show(text='正在处理数据,请稍后...')
         self.variety_profit_view.handle_data(self.source_data['trade_detail'])
 
-
+    def show_account_risk(self):
+        # 风控分析 - 账户风控
+        self.tip_popup.show(text='正在处理数据,请稍后...')
+        self.risk_control_view.handle_data(self.source_data['account'], self.source_data['trade_detail'])
 
 
     # def show_sum_profit_rate(self):

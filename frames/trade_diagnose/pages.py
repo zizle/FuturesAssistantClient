@@ -670,10 +670,11 @@ class NetValueWidget(QScrollArea):
         self.chart.page().setWebChannel(channel_qt_obj)
         channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道,只能注册一个
 
-        self.table = QTableWidget(self)
+        # self.table = QTableWidget(self)
 
         layout.addWidget(self.chart)
-        layout.addWidget(self.table)
+        layout.addStretch()
+        # layout.addWidget(self.table)
 
         cw.setLayout(layout)
         self.setWidgetResizable(True)
@@ -707,7 +708,6 @@ class NetValueWidget(QScrollArea):
         # 传入数据到页面显示图形
         self.contact_channel.chartSource.emit(json.dumps(data), '')
         self.finished.emit()
-
 
 
 class VarietyProfitWidget(QScrollArea):
@@ -754,6 +754,60 @@ class VarietyProfitWidget(QScrollArea):
             return
         self.clear_thread()
         self.thread_ = threads.HandleVarietyProfitThread(trade_detail, parent=self)
+        self.thread_.finished.connect(self.thread_.deleteLater)
+        self.thread_.handle_finished.connect(self.data_show)
+        self.thread_.start()
+
+    def data_show(self, data):
+        # 传入数据到页面显示图形
+        self.contact_channel.chartSource.emit(json.dumps(data), '')
+        self.finished.emit()
+
+
+class RiskControlWidget(QScrollArea):
+    finished = pyqtSignal()
+
+    def __init__(self, *args, **kwargs):
+        super(RiskControlWidget, self).__init__(*args, **kwargs)
+        cw = QWidget(self)  # center widget
+
+        layout = QVBoxLayout()
+        self.chart = ChartEngineView(self)
+        self.chart.setMinimumHeight(300)
+        # 加载图形页面html
+        self.chart.page().load(QUrl('file:///html/charts/riskControl.html'))
+        # 设置与页面信息交互的通道
+        channel_qt_obj = QWebChannel(self.chart.page())  # 实例化qt信道对象,必须传入页面参数
+        self.contact_channel = ChartDataObj(self)  # 页面信息交互通道
+        self.chart.page().setWebChannel(channel_qt_obj)
+        channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道,只能注册一个
+
+        layout.addWidget(self.chart)
+
+        cw.setLayout(layout)
+        self.setWidgetResizable(True)
+        self.setWidget(cw)
+        self.setStyleSheet("QScrollArea{background-color:#ffffff}")
+        self.viewport().setStyleSheet("background-color:#ffffff")
+
+        self.thread_ = None
+        self.is_shown = False
+
+    def resizeEvent(self, event):
+        super(RiskControlWidget, self).resizeEvent(event)
+        self.contact_channel.chartResize.emit(self.chart.width() - 50, 300)
+
+    def clear_thread(self):
+        if self.thread_:
+            del self.thread_
+            self.thread_ = None
+
+    def handle_data(self, account, trade_detail):
+        if self.is_shown:
+            self.finished.emit()
+            return
+        self.clear_thread()
+        self.thread_ = threads.HandleRiskControlThread(account, trade_detail, parent=self)
         self.thread_.finished.connect(self.thread_.deleteLater)
         self.thread_.handle_finished.connect(self.data_show)
         self.thread_.start()

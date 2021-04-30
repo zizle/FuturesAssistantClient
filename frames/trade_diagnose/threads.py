@@ -407,7 +407,6 @@ class HandleBaseThread(QThread):
         self.handle_finished.emit(base_data)
 
 
-
 # 处理交易分析 - 手数金额数据
 class HandlePriceHandsThread(QThread):
     handle_finished = pyqtSignal(dict)
@@ -535,4 +534,72 @@ class HandleVarietyProfitThread(QThread):
         group = pd.merge(kuisun_jefb, kuisun_shfb, on=['variety_en'], how='outer')
         group['variety_text'] = group['variety_en'].apply(lambda x: CH_VARIETY.get(x, x))
         data['kuisun'] = group.to_dict(orient='records')  # 亏损品种对应盈利金额和盈利手数
+        self.handle_finished.emit(data)
+
+
+class HandleRiskControlThread(QThread):
+    handle_finished = pyqtSignal(dict)
+
+    def __init__(self, account, trade_detail, *args, **kwargs):
+        super(HandleRiskControlThread, self).__init__(*args, **kwargs)
+        self.account = account
+        self.trade_detail = trade_detail
+
+    def run(self):
+        account_df = pd.DataFrame(self.account)
+        trade_df = pd.DataFrame(self.trade_detail)
+        for a_key in ['rights', 'bail']:
+            account_df[a_key] = account_df[a_key].astype(float)
+        for t_key in []:
+            trade_df[t_key] = trade_df[t_key].astype(float)
+        # 仓位比例（保证金 / 权益）
+        account_df['risk_rate'] = account_df['bail'] / account_df['rights']
+        # 做多的单
+        duo_df = trade_df[trade_df['is_long'] == 1]
+        duo_yl = duo_df[duo_df['close_profit'] > 0]['close_profit'].sum()  # 多单盈利
+        duo_ks = duo_df[duo_df['close_profit'] <= 0]['close_profit'].sum()  # 多单亏损
+        duo_ylsh = duo_df[duo_df['close_profit'] > 0]['close_hands'].sum()
+        duo_kssh = duo_df[duo_df['close_profit'] <= 0]['close_hands'].sum()
+
+        # 做空的单
+        kong_df = trade_df[trade_df['is_long'] == 0]
+        kong_yl = kong_df[kong_df['close_profit'] > 0]['close_profit'].sum()  # 空单盈利
+        kong_ks = kong_df[kong_df['close_profit'] <= 0]['close_profit'].sum()  # 空单亏损
+        kong_ylsh = kong_df[kong_df['close_profit'] > 0]['close_hands'].sum()  # 空单盈利手数
+        kong_kssh = kong_df[kong_df['close_profit'] <= 0]['close_hands'].sum()  # 空单亏损手数
+        data = dict()
+        # 仓位比率图
+        data['cwbl'] = account_df[['exchange_date', 'risk_rate']].to_dict(orient='record')
+        # 多空盈亏
+        data['duo_kong_yk'] = [
+            {'value': round(duo_yl, 2), 'name': '多单盈利'},
+            {'value': round(-duo_ks, 2), 'name': '多单亏损'},
+            {'value': round(kong_yl, 2), 'name': '空单盈利'},
+            {'value': round(-kong_ks, 2), 'name': '空单亏损'},
+        ]
+        data['duo_kong_sh'] = [
+            {'value': int(duo_ylsh), 'name': '多单盈利手数'},
+            {'value': int(duo_kssh), 'name': '多单亏损手数'},
+            {'value': int(kong_ylsh), 'name': '空单盈利手数'},
+            {'value': int(kong_kssh), 'name': '空单亏损手数'},
+        ]
+        # 日内交易的单
+        rinei_df = trade_df[trade_df['open_date'] == trade_df['close_date']]
+        rinei_yk = rinei_df['close_profit'].sum()
+        # 隔夜交易的单
+        geye_df = trade_df[trade_df['open_date'] != trade_df['close_date']]
+        geye_yk = geye_df['close_profit'].sum()
+        rinei_name = '日内交易盈利'
+        if rinei_yk<0:
+            rinei_yk = -rinei_yk
+            rinei_name = '日内交易亏损'
+        geye_name = '隔夜交易盈利'
+        if geye_yk < 0:
+            geye_yk = -geye_yk
+            geye_name = '隔夜交易亏损'
+
+        data['rgyk'] = [
+            {'value': round(rinei_yk, 2), 'name': rinei_name},
+            {'value': round(geye_yk, 2), 'name': geye_name},
+        ]
         self.handle_finished.emit(data)
