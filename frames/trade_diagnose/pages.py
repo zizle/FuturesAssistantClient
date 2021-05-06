@@ -6,7 +6,7 @@
 import math
 import json
 
-from PyQt5.QtGui import QPainter, QPixmap, QIcon, QBrush, QColor
+from PyQt5.QtGui import QPainter, QPixmap, QIcon, QBrush, QColor, QPalette
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QPushButton, QTabWidget,
                              QHBoxLayout, QRadioButton, QScrollArea, QHeaderView)
 from PyQt5.QtCore import Qt, pyqtSignal, QUrl, QObject, QRect
@@ -230,6 +230,7 @@ class BaseViewWidget(QScrollArea):
         self.title = QLabel('交易诊断分析', self)
         self.title.setFixedHeight(35)
         self.title.setAlignment(Qt.AlignCenter)
+        self.title.hide()
         layout.addWidget(self.title)
         self.table = QTableWidget(self)
         self.table.setColumnCount(4)
@@ -238,10 +239,16 @@ class BaseViewWidget(QScrollArea):
         self.table.verticalHeader().hide()
         layout.addWidget(self.table)
 
+        # 注释说明
+        self.explain_label = QLabel(self)
+        # self.explain_label.setWordWrap(True)
+        layout.addWidget(self.explain_label)
+
         # 总结语
         self.text_label = QLabel(self)
         self.text_label.setWordWrap(True)
         self.text_label.setAlignment(Qt.AlignTop)
+        self.text_label.hide()
         layout.addWidget(self.text_label)
         layout.setSpacing(0)
         cw.setLayout(layout)
@@ -250,12 +257,46 @@ class BaseViewWidget(QScrollArea):
         self.setObjectName('area')
         cw.setObjectName('cw')
         self.text_label.setObjectName('tl')
-        self.text_label.setStyleSheet('background-color:rgb(20,20,20);color:rgb(235,118,0);padding-top:15px')
+        set_table_style([self.table])
+        # self.text_label.setStyleSheet('background-color:rgb(20,20,20);color:rgb(235,118,0);padding-top:15px')
+        # self.explain_label.setAttribute(Qt.WA_StyledBackground, True)
+        self.explain_label.setStyleSheet('background-color:#2b2b2b;color:#bbbbbb;padding-top:15px')
         self.setStyleSheet('#area,#cw{background-color:rgb(159, 205, 254)}')
 
         self.thread_ = None
         self.is_shown = False
-        set_table_style([self.table])
+
+        self.table.setRowCount(13)
+        self.table.setColumnCount(4)
+
+        self.indicators_list = [
+            {'nkey': '开始日期',   'nrow': 0, 'ncol': 0, 'vkey': 'ksrq', 'vrow': 0, 'vcol': 1},
+            {'nkey': '结束日期',   'nrow': 0, 'ncol': 2, 'vkey': 'jsrq', 'vrow': 0, 'vcol': 3},
+            {'nkey': '期初权益',   'nrow': 1, 'ncol': 0, 'vkey': 'qcqy', 'vrow': 1, 'vcol': 1},
+            {'nkey': '期末权益',   'nrow': 1, 'ncol': 2, 'vkey': 'qmqy', 'vrow': 1, 'vcol': 3},
+            {'nkey': '交易天数',   'nrow': 2, 'ncol': 0, 'vkey': 'qjts', 'vrow': 2, 'vcol': 1},
+            {'nkey': '盈利天数',   'nrow': 2, 'ncol': 2, 'vkey': 'ylts', 'vrow': 2, 'vcol': 3},
+            {'nkey': '亏损天数',   'nrow': 3, 'ncol': 0, 'vkey': 'ksts', 'vrow': 3, 'vcol': 1},
+            {'nkey': '交易胜率',   'nrow': 3, 'ncol': 2, 'vkey': 'jysl', 'vrow': 3, 'vcol': 3},
+            {'nkey': '累计净入金', 'nrow': 4, 'ncol': 0, 'vkey': 'ljjrj', 'vrow': 4, 'vcol': 1},
+            {'nkey': '累计净值',   'nrow': 4, 'ncol': 2, 'vkey': 'ljjz', 'vrow': 4, 'vcol': 3},
+            {'nkey': '交易费用', 'nrow': 5, 'ncol': 0, 'vkey': 'jyfy', 'vrow': 5, 'vcol': 1},
+            {'nkey': '累计净利润', 'nrow': 5, 'ncol': 2, 'vkey': 'ljjlr', 'vrow': 5, 'vcol': 3},
+            {'nkey': '盈亏比', 'nrow': 6, 'ncol': 0, 'vkey': 'ykb', 'vrow': 6, 'vcol': 1},
+            {'nkey': '手续费/净利润', 'nrow': 6, 'ncol': 2, 'vkey': 'fjlrb', 'vrow': 6, 'vcol': 3},
+            {'nkey': '最大回撤时点', 'nrow': 7, 'ncol': 0, 'vkey': 'zdhcsd', 'vrow': 7, 'vcol': 1},
+            {'nkey': '最大回撤区间', 'nrow': 7, 'ncol': 2, 'vkey': 'zdhcqj', 'vrow': 7, 'vcol': 3},
+            {'nkey': '最大日收益率', 'nrow': 8, 'ncol': 0, 'vkey': 'zdrsyl', 'vrow': 8, 'vcol': 1},
+            {'nkey': '最小日收益率', 'nrow': 8, 'ncol': 2, 'vkey': 'zxrsyl', 'vrow': 8, 'vcol': 3},
+            {'nkey': '日收益率均值', 'nrow': 9, 'ncol': 0, 'vkey': 'pjrsyl', 'vrow': 9, 'vcol': 1},
+            {'nkey': '预计年化收益率', 'nrow': 9, 'ncol': 2, 'vkey': 'yjnhsyl', 'vrow': 9, 'vcol': 3},
+            {'nkey': '最大仓位比率', 'nrow': 10, 'ncol': 0, 'vkey': 'zdcwbl', 'vrow': 10, 'vcol': 1},
+            {'nkey': '最小仓位比率', 'nrow': 10, 'ncol': 2, 'vkey': 'zxcwbl', 'vrow': 10, 'vcol': 3},
+            {'nkey': '平均仓位比率', 'nrow': 11, 'ncol': 0, 'vkey': 'pjcwbl', 'vrow': 11, 'vcol': 1},
+            {'nkey': '空仓天数', 'nrow': 11, 'ncol': 2, 'vkey': 'kcts', 'vrow': 11, 'vcol': 3},
+            {'nkey': '夏普比率', 'nrow': 12, 'ncol': 0, 'vkey': 'xpbl', 'vrow': 12, 'vcol': 1},
+            {'nkey': '卡玛比率', 'nrow': 12, 'ncol': 2, 'vkey': 'kmbl', 'vrow': 12, 'vcol': 3},
+        ]
 
     def clear_thread(self):
         if self.thread_:
@@ -266,62 +307,56 @@ class BaseViewWidget(QScrollArea):
         if self.is_shown:
             self.finished.emit()
             return
-        self.add_indicators()
         self.clear_thread()
         self.thread_ = threads.HandleBaseThread(account=account, trade_detail=trade_detail, parent=self)
         self.thread_.finished.connect(self.thread_.deleteLater)
         self.thread_.handle_finished.connect(self.show_data)
         self.thread_.start()
 
-    def add_indicators(self):
-        indicators = [
-            {'key': 'start_date', 'name': '开始日期'}, {'key': 'end_date', 'name': '结束日期'},
-            {'key': 'initial_equity', 'name': '期初权益'}, {'key': 'ending_equity', 'name': '期末权益'},
-            {'key': 'net_income', 'name': '累计净入金'}, {'key': 'accumulated_net', 'name': '累计净值'},
-            {'key': 'max_huiche_date', 'name': '最大回撤时点'}, {'key': 'max_huiche_range', 'name': '最大回撤区间'},
-            {'key': 'maxrrate', 'name': '最大回撤率'}, {'key': 'exchange_cost', 'name': '交易费用'},
-            {'key': 'accumulated_profit', 'name': '累计盈亏'}, {'key': 'average_daily', 'name': '日收益率均值'},
-            {'key': 'historical_maxp', 'name': '历史最大本金'},
-            {'key': 'max_daily_profit', 'name': '历史最高收益率'}, {'key': 'min_daily_profit', 'name': '历史最低收益率'},
-            {'key': 'expected_annual_rate', 'name': '预计年化收益率'}, {'key': 'total_days', 'name': '总交易天数'},
-            {'key': 'profit_days', 'name': '盈利天数'}, {'key': 'loss_days', 'name': '亏损天数'},
-            {'key': 'wining_rate', 'name': '交易胜率'}, {'key': 'profit_loss_rate', 'name': '盈亏比'},
-            {'key': 'net_profit', 'name': '手续费/净利润'},
-            {'key': 'zdckbl', 'name': '最大仓位比例'}, {'key': 'pjckbl', 'name': '平均仓位比例'},
-            {'key': 'kcts', 'name': '空仓天数'}, {'key': 'place', 'name': ''},
-        ]
-        self.table.setRowCount(math.ceil(len(indicators) / 2))
-        self.table.setFixedHeight(math.ceil(len(indicators) / 2) * 31)
-        self.table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        i = 0
-        for row in range(self.table.rowCount()):
-            for col in range(self.table.columnCount()):
-                if col % 2 == 0:
-                    item = QTableWidgetItem(indicators[i]['name'])
-                    item.setData(Qt.UserRole, indicators[i]['key'])
-                    item.setForeground(QBrush(QColor(66, 233, 233)))
-                    self.table.setItem(row, col, item)
-                    i += 1
-                else:
-                    self.table.setColumnWidth(col, 200)
-            self.table.setRowHeight(row, 31)
-
     def show_data(self, base_data):
         self.show_base_data(base_data)
-        self.show_text(base_data)
+        # self.show_text(base_data)
+        self.show_explain_text(base_data)
+        self.finished.emit()
+
+    def show_explain_text(self, base_data):
+        explain_text = f"""
+        <div style='color:#42e9e9'>
+            <p>平仓盈利前五品种：<span style=color:'#dc2835'>{base_data['ylqwpz']}</span>；平仓亏损前五品种：<span style=color:'#15bc3e'>{base_data['ksqwpz']}</span></p>
+            <p>交易手数前五品种：<span style=color:'#ffffff'>{base_data['shqwpz']}</span>；交易金额前五品种：<span style=color:'#ffffff'>{base_data['jeqwpz']}</span></p>
+        </div>
+        <div>
+            <p>其中:</p>
+            <p>交易天数:账户资金记录的日期总天数  盈利天数:账户资金表中当日盈亏为正的天数  亏损天数:账户资金表中当日盈亏不为正的天数</p>
+            <p>交易胜率:平仓盈利的交易手数 / 总平仓手数</p>
+            <p>累计净值P=P1*P2*P3.....*Pn，其中P为累计净值，Pn为当日净值；Pn=(当日权益 - 当日存取)/上日权益</p>
+            <p>累计净利润：平仓交易净盈亏 - 交易费用，其中交易费用为手续费加和</p>
+            <p>盈亏比：平仓交易盈利加和 / 平仓交易亏损加和 * 100%</p>
+            <p>最大回撤时点：最大回撤区间开始时的时点，其中最大回撤区间为诊断的日期内的区间</p>
+            <p>日收益率=当日净值Pn - 1，预计年化收益率：平均日收益率 x 250</p>
+            <p>仓位比率(风险度) = 当日保证金占用 / 当日权益 * 100%</p>
+            <p>空仓天数：账户中保证金占用为0的天数</p>
+            <p>夏普比率：(年化收益率 - 无风险利率) / 收益率标准差; 其中无风险利率：2%</p>
+            <p>卡玛比率：(年化收益率 - 无风险利率) / 最大回撤率; 其中无风险利率：2%</p>
+            <p>最大回撤率:区间最高累计净值 - 当日的累计净值) / 区间最高累计净值，取最大值</p>
+        </div>
+        """
+        self.explain_label.setText(explain_text)
+        self.explain_label.setAlignment(Qt.AlignTop)
 
     def show_base_data(self, base_data):
+        self.table.setRowCount(math.ceil(len(self.indicators_list) / 2))
+        self.table.setFixedHeight(math.ceil(len(self.indicators_list) / 2) * 31)
         # 显示目标数据
-        # {k:v}
-        self.finished.emit()
-        for row in range(self.table.rowCount()):
-            for col in range(self.table.columnCount()):
-                if col % 2 == 0:
-                    item = self.table.item(row, col)
-                    data_key = item.data(Qt.UserRole)
-                    data_item = QTableWidgetItem(str(base_data.get(data_key, '1')))
-                    data_item.setForeground(QBrush(QColor(255, 255, 255)))
-                    self.table.setItem(row, col + 1, data_item)
+        for indicator in self.indicators_list:
+            item1 = QTableWidgetItem(str(indicator['nkey']))
+            item1.setForeground(QBrush(QColor(66, 233, 233)))
+            self.table.setItem(indicator['nrow'], indicator['ncol'], item1)
+            item2 = QTableWidgetItem(str(base_data[indicator['vkey']]))
+            item2.setForeground(QBrush(QColor(255, 255, 255)))
+            self.table.setItem(indicator['vrow'], indicator['vcol'], item2)
+            self.table.setColumnWidth(indicator['vcol'], 180)
+            self.table.setRowHeight(indicator['nrow'], 31)
 
         self.is_shown = True
 
@@ -452,425 +487,332 @@ class BaseViewWidget(QScrollArea):
         self.text_label.setText(text)
 
 
-# 累计净值窗口
-class ProfitViewWidget(QWidget):
+# 交易分析 - 手数金额
+class HandsPriceWidget(QScrollArea):
     finished = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
-        super(ProfitViewWidget, self).__init__(*args, **kwargs)
+        super(HandsPriceWidget, self).__init__(*args, **kwargs)
+        cw = QWidget(self)  # center widget
+
         layout = QVBoxLayout()
-
-        # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
-        self.chart.setMaximumHeight(430)
-        self.chart.setMinimumHeight(430)
-        layout.addWidget(self.chart)
-        self.table = QTableWidget(self)
-        self.table.horizontalHeader().setDefaultSectionSize(156)
-        layout.addWidget(self.table)
-        self.setLayout(layout)
-
+        self.chart.setMinimumHeight(300)
         # 加载图形页面html
-        self.chart.page().load(QUrl('file:///html/charts/sum_profit.html'))
+        self.chart.page().load(QUrl('file:///html/charts/handPrice.html'))
         # 设置与页面信息交互的通道
         channel_qt_obj = QWebChannel(self.chart.page())  # 实例化qt信道对象,必须传入页面参数
         self.contact_channel = ChartDataObj(self)  # 页面信息交互通道
         self.chart.page().setWebChannel(channel_qt_obj)
         channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道,只能注册一个
 
+        layout.addWidget(self.chart)
+
+        cw.setLayout(layout)
+        self.setWidgetResizable(True)
+        self.setWidget(cw)
+        self.setStyleSheet("QScrollArea{background-color:#ffffff}")
+        self.viewport().setStyleSheet("background-color:#ffffff")
+
         self.thread_ = None
         self.is_shown = False
-        set_table_style([self.table])
 
     def resizeEvent(self, event):
-        super(ProfitViewWidget, self).resizeEvent(event)
-        self.contact_channel.chartResize.emit(self.chart.width() - 50, self.chart.height())
+        super(HandsPriceWidget, self).resizeEvent(event)
+        self.contact_channel.chartResize.emit(self.chart.width() -50, self.chart.height())
 
     def clear_thread(self):
         if self.thread_:
             del self.thread_
             self.thread_ = None
 
-    def handle_profit_data(self, base_data):
+    def handle_data(self, trade_detail):
         if self.is_shown:
             self.finished.emit()
             return
         self.clear_thread()
-        self.thread_ = threads.HandProfitThread(source=base_data, parent=self)
+        self.thread_ = threads.HandlePriceHandsThread(trade_detail, parent=self)
         self.thread_.finished.connect(self.thread_.deleteLater)
-        self.thread_.handle_finished.connect(self.show_profit_data)
+        self.thread_.handle_finished.connect(self.data_show)
         self.thread_.start()
 
-    def show_profit_data(self, profit_data):
+    def data_show(self, data):
+        # 传入数据到页面显示图形
+        self.contact_channel.chartSource.emit(json.dumps(data), '')
         self.finished.emit()
-        # 加载图形
-        self.contact_channel.chartSource.emit(json.dumps(profit_data), '{}')
-        # 表格显示数据
-        self.table_show(profit_data)
-
-    def table_show(self, profit_data):
-        self.table.clear()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(['日期', '当日净值', '累计净值'])
-        self.table.setRowCount(len(profit_data))
-        for row, row_item in enumerate(profit_data):
-            for col, key in enumerate(['exchange_date', 'profit_rate', 'cum_sum']):
-                item = QTableWidgetItem(str(row_item[key]))
-                if col == 0:
-                    item.setForeground(QBrush(QColor(255,255,255)))
-                else:
-                    item.setForeground(QBrush(QColor(66, 233, 233)))
-                item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                self.table.setItem(row, col, item)
-
-        self.is_shown = True
 
 
-# 累计净利润
-class NetProfitsWidget(QWidget):
-
+# 交易分析 - 日内隔夜交易
+class PassNightWidget(QScrollArea):
     finished = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
-        super(NetProfitsWidget, self).__init__(*args, **kwargs)
+        super(PassNightWidget, self).__init__(*args, **kwargs)
+        cw = QWidget(self)  # center widget
+
         layout = QVBoxLayout()
-
-        # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
-        self.chart.setMaximumHeight(430)
-        self.chart.setMinimumHeight(430)
-        layout.addWidget(self.chart)
-        self.table = QTableWidget(self)
-        self.table.horizontalHeader().setDefaultSectionSize(156)
-        layout.addWidget(self.table)
-        self.setLayout(layout)
-
+        self.chart.setMinimumHeight(300)
         # 加载图形页面html
-        self.chart.page().load(QUrl('file:///html/charts/net_profits.html'))
+        self.chart.page().load(QUrl('file:///html/charts/passNight.html'))
         # 设置与页面信息交互的通道
         channel_qt_obj = QWebChannel(self.chart.page())  # 实例化qt信道对象,必须传入页面参数
         self.contact_channel = ChartDataObj(self)  # 页面信息交互通道
         self.chart.page().setWebChannel(channel_qt_obj)
         channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道,只能注册一个
 
+        layout.addWidget(self.chart)
+
+        cw.setLayout(layout)
+        self.setWidgetResizable(True)
+        self.setWidget(cw)
+        self.setStyleSheet("QScrollArea{background-color:#ffffff}")
+        self.viewport().setStyleSheet("background-color:#ffffff")
+
         self.thread_ = None
         self.is_shown = False
 
     def resizeEvent(self, event):
-        super(NetProfitsWidget, self).resizeEvent(event)
-        self.contact_channel.chartResize.emit(self.chart.width() - 50, self.chart.height())
+        super(PassNightWidget, self).resizeEvent(event)
+        self.contact_channel.chartResize.emit(self.chart.width() - 50, 300)
 
     def clear_thread(self):
         if self.thread_:
             del self.thread_
             self.thread_ = None
 
-    def handle_net_profits(self, base_data):
+    def handle_data(self, trade_detail):
         if self.is_shown:
             self.finished.emit()
             return
         self.clear_thread()
-        self.thread_ = threads.HandNetProfitsThread(source=base_data, parent=self)
+        self.thread_ = threads.HandlePassNightThread(trade_detail, parent=self)
         self.thread_.finished.connect(self.thread_.deleteLater)
-        self.thread_.handle_finished.connect(self.show_net_profits)
+        self.thread_.handle_finished.connect(self.data_show)
         self.thread_.start()
 
-    def show_net_profits(self, profit_data):
+    def data_show(self, data):
+        # 传入数据到页面显示图形
+        self.contact_channel.chartSource.emit(json.dumps(data), '')
         self.finished.emit()
-        # 加载图形
-        self.contact_channel.chartSource.emit(json.dumps(profit_data), '{}')
-        # 表格显示数据
-        self.table_show(profit_data)
-
-    def table_show(self, profit_data):
-        self.table.clear()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(['日期', '当日净利润', '累计净利润'])
-        self.table.setRowCount(len(profit_data))
-        for row, row_item in enumerate(profit_data):
-            for col, key in enumerate(['exchange_date', 'net_profit', 'net_profit_cumsum']):
-                item = QTableWidgetItem(str(row_item[key]))
-                self.table.setItem(row, col, item)
-
-        self.is_shown = True
 
 
-# 累计品种盈亏
-class SumVarietyProfitWidget(QWidget):
+# 交易分析 - 交易费用
+class ExchangeChargeWidget(QScrollArea):
     finished = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
-        super(SumVarietyProfitWidget, self).__init__(*args, **kwargs)
+        super(ExchangeChargeWidget, self).__init__(*args, **kwargs)
+        cw = QWidget(self)  # center widget
+
         layout = QVBoxLayout()
-
-        # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
-        self.chart.setMaximumHeight(430)
-        self.chart.setMinimumHeight(430)
-        layout.addWidget(self.chart)
-        self.table = QTableWidget(self)
-        self.table.horizontalHeader().setDefaultSectionSize(156)
-        layout.addWidget(self.table)
-        self.setLayout(layout)
-
+        self.chart.setMinimumHeight(300)
         # 加载图形页面html
-        self.chart.page().load(QUrl('file:///html/charts/sum_variety_profit.html'))
+        self.chart.page().load(QUrl('file:///html/charts/exchangeCharge.html'))
         # 设置与页面信息交互的通道
         channel_qt_obj = QWebChannel(self.chart.page())  # 实例化qt信道对象,必须传入页面参数
         self.contact_channel = ChartDataObj(self)  # 页面信息交互通道
         self.chart.page().setWebChannel(channel_qt_obj)
         channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道,只能注册一个
 
+        layout.addWidget(self.chart)
+
+        cw.setLayout(layout)
+        self.setWidgetResizable(True)
+        self.setWidget(cw)
+        self.setStyleSheet("QScrollArea{background-color:#ffffff}")
+        self.viewport().setStyleSheet("background-color:#ffffff")
+
         self.thread_ = None
         self.is_shown = False
 
     def resizeEvent(self, event):
-        super(SumVarietyProfitWidget, self).resizeEvent(event)
-        self.contact_channel.chartResize.emit(self.chart.width() - 50, self.chart.height())
+        super(ExchangeChargeWidget, self).resizeEvent(event)
+        self.contact_channel.chartResize.emit(self.chart.width() - 50, 420)
 
     def clear_thread(self):
         if self.thread_:
             del self.thread_
             self.thread_ = None
 
-    def handle_sum_variety_profit(self, base_data):
+    def handle_data(self, account_data):
         if self.is_shown:
             self.finished.emit()
             return
         self.clear_thread()
-        self.thread_ = threads.HandleSumVarietyProfitThread(source=base_data, parent=self)
+        self.thread_ = threads.HandleExChargeThread(account_data, parent=self)
         self.thread_.finished.connect(self.thread_.deleteLater)
-        self.thread_.handle_finished.connect(self.sum_variety_profit)
+        self.thread_.handle_finished.connect(self.data_show)
         self.thread_.start()
 
-    def sum_variety_profit(self, profit_data):
+    def data_show(self, data):
+        # 传入数据到页面显示图形
+        self.contact_channel.chartSource.emit(json.dumps(data), '')
         self.finished.emit()
-        # 加载图形
-        self.contact_channel.chartSource.emit(json.dumps(profit_data), '{}')
-        # 表格显示数据
-        self.table_show(profit_data)
 
-    def table_show(self, profit_data):
-        self.table.clear()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(['品种', '盈亏', '亏损'])
-        self.table.setRowCount(len(profit_data))
-        for row, row_item in enumerate(profit_data):
-            for col, key in enumerate(['variety_text', 'yingli', 'kuisun']):
-                item = QTableWidgetItem(str(row_item[key]))
-                self.table.setItem(row, col, item)
-
-        self.is_shown = True
-
-
-# 风险度
-class RiskViewWidget(QWidget):
-
+# 盈亏分析 - 净值图
+class NetValueWidget(QScrollArea):
     finished = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
-        super(RiskViewWidget, self).__init__(*args, **kwargs)
+        super(NetValueWidget, self).__init__(*args, **kwargs)
+        cw = QWidget(self)  # center widget
+
         layout = QVBoxLayout()
-
-        # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
-        self.chart.setMaximumHeight(430)
-        self.chart.setMinimumHeight(430)
-        layout.addWidget(self.chart)
-        self.table = QTableWidget(self)
-        self.table.horizontalHeader().setDefaultSectionSize(156)
-        layout.addWidget(self.table)
-        self.setLayout(layout)
-
+        self.chart.setFixedHeight(420)
         # 加载图形页面html
-        self.chart.page().load(QUrl('file:///html/charts/risk_percent.html'))
+        self.chart.page().load(QUrl('file:///html/charts/netValue.html'))
         # 设置与页面信息交互的通道
         channel_qt_obj = QWebChannel(self.chart.page())  # 实例化qt信道对象,必须传入页面参数
         self.contact_channel = ChartDataObj(self)  # 页面信息交互通道
         self.chart.page().setWebChannel(channel_qt_obj)
         channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道,只能注册一个
 
+        # self.table = QTableWidget(self)
+
+        layout.addWidget(self.chart)
+        layout.addStretch()
+        # layout.addWidget(self.table)
+
+        cw.setLayout(layout)
+        self.setWidgetResizable(True)
+        self.setWidget(cw)
+        self.setStyleSheet("QScrollArea{background-color:#ffffff}")
+        self.viewport().setStyleSheet("background-color:#ffffff")
+
         self.thread_ = None
         self.is_shown = False
 
     def resizeEvent(self, event):
-        super(RiskViewWidget, self).resizeEvent(event)
-        self.contact_channel.chartResize.emit(self.chart.width() - 50, self.chart.height())
+        super(NetValueWidget, self).resizeEvent(event)
+        self.contact_channel.chartResize.emit(self.chart.width() - 50, 420)
 
     def clear_thread(self):
         if self.thread_:
             del self.thread_
             self.thread_ = None
 
-    def handle_risk_percent(self, base_data):
+    def handle_data(self, account_data):
         if self.is_shown:
             self.finished.emit()
             return
         self.clear_thread()
-        self.thread_ = threads.RiskThread(source=base_data, parent=self)
+        self.thread_ = threads.HandleNetValueThread(account_data, parent=self)
         self.thread_.finished.connect(self.thread_.deleteLater)
-        self.thread_.handle_finished.connect(self.show_risk)
+        self.thread_.handle_finished.connect(self.data_show)
         self.thread_.start()
 
-    def show_risk(self, profit_data):
+    def data_show(self, data):
+        # 传入数据到页面显示图形
+        self.contact_channel.chartSource.emit(json.dumps(data), '')
         self.finished.emit()
-        # 加载图形
-        self.contact_channel.chartSource.emit(json.dumps(profit_data), '{}')
-        # 表格显示数据
-        self.table_show(profit_data)
-
-    def table_show(self, profit_data):
-        self.table.clear()
-        self.table.setColumnCount(2)
-        self.table.setHorizontalHeaderLabels(['日期', '风险度'])
-        self.table.setRowCount(len(profit_data))
-        for row, row_item in enumerate(profit_data):
-            for col, key in enumerate(['exchange_date', 'risk']):
-                item = QTableWidgetItem(f'{row_item[key]}%')
-                self.table.setItem(row, col, item)
-
-        self.is_shown = True
 
 
-# 交易品种统计
-class VarietyViewWidget(QWidget):
-
+class VarietyProfitWidget(QScrollArea):
     finished = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
-        super(VarietyViewWidget, self).__init__(*args, **kwargs)
+        super(VarietyProfitWidget, self).__init__(*args, **kwargs)
+        cw = QWidget(self)  # center widget
+
         layout = QVBoxLayout()
-
-        # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
-        self.chart.setMaximumHeight(430)
-        self.chart.setMinimumHeight(430)
-        layout.addWidget(self.chart)
-        self.table = QTableWidget(self)
-        self.table.horizontalHeader().setDefaultSectionSize(156)
-        layout.addWidget(self.table)
-        self.setLayout(layout)
-
+        self.chart.setMinimumHeight(300)
         # 加载图形页面html
-        self.chart.page().load(QUrl('file:///html/charts/variety_pie.html'))
+        self.chart.page().load(QUrl('file:///html/charts/varietyProfit.html'))
         # 设置与页面信息交互的通道
         channel_qt_obj = QWebChannel(self.chart.page())  # 实例化qt信道对象,必须传入页面参数
         self.contact_channel = ChartDataObj(self)  # 页面信息交互通道
         self.chart.page().setWebChannel(channel_qt_obj)
         channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道,只能注册一个
 
+        layout.addWidget(self.chart)
+
+        cw.setLayout(layout)
+        self.setWidgetResizable(True)
+        self.setWidget(cw)
+        self.setStyleSheet("QScrollArea{background-color:#ffffff}")
+        self.viewport().setStyleSheet("background-color:#ffffff")
+
         self.thread_ = None
         self.is_shown = False
 
-        set_table_style([self.table])
-
     def resizeEvent(self, event):
-        super(VarietyViewWidget, self).resizeEvent(event)
-        self.contact_channel.chartResize.emit(self.chart.width() - 50, self.chart.height())
+        super(VarietyProfitWidget, self).resizeEvent(event)
+        self.contact_channel.chartResize.emit(self.chart.width() - 50, 300)
 
     def clear_thread(self):
         if self.thread_:
             del self.thread_
             self.thread_ = None
 
-    def handle_variety_percent(self, base_data):
+    def handle_data(self, trade_detail):
         if self.is_shown:
             self.finished.emit()
             return
         self.clear_thread()
-        self.thread_ = threads.VarietyPercentThread(source=base_data, parent=self)
+        self.thread_ = threads.HandleVarietyProfitThread(trade_detail, parent=self)
         self.thread_.finished.connect(self.thread_.deleteLater)
-        self.thread_.handle_finished.connect(self.show_variety)
+        self.thread_.handle_finished.connect(self.data_show)
         self.thread_.start()
 
-    def show_variety(self, profit_data):
+    def data_show(self, data):
+        # 传入数据到页面显示图形
+        self.contact_channel.chartSource.emit(json.dumps(data), '')
         self.finished.emit()
-        # 加载图形
-        self.contact_channel.chartSource.emit(json.dumps(profit_data), '{}')
-        # 表格显示数据
-        self.table_show(profit_data)
-
-    def table_show(self, profit_data):
-        self.table.clear()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(['品种', '交易额', '交易手数'])
-        self.table.setRowCount(len(profit_data))
-        for row, row_item in enumerate(profit_data):
-            for col, key in enumerate(['variety_text', 'ex_money', 'hands']):
-                item = QTableWidgetItem(str(row_item[key]))
-                if col == 0:
-                    item.setForeground(QBrush(QColor(255,255,255)))
-                else:
-                    item.setForeground(QBrush(QColor(66,233,233)))
-                self.table.setItem(row, col, item)
-
-        self.is_shown = True
 
 
-# 多空盈亏统计
-class ShortMoreViewWidget(QWidget):
-
+class RiskControlWidget(QScrollArea):
     finished = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
-        super(ShortMoreViewWidget, self).__init__(*args, **kwargs)
+        super(RiskControlWidget, self).__init__(*args, **kwargs)
+        cw = QWidget(self)  # center widget
+
         layout = QVBoxLayout()
-
-        # 上方图形，下方数据表
         self.chart = ChartEngineView(self)
-        self.chart.setMaximumHeight(430)
-        self.chart.setMinimumHeight(430)
-        layout.addWidget(self.chart)
-        self.table = QTableWidget(self)
-        self.table.horizontalHeader().setDefaultSectionSize(156)
-        layout.addWidget(self.table)
-        self.setLayout(layout)
-
+        self.chart.setMinimumHeight(300)
         # 加载图形页面html
-        self.chart.page().load(QUrl('file:///html/charts/shmore_pie.html'))
+        self.chart.page().load(QUrl('file:///html/charts/riskControl.html'))
         # 设置与页面信息交互的通道
         channel_qt_obj = QWebChannel(self.chart.page())  # 实例化qt信道对象,必须传入页面参数
         self.contact_channel = ChartDataObj(self)  # 页面信息交互通道
         self.chart.page().setWebChannel(channel_qt_obj)
         channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道,只能注册一个
 
+        layout.addWidget(self.chart)
+
+        cw.setLayout(layout)
+        self.setWidgetResizable(True)
+        self.setWidget(cw)
+        self.setStyleSheet("QScrollArea{background-color:#ffffff}")
+        self.viewport().setStyleSheet("background-color:#ffffff")
+
         self.thread_ = None
         self.is_shown = False
 
     def resizeEvent(self, event):
-        super(ShortMoreViewWidget, self).resizeEvent(event)
-        self.contact_channel.chartResize.emit(self.chart.width() - 50, self.chart.height())
+        super(RiskControlWidget, self).resizeEvent(event)
+        self.contact_channel.chartResize.emit(self.chart.width() - 50, 300)
 
     def clear_thread(self):
         if self.thread_:
             del self.thread_
             self.thread_ = None
 
-    def handle_short_more(self, base_data):
+    def handle_data(self, account, trade_detail):
         if self.is_shown:
             self.finished.emit()
             return
         self.clear_thread()
-        self.thread_ = threads.ShortMoretThread(source=base_data, parent=self)
+        self.thread_ = threads.HandleRiskControlThread(account, trade_detail, parent=self)
         self.thread_.finished.connect(self.thread_.deleteLater)
-        self.thread_.handle_finished.connect(self.show_short_more)
+        self.thread_.handle_finished.connect(self.data_show)
         self.thread_.start()
 
-    def show_short_more(self, profit_data):
+    def data_show(self, data):
+        # 传入数据到页面显示图形
+        self.contact_channel.chartSource.emit(json.dumps(data), '')
         self.finished.emit()
-        # 加载图形
-        self.contact_channel.chartSource.emit(json.dumps(profit_data), '{}')
-        # 表格显示数据
-        self.table_show(profit_data['pieData'])
-
-    def table_show(self, profit_data):
-        self.table.clear()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(['类型', '盈亏', '手数'])
-        self.table.setRowCount(len(profit_data))
-        for row, row_item in enumerate(profit_data):
-            for col, key in enumerate(['valueName', 'value', 'hands']):
-                item = QTableWidgetItem(str(row_item[key]))
-                self.table.setItem(row, col, item)
-
-        self.is_shown = True

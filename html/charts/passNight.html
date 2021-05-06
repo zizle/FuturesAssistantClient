@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>隔夜交易手数-金额</title>
+    <script src="js/jquery-1.7.2.min.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/qwebchannel.js"></script>
+    <script src="js/public.js"></script>
+</head>
+<style>
+html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
+#chart1{width: 50%; height:300px;margin: 0 auto}
+#chart2{width: 50%; height:300px;margin: 0 auto}
+#chart3{width: 50%; height:300px;margin: 0 auto}
+</style>
+<body>
+<div style="display: flex">
+    <div id="chart1"></div>
+</div>
+<div style="height: 35px"></div>
+<div style="display: flex">
+    <div id="chart2"></div>
+    <div id="chart3"></div>
+</div>
+</body>
+<script>
+
+function getOption1(pieSource){
+  return {
+    title:{text:'日内隔夜交易分布',left: 'center'},
+    tooltip: {
+      trigger: 'item'
+    },
+
+    legend: {
+        bottom: 0
+    },
+    series:[
+        {
+            name: '日内隔夜交易分布',
+            type: 'pie',
+            radius: '50%',
+            data: [
+                {value: pieSource.rinei, name: '日内交易额'},
+                {value: pieSource.geye, name: '隔夜交易额'},
+            ]
+        }
+    ]
+
+  }
+}
+
+function getOption2(pieSource){
+  return {
+    title:{text:'日内交易品种分布',left: 'center'},
+    tooltip: {
+      trigger: 'item'
+    },
+
+    legend: {
+        bottom: 0
+    },
+    series:[
+        {
+            name: '日内交易品种分布',
+            type: 'pie',
+            radius: '50%',
+            data: pieSource.map(item => {return {value: item.sum_ex_money, name: item.variety_text}})
+        }
+    ]
+
+  }
+}
+
+
+function getOption3(pieSource){
+  return {
+    title:{text:'隔夜交易品种分布',left: 'center'},
+    tooltip: {
+      trigger: 'item'
+    },
+    legend: {
+        bottom: 0
+    },
+    series:[
+        {
+            name: '隔夜交易品种分布',
+            type: 'pie',
+            radius: '50%',
+            data: pieSource.map(item => {return {value: item.sum_ex_money, name: item.variety_text}})
+        }
+    ]
+
+  }
+}
+// 主入口函数
+$(function () {
+    let chart1 = echarts.init(document.getElementById('chart1'), null, {renderer: 'svg'});
+    let chart2 = echarts.init(document.getElementById('chart2'), null, {renderer: 'svg'});
+    let chart3 = echarts.init(document.getElementById('chart3'), null, {renderer: 'svg'});
+    // 与UI界面通讯的实例
+    new QWebChannel(qt.webChannelTransport, function(channel)
+        {
+            let pageContact = channel.objects.pageContactChannel;
+            // 传入绘图数据
+            pageContact.chartSource.connect(function (sourceData) {
+                let source = JSON.parse(sourceData)
+                let option1 = getOption1(source.rngyjezb)  // 日内隔夜交易占比
+                chart1.clear();
+                chart1.setOption(option1, true)
+                let option2 = getOption2(source.rnpzjyzb)  // 日内品种分布
+                chart2.clear();
+                chart2.setOption(option2, true)
+                let option3 = getOption3(source.gypzjyzb)  // 隔夜品种分布
+                chart3.clear();
+                chart3.setOption(option3, true)
+            });
+            // 传入重置大小
+            pageContact.chartResize.connect(function (cWidth, cHeight) {
+                chart1.resize({width: cWidth / 2, height: cHeight});
+                document.getElementById('chart1').style.height = cHeight
+                chart2.resize({width: cWidth / 2, height: cHeight});
+                document.getElementById('chart2').style.height = cHeight
+                chart3.resize({width: cWidth / 2, height: cHeight});
+                document.getElementById('chart3').style.height = cHeight
+            });
+            // 清除图形
+            // pageContact.clearChart.connect(function () {
+            //     chartObj.clear();
+            // })
+        }
+    );
+})
+</script>
+</html>

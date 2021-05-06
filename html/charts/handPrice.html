@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>交易手数-金额</title>
+    <script src="js/jquery-1.7.2.min.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/qwebchannel.js"></script>
+    <script src="js/public.js"></script>
+</head>
+<style>
+html,body{margin:0;padding:0;background-color: rgb(235,235,235)}
+#chart1{width: 50%; height:260px;margin: 0 auto}
+#chart2{width: 50%; height:260px;margin: 0 auto}
+</style>
+<body>
+<div style="display: flex">
+    <div id="chart1"></div>
+    <div id="chart2"></div>
+</div>
+</body>
+<script>
+
+function getOption1(pieSource){
+  return {
+    title:{text:'品种交易手数分布',left: 'center'},
+    tooltip: {
+      trigger: 'item'
+    },
+    legend: {
+        top: 40
+    },
+    series:[
+        {
+            name: '品种手数分布',
+            type: 'pie',
+            radius: '50%',
+            data: pieSource.map(item => {return {value: item.sum_hands, name: item.variety_text}})
+        }
+    ]
+
+  }
+}
+
+function getOption2(pieSource){
+  return {
+    title:{text:'品种成交金额分布',left: 'center'},
+    tooltip: {
+      trigger: 'item'
+    },
+    legend: {
+        top: 40
+    },
+    series:[
+        {
+            name: '交易金额分布',
+            type: 'pie',
+            radius: '50%',
+            data: pieSource.map(item => {return {value: item.sum_ex_money, name: item.variety_text}})
+        }
+    ]
+
+  }
+}
+// 主入口函数
+$(function () {
+    let chart1 = echarts.init(document.getElementById('chart1'), null, {renderer: 'svg'});
+    let chart2 = echarts.init(document.getElementById('chart2'), null, {renderer: 'svg'});
+    // 与UI界面通讯的实例
+    new QWebChannel(qt.webChannelTransport, function(channel)
+        {
+            let pageContact = channel.objects.pageContactChannel;
+            // 传入绘图数据
+            pageContact.chartSource.connect(function (sourceData) {
+                let source = JSON.parse(sourceData)
+                let option1 = getOption1(source.jyshfb)  // 交易手数分布jyshfb
+                chart1.clear();
+                chart1.setOption(option1, true)
+                let option2 = getOption2(source.jyjefb)  // 交易金额分布jyjefb
+                chart2.clear();
+                chart2.setOption(option2, true)
+            });
+            // 传入重置大小
+            pageContact.chartResize.connect(function (cWidth, cHeight) {
+                chart1.resize({width: cWidth / 2, height: cHeight});
+                chart2.resize({width: cWidth / 2, height: cHeight});
+            });
+            // 清除图形
+            // pageContact.clearChart.connect(function () {
+            //     chartObj.clear();
+            // })
+        }
+    );
+})
+</script>
+</html>
