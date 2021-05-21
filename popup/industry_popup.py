@@ -10,9 +10,9 @@ from xlsxwriter.exceptions import FileCreateError
 from PyQt5.QtWidgets import (qApp, QDesktopWidget, QDialog, QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QLabel,
                              QPushButton, QSplitter, QLineEdit, QSpinBox, QComboBox, QGroupBox, QTableWidget, QCheckBox,
                              QListWidget, QListWidgetItem, QTableWidgetItem, QHeaderView, QMenu, QMessageBox,
-                             QFileDialog)
+                             QFileDialog, QScrollArea)
 from PyQt5.QtCore import Qt, pyqtSignal, QMargins, QUrl
-from PyQt5.QtGui import QBrush, QColor, QIntValidator
+from PyQt5.QtGui import QBrush, QColor, QIntValidator, QPalette
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtWebChannel import QWebChannel
@@ -25,6 +25,8 @@ from .message import InformationPopup
 from settings import BASE_DIR, SERVER_API, logger
 from widgets import OperateButton
 from apis.industry import SheetAPI
+from apis.industry.sheet import UpdateSheetRows, GetChartSheetColumns
+from apis.industry.charts import SaveComparesThread
 
 """ 配置更新文件夹 """
 
@@ -120,6 +122,7 @@ class UpdateFolderPopup(QDialog):
         conn.close()
         self.successful_signal.emit("调整配置成功!")
         """
+
     def create_update_folder_reply(self):
         """ 创建更新文件价返回 """
         reply = self.sender()
@@ -141,12 +144,27 @@ class SheetWidgetPopup(QDialog):
         self.header_keys = None
         self.sheet_id = sheet_id
         layout = QVBoxLayout()
+        header_widget = QWidget(self)
+        header_lt = QHBoxLayout(self)
+        header_lt.setContentsMargins(0, 0, 0, 0)
         self.declare_label = QLabel(
-            '双击要修改的数据单元格后,写入新的数据,再点击对应行最后的确认按钮(√)进行修改,一次只能修改一行数据(编号日期不支持修改)。', self)
-        layout.addWidget(self.declare_label, alignment=Qt.AlignTop | Qt.AlignLeft)
+            '双击要修改的数据单元格后,写入新的数据,再点击对应行最后的确认按钮(√)进行修改,一次只能修改一行数据(编号日期不支持修改)。右侧按钮支持修改完再统一更新', self)
+        header_lt.addWidget(self.declare_label)
+
+        self.all_update_button = QPushButton('确定更新', self)
+        self.all_update_button.setFocusPolicy(Qt.NoFocus)
+        self.all_update_button.clicked.connect(self.update_all_edit_rows)
+        header_lt.addWidget(self.all_update_button)
+        header_lt.addStretch()
+
+        header_widget.setLayout(header_lt)
+
+        layout.addWidget(header_widget)
+
         self.value_table = QTableWidget(self)
         self.value_table.horizontalHeader().hide()
         self.value_table.verticalHeader().hide()
+        self.value_table.cellChanged.connect(self.append_edit_row)
         layout.addWidget(self.value_table)
 
         self.loading_cover = LoadingCover(self)  # 在此实现才能遮住之前的控件
@@ -163,9 +181,72 @@ class SheetWidgetPopup(QDialog):
 
         self.get_current_sheet_values()
 
+        self.edit_rows = []
+        self.update_thread = UpdateSheetRows(self)
+        self.update_thread.finished.connect(self.reset_thread_data)
+        self.update_thread.update_signal.connect(self.update_rows_result)
+
+    def reset_thread_data(self):
+        self.update_thread.set_sheet_id(0)
+        self.update_thread.set_rows([])
+
     def resizeEvent(self, event):
         super(SheetWidgetPopup, self).resizeEvent(event)
         self.loading_cover.resize(self.width(), self.height())
+
+    def update_all_edit_rows(self):
+        # 更新所有编辑过的行
+        if len(self.edit_rows) < 1:
+            return
+        self.update_thread.set_sheet_id(self.sheet_id)
+        self.update_thread.set_rows(self.edit_rows)
+        self.update_thread.start()
+
+    def update_rows_result(self, msg):
+        print(msg)
+        QMessageBox.information(self, '提示', msg)
+        # 关闭变化信号
+        self.value_table.cellChanged.disconnect()
+        for row_item in self.edit_rows:
+            for col in range(self.value_table.columnCount()):
+                item = self.value_table.item(row_item['row_index'], col)
+                if item:
+                    item.setBackground(QBrush(QColor(255, 255, 255)))
+        # 清空待更新数据
+        self.edit_rows.clear()
+        # 开启变化信息
+        self.value_table.cellChanged.connect(self.append_edit_row)
+
+    def append_edit_row(self, row, col):
+        item = self.value_table.item(row, col)
+        if not item:
+            return
+
+        value_obj = {'row_index': row}
+
+        for col, key in enumerate(self.header_keys):
+            value_item = self.value_table.item(row, col)
+            if key == 'id':
+                if row > 0:
+                    value_obj[key] = int(value_item.text())
+                else:
+                    value_obj[key] = 1
+            else:
+                value_obj[key] = value_item.text()
+
+        is_new = True
+        for d_item in self.edit_rows:
+            if d_item['id'] == value_obj['id']:
+                d_item.update(value_obj)
+                is_new = False
+        if is_new:
+            self.edit_rows.append(value_obj)
+
+        item.setBackground(QBrush(QColor(220, 220, 220)))
+
+        # print('待更新:')
+        # for i in self.edit_rows:
+        #     print(i)
 
     def get_current_sheet_values(self):
         """ 获取当前表的数据 """
@@ -190,6 +271,7 @@ class SheetWidgetPopup(QDialog):
         """ 将数据显示到表格中 """
         if not sheet_values:
             return
+        self.value_table.cellChanged.disconnect()
         first_row = sheet_values[0]
         value_keys = list(first_row.keys())
         if self.header_keys is not None:
@@ -218,6 +300,7 @@ class SheetWidgetPopup(QDialog):
                     setattr(button, 'row_index', row)
                     button.clicked.connect(self.modify_sheet_row_value)
                     self.value_table.setCellWidget(row, col + 1, button)
+        self.value_table.cellChanged.connect(self.append_edit_row)
 
     def modify_sheet_row_value(self):
         """ 修改一行数据 """
@@ -334,7 +417,7 @@ class OptionWidget(QWidget):
         current_indicator.setLayout(current_indicator_layout)
         self.current_indicator_list = QListWidget(self)
         self.current_indicator_list.itemDoubleClicked.connect(self.remove_selected_indicator)  # 移除已选指标
-        self.current_indicator_list.itemClicked.connect(self.change_check_state)               # 修改去0选项
+        self.current_indicator_list.itemClicked.connect(self.change_check_state)  # 修改去0选项
         current_indicator_layout.addWidget(self.current_indicator_list)
         main_layout.addWidget(current_indicator)
 
@@ -434,7 +517,7 @@ class OptionWidget(QWidget):
             indicator_params = item.data(Qt.UserRole)
             indicator_params["contain_zero"] = 0
             item.setCheckState(Qt.Checked)
-        item.setData(Qt.UserRole, indicator_params)     # 重新设置item的Data
+        item.setData(Qt.UserRole, indicator_params)  # 重新设置item的Data
         text = suffix_text + text[6:]
         item.setText(text)
 
@@ -480,6 +563,7 @@ class OptionWidget(QWidget):
 
 class MoreDisposePopup(QDialog):
     """ 更多配置参数弹窗 """
+
     def __init__(self, *args, **kwargs):
         super(MoreDisposePopup, self).__init__(*args, **kwargs)
         self.setWindowTitle("更多参数")
@@ -572,10 +656,10 @@ class ChartWidget(QWidget):
 
         self.chart_container = QWebEngineView(self)
         self.chart_container.setContextMenuPolicy(Qt.NoContextMenu)
-        self.chart_container.load(QUrl("file:///html/charts/custom_chart.html"))   # 加载页面
+        self.chart_container.load(QUrl("file:///html/charts/custom_chart.html"))  # 加载页面
         # 设置与页面信息交互的通道
-        channel_qt_obj = QWebChannel(self.chart_container.page())                  # 实例化qt信道对象,必须传入页面参数
-        self.contact_channel = ChartOptionChannel()                                # 页面信息交互通道
+        channel_qt_obj = QWebChannel(self.chart_container.page())  # 实例化qt信道对象,必须传入页面参数
+        self.contact_channel = ChartOptionChannel()  # 页面信息交互通道
         self.chart_container.page().setWebChannel(channel_qt_obj)
         channel_qt_obj.registerObject("pageContactChannel", self.contact_channel)  # 信道对象注册信道，只能注册一个
 
@@ -685,8 +769,8 @@ class DisposeChartPopup(QDialog):
             "min-height:25px;min-width:40px;font-weight:bold;font-size:13px};"
         )
 
-        self.option_widget.chart_drawer.clicked.connect(self.preview_chart_with_option)        # 在右侧图形窗口显示图形信号
-        self.option_widget.season_drawer.clicked.connect(self.preview_chart_with_option)       # 季节图形
+        self.option_widget.chart_drawer.clicked.connect(self.preview_chart_with_option)  # 在右侧图形窗口显示图形信号
+        self.option_widget.season_drawer.clicked.connect(self.preview_chart_with_option)  # 季节图形
 
     def resizeEvent(self, event):
         super(DisposeChartPopup, self).resizeEvent(event)
@@ -728,24 +812,24 @@ class DisposeChartPopup(QDialog):
     def handler_sheet_values(self, values):
         """ pandas处理数据到弹窗相应参数中 """
         value_df = pd.DataFrame(values)
-        if value_df.iloc[2:].empty:                                             # 从第3行起取数,为空
+        if value_df.iloc[2:].empty:  # 从第3行起取数,为空
             logger.error("该数据表最多存在3行数据,遂取绘图数据失败!")
             self.cover_widget.hide()
             return
-        self.source_dataframe = value_df.copy()                                 # 将源数据复制一份关联到窗口(用于作图)
-        sheet_headers = value_df.iloc[:1].to_numpy().tolist()[0]                # 取表头
-        sheet_headers.pop(0)                                                    # 删掉id列
+        self.source_dataframe = value_df.copy()  # 将源数据复制一份关联到窗口(用于作图)
+        sheet_headers = value_df.iloc[:1].to_numpy().tolist()[0]  # 取表头
+        sheet_headers.pop(0)  # 删掉id列
         col_index_list = ["id", ]
-        for i, header_item in enumerate(sheet_headers):                         # 根据表头生成数据选择项
+        for i, header_item in enumerate(sheet_headers):  # 根据表头生成数据选择项
             col_index = "column_{}".format(i)
             self.option_widget.x_axis_combobox.addItem(header_item, col_index)  # 添加横轴选项
             indicator_item = QListWidgetItem(header_item)
             indicator_item.setData(Qt.UserRole, col_index)
-            self.option_widget.indicator_list.addItem(indicator_item)           # 填入指标选择框
+            self.option_widget.indicator_list.addItem(indicator_item)  # 填入指标选择框
             col_index_list.append(col_index)
         # 根据最值填入起终值的范围
-        max_date = value_df.iloc[2:]["column_0"].max()                          # 取日期最大值
-        min_date = value_df.iloc[2:]["column_0"].min()                          # 取日期最小值
+        max_date = value_df.iloc[2:]["column_0"].max()  # 取日期最大值
+        min_date = value_df.iloc[2:]["column_0"].min()  # 取日期最小值
         self.option_widget.start_year.clear()
         self.option_widget.end_year.clear()
         self.option_widget.start_year.addItem("0")
@@ -754,25 +838,25 @@ class DisposeChartPopup(QDialog):
             self.option_widget.start_year.addItem(str(year))
             self.option_widget.end_year.addItem(str(year))
 
-        sheet_headers.insert(0, "编号")                                         # 还原id列
+        sheet_headers.insert(0, "编号")  # 还原id列
 
         table_show_df = value_df.iloc[1:]
         if self.is_dated:  # 日期序列做排序
             table_show_df = table_show_df.sort_values(by="column_0")
-        table_show_df.reset_index(inplace=True)                                  # 重置索引,让排序生效(赋予row正确的值)
+        table_show_df.reset_index(inplace=True)  # 重置索引,让排序生效(赋予row正确的值)
         self.sheet_table.setColumnCount(len(sheet_headers))
         self.sheet_table.setHorizontalHeaderLabels(sheet_headers)
         self.sheet_table.setRowCount(table_show_df.shape[0])
         self.sheet_table.horizontalHeader().setDefaultSectionSize(150)
         self.sheet_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.sheet_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        for row, row_item in table_show_df.iterrows():                           # 遍历数据(填入表格显示)
+        for row, row_item in table_show_df.iterrows():  # 遍历数据(填入表格显示)
             for col, col_key in enumerate(col_index_list):
                 # print(row_item[col_key], end=' ')
                 item = QTableWidgetItem(str(row_item[col_key]))
                 item.setTextAlignment(Qt.AlignCenter)
                 if col < 2:
-                    item.setFlags(Qt.ItemIsEditable)                            # ID,日期不可编辑
+                    item.setFlags(Qt.ItemIsEditable)  # ID,日期不可编辑
                     item.setForeground(QBrush(QColor(60, 60, 60)))
                 self.sheet_table.setItem(row, col, item)
             # print()
@@ -833,7 +917,7 @@ class DisposeChartPopup(QDialog):
 
     def get_chart_option(self):
         """ 获取图形的配置 """
-        base_option = self.option_widget.get_base_option()       # 作图基本配置
+        base_option = self.option_widget.get_base_option()  # 作图基本配置
         more_option = self.more_dispose_popup.get_more_option()  # 作图更多配置
         # 将更多配置添加入基本配置中
         y_axis = base_option["y_axis"]
@@ -903,7 +987,7 @@ class DisposeChartPopup(QDialog):
                 date_length = base_option["x_axis"]["date_length"]
                 values_df["column_0"] = values_df["column_0"].apply(lambda x: x[:date_length])
             values_json = values_df.to_dict(orient="record")
-        elif chart_type == "season":    # 季节图形将数据分为{year1: values1, year2: values2}型
+        elif chart_type == "season":  # 季节图形将数据分为{year1: values1, year2: values2}型
             values_json = self.get_season_chart_source(values_df.copy())
         else:
             values_json = []
@@ -923,7 +1007,8 @@ class DisposeChartPopup(QDialog):
             current_first = str(year) + "-01-01"
             current_last = str(year) + "-12-31"
             # 从data frame中取本年度的数据并转为列表字典格式
-            current_year_df = source_df[(source_df["column_0"] >= current_first) & (source_df["column_0"] <= current_last)]
+            current_year_df = source_df[
+                (source_df["column_0"] >= current_first) & (source_df["column_0"] <= current_last)]
             current_year_df["column_0"] = current_year_df["column_0"].apply(lambda x: x[5:])
             # target_values[str(year)] = current_year_df.to_dict(orient="record")
             target_values[str(year)] = current_year_df.to_dict(orient="record")
@@ -1035,7 +1120,7 @@ class AddSheetRecordPopup(QDialog):
         return value
 
     def handle_row_data(self, item):
-        if len(item)<1:
+        if len(item) < 1:
             return []
         try:
             item[0] = datetime.strptime(item[0], '%Y-%m-%d').strftime('%Y-%m-%d')
@@ -1269,4 +1354,112 @@ class ExportSheetPopup(QDialog):
             self.loading_cover.hide()
 
 
+class SetComparesPopup(QDialog):
+    def __init__(self, sid, cid, *args, **kwargs):
+        super(SetComparesPopup, self).__init__(*args, **kwargs)
+        self.resize(800, 450)
+        self.chart_id = cid
+        lt = QVBoxLayout(self)
+        scroll_widget = QScrollArea(self)
 
+        self.setLayout(lt)
+
+        self.column_widget = QWidget(self)
+        self.column_lt = QVBoxLayout()
+        self.column_widget.setLayout(self.column_lt)
+        scroll_widget.setWidget(self.column_widget)
+        scroll_widget.setWidgetResizable(True)
+        lt.addWidget(scroll_widget)
+
+        self.confirm_compare_button = QPushButton('保存设置', self)
+        self.confirm_compare_button.setFocusPolicy(Qt.NoFocus)
+        self.confirm_compare_button.clicked.connect(self.to_save_compares)
+
+        lt.addWidget(self.confirm_compare_button, alignment=Qt.AlignBottom | Qt.AlignRight)
+
+        self.get_columns_thread = GetChartSheetColumns(self)
+        self.get_columns_thread.set_sheet_id(sid, self.chart_id)
+        self.get_columns_thread.columns_reply.connect(self.sheet_columns_reply)
+        self.get_columns_thread.start()
+
+        self.save_compare_thread = SaveComparesThread(self)
+        self.save_compare_thread.request_finished.connect(self.save_reply)
+
+        self.compare_obj = {}
+
+    def save_reply(self, data):
+        QMessageBox.information(self, '提示', data['message'])
+
+    def to_save_compares(self):
+        if len(self.compare_obj) <= 0:
+            QMessageBox.information(self, '错误', '至少设置一个对比解读才能保存!')
+            return
+        self.save_compare_thread.set_body_data(self.compare_obj, self.chart_id)
+        self.save_compare_thread.start()
+
+    def sheet_columns_reply(self, reply_data):
+        columns = reply_data['columns']
+        compares = reply_data['compares']
+        print(compares)
+        for col_key, col_name in columns.items():
+            c_label = QLabel(col_name, self.column_widget)
+            pal = c_label.palette()
+            pal.setColor(QPalette.Background, QColor(180, 220, 230))
+            c_label.setPalette(pal)
+            c_label.setAutoFillBackground(True)
+            self.column_lt.addWidget(c_label)
+            compare = compares.get(col_key, [])
+            self.column_lt.addWidget(self.get_column_checks(col_key, compare))
+        self.column_lt.addStretch()
+
+    def check_compares(self):
+        check = self.sender()
+        check_msg = getattr(check, 'data', None)
+        if not check_msg:
+            return
+        # 设置数据
+        save_column = self.compare_obj.get(check_msg['column'], [])
+        if check.checkState() == Qt.Checked:
+            self.compare_obj[check_msg['column']] = list(set(save_column + [check_msg['name']]))
+        else:
+            # 去除选择
+            if save_column:
+                save_column.remove(check_msg['name'])
+            if not save_column:
+                self.compare_obj[check_msg['column']] = []
+
+    def get_column_checks(self, col_key, compare):
+        check_widget = QWidget(self.column_widget)
+        clt = QHBoxLayout()
+        clt.setContentsMargins(10, 0, 0, 0)
+        wk = QCheckBox(check_widget)
+        setattr(wk, 'data', {'column': col_key, 'name': 'week'})
+        wk.setText('环比上周')
+        wk.stateChanged.connect(self.check_compares)
+        if 'week' in compare:
+            wk.setChecked(Qt.Checked)
+        clt.addWidget(wk)
+
+        mn = QCheckBox(check_widget)
+        mn.setText('环比上月')
+        setattr(mn, 'data', {'column': col_key, 'name': 'month'})
+        mn.stateChanged.connect(self.check_compares)
+        if 'month' in compare:
+            mn.setChecked(Qt.Checked)
+        clt.addWidget(mn)
+
+        yr = QCheckBox(check_widget)
+        yr.setText('去年同期')
+        setattr(yr, 'data', {'column': col_key, 'name': 'year'})
+        yr.stateChanged.connect(self.check_compares)
+        if 'year' in compare:
+            yr.setChecked(Qt.Checked)
+        clt.addWidget(yr)
+
+        clt.addStretch()
+        check_widget.setLayout(clt)
+        return check_widget
+
+    def hideEvent(self, event) -> None:
+        super(SetComparesPopup, self).hideEvent(event)
+        self.deleteLater()

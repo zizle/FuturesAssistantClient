@@ -15,7 +15,8 @@ from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
 from PyQt5.QtGui import QBrush, QColor, QCursor, QIcon
 from settings import SERVER_API, logger
 from utils.client import get_user_token, get_client_uuid
-from popup.industry_popup import UpdateFolderPopup, DisposeChartPopup, SheetWidgetPopup, AddSheetRecordPopup, ExportSheetPopup
+from popup.industry_popup import (UpdateFolderPopup, DisposeChartPopup, SheetWidgetPopup, AddSheetRecordPopup,
+                                  ExportSheetPopup,SetComparesPopup)
 from popup.sheet_charts import SheetChartsPopup, DeciphermentPopup, ChartPopup, EditChartOptionPopup
 from popup.message import InformationPopup, WarningPopup
 from widgets import OperateButton
@@ -150,12 +151,61 @@ class UserDataMaintain(UserDataMaintainUI):
         self.variety_sheet_widget.sheet_table.cellChanged.connect(self.sheet_table_cell_changed)
         self.variety_sheet_widget.only_me_check.stateChanged.connect(self.get_show_variety_sheets)  # 重新获取品种的数据表
         self.variety_sheet_widget.sheet_table.right_mouse_clicked.connect(self.sheet_table_right_mouse)  # 右键点击数据表
+        # 检索数据表
+        self.variety_sheet_widget.query_edit.textChanged.connect(self.query_variety_sheet)
+        self.variety_sheet_widget.sheet_table.cell_changed_signal.connect(self.open_close_cell_change_signal)
+        self.variety_sheet_widget.sheet_table.to_set_row_buttons.connect(self.set_row_buttons)
+        self.variety_sheet_widget.refresh_button.clicked.connect(self.get_show_variety_sheets)
 
         self.sheet_chart_widget.swap_tab.tabBarClicked.connect(self.swap_to_render_variety_charts)  # 切换渲染品种下的图形
         # 图形表单元格变化(在添加数据之前取消关联才不会崩溃)
         self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)
         self.sheet_chart_widget.only_me_check.stateChanged.connect(self.chart_page_variety_changed)  # 重新请求图形界面的图形
         self.sheet_chart_widget.category_combobox.currentTextChanged.connect(self.chart_page_variety_changed)  # 图形类别变化
+        # 检索图形
+        self.sheet_chart_widget.query_edit.textChanged.connect(self.query_sheet_chart)
+        self.sheet_chart_widget.chart_table.cell_changed_signal.connect(self.oc_cell_change_signal)
+        self.sheet_chart_widget.chart_table.to_set_row_buttons.connect(self.set_row_operation_button)
+        self.sheet_chart_widget.refresh_button.clicked.connect(self.chart_page_variety_changed)
+        self.sheet_chart_widget.chart_table.right_mouse_clicked.connect(self.chart_table_right_mouse)
+
+    def open_close_cell_change_signal(self, flag):
+        if flag:
+            # 还原表格单元格内容发生变化的信号
+            self.variety_sheet_widget.sheet_table.cellChanged.connect(self.sheet_table_cell_changed)
+        else:
+            self.variety_sheet_widget.sheet_table.cellChanged.disconnect()
+
+    def oc_cell_change_signal(self, falg):
+        if falg:
+            # 连接单元格变化的信号
+            self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)  # 图形表单元格变化
+        else:
+            self.sheet_chart_widget.chart_table.cellChanged.disconnect()  # 关闭单元格变化的信号(防止设置勾选时发送请求)
+
+    def query_variety_sheet(self, sheet_name):  # 检索数据表
+        count = self.variety_sheet_widget.sheet_table.rowCount()
+        for row in range(count):
+            item = self.variety_sheet_widget.sheet_table.item(row, 3)
+            if not item:
+                continue
+            table_name = item.text()
+            if sheet_name in table_name:
+                self.variety_sheet_widget.sheet_table.showRow(row)
+            else:
+                self.variety_sheet_widget.sheet_table.hideRow(row)
+
+    def query_sheet_chart(self, chart_name):
+        count = self.sheet_chart_widget.chart_table.rowCount()
+        for row in range(count):
+            item = self.sheet_chart_widget.chart_table.item(row, 3)
+            if not item:
+                continue
+            name = item.text()
+            if chart_name in name:
+                self.sheet_chart_widget.chart_table.showRow(row)
+            else:
+                self.sheet_chart_widget.chart_table.hideRow(row)
 
     def _get_user_variety(self):
         """ 获取用户有权限的品种信息 """
@@ -503,71 +553,97 @@ class UserDataMaintain(UserDataMaintainUI):
         self.variety_sheet_widget.sheet_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         self.variety_sheet_widget.sheet_table.horizontalHeader().setDefaultSectionSize(75)
         self.variety_sheet_widget.sheet_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Interactive)
-        self.variety_sheet_widget.sheet_table.setRowCount(len(sheets))
+
+        # self.variety_sheet_widget.sheet_table.setRowCount(len(sheets))
+        self.variety_sheet_widget.sheet_table.clearContents()
+        self.variety_sheet_widget.sheet_table.setRowCount(0)
 
         for row, row_item in enumerate(sheets):
-            item0 = QTableWidgetItem("%04d" % row_item["id"])
-            item0.setTextAlignment(Qt.AlignCenter)
-            item0.setToolTip('创建者:{}'.format(row_item["creator"]))
-            item0.setData(Qt.UserRole, {"is_dated": row_item['is_dated']})
-            self.variety_sheet_widget.sheet_table.setItem(row, 0, item0)
-
-            item1 = QTableWidgetItem(row_item["create_date"])
-            item1.setTextAlignment(Qt.AlignCenter)
-            self.variety_sheet_widget.sheet_table.setItem(row, 1, item1)
-
-            date_index = '是' if row_item['is_dated'] else '否'
-            item2 = QTableWidgetItem(date_index)
-            item2.setTextAlignment(Qt.AlignCenter)
-            self.variety_sheet_widget.sheet_table.setItem(row, 2, item2)
-
-            item3 = QTableWidgetItem(row_item["sheet_name"])
-            item3.setTextAlignment(Qt.AlignCenter)
-            self.variety_sheet_widget.sheet_table.setItem(row, 3, item3)
-
-            item4 = QTableWidgetItem(row_item["update_date"])
-            item4.setTextAlignment(Qt.AlignCenter)
-            self.variety_sheet_widget.sheet_table.setItem(row, 4, item4)
-
-            item5 = QTableWidgetItem(row_item["update_by"])
-            item5.setTextAlignment(Qt.AlignCenter)
-            self.variety_sheet_widget.sheet_table.setItem(row, 5, item5)
-
-            update_count = row_item["update_count"]
-            item6 = QTableWidgetItem(str(update_count))
-            item6.setTextAlignment(Qt.AlignCenter)
-            item6.setForeground(QBrush(QColor(233, 66, 66))) if update_count > 0 else item6.setForeground(QBrush(QColor(66, 66, 66)))
-            self.variety_sheet_widget.sheet_table.setItem(row, 6, item6)
-
-            item7_button = OperateButton("media/icons/chart.png", "media/icons/chart_hover.png", self)
-            item7_button.setText(str(row_item['chart_count']))
-            setattr(item7_button, "row_index", row)
-            item7_button.clicked.connect(self.show_sheet_charts_values)
-            self.variety_sheet_widget.sheet_table.setCellWidget(row, 7, item7_button)
-
-            if row > 0:
-                item8_button = OperateButton("media/icons/swap.png", "media/icons/swap_hover.png", self)
-                setattr(item8_button, "row_index", row)
-                item8_button.clicked.connect(self.swap_sheet_suffix)
-                self.variety_sheet_widget.sheet_table.setCellWidget(row, 8, item8_button)
-
-            check = Qt.Checked if row_item["is_private"] else Qt.Unchecked
-            item9 = QTableWidgetItem("私有")
-            item9.setCheckState(check)
-            self.variety_sheet_widget.sheet_table.setItem(row, 9, item9)
-
-            item10_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
-            setattr(item10_button, "row_index", row)
-            item10_button.clicked.connect(self.delete_sheet_table)
-            self.variety_sheet_widget.sheet_table.setCellWidget(row, 10, item10_button)
+            self.variety_sheet_widget.sheet_table.insert_row_data(row, row_item)
+            # item0 = QTableWidgetItem("%04d" % row_item["id"])
+            # item0.setTextAlignment(Qt.AlignCenter)
+            # item0.setToolTip('创建者:{}'.format(row_item["creator"]))
+            # # item0.setData(Qt.UserRole, {"is_dated": row_item['is_dated']})
+            # item0.setData(Qt.UserRole, row_item)
+            # self.variety_sheet_widget.sheet_table.setItem(row, 0, item0)
+            #
+            # item1 = QTableWidgetItem(row_item["create_date"])
+            # item1.setTextAlignment(Qt.AlignCenter)
+            # self.variety_sheet_widget.sheet_table.setItem(row, 1, item1)
+            #
+            # date_index = '是' if row_item['is_dated'] else '否'
+            # item2 = QTableWidgetItem(date_index)
+            # item2.setTextAlignment(Qt.AlignCenter)
+            # self.variety_sheet_widget.sheet_table.setItem(row, 2, item2)
+            #
+            # item3 = QTableWidgetItem(row_item["sheet_name"])
+            # item3.setTextAlignment(Qt.AlignCenter)
+            # self.variety_sheet_widget.sheet_table.setItem(row, 3, item3)
+            #
+            # item4 = QTableWidgetItem(row_item["update_date"])
+            # item4.setTextAlignment(Qt.AlignCenter)
+            # self.variety_sheet_widget.sheet_table.setItem(row, 4, item4)
+            #
+            # item5 = QTableWidgetItem(row_item["update_by"])
+            # item5.setTextAlignment(Qt.AlignCenter)
+            # self.variety_sheet_widget.sheet_table.setItem(row, 5, item5)
+            #
+            # update_count = row_item["update_count"]
+            # item6 = QTableWidgetItem(str(update_count))
+            # item6.setTextAlignment(Qt.AlignCenter)
+            # item6.setForeground(QBrush(QColor(233, 66, 66))) if update_count > 0 else item6.setForeground(QBrush(QColor(66, 66, 66)))
+            # self.variety_sheet_widget.sheet_table.setItem(row, 6, item6)
+            #
+            # item7_button = OperateButton("media/icons/chart.png", "media/icons/chart_hover.png", self)
+            # item7_button.setText(str(row_item['chart_count']))
+            # setattr(item7_button, "row_index", row)
+            # item7_button.clicked.connect(self.show_sheet_charts_values)
+            # self.variety_sheet_widget.sheet_table.setCellWidget(row, 7, item7_button)
+            #
+            # if row > 0:
+            #     item8_button = OperateButton("media/icons/swap.png", "media/icons/swap_hover.png", self)
+            #     setattr(item8_button, "row_index", row)
+            #     item8_button.clicked.connect(self.swap_sheet_suffix)
+            #     self.variety_sheet_widget.sheet_table.setCellWidget(row, 8, item8_button)
+            #
+            # check = Qt.Checked if row_item["is_private"] else Qt.Unchecked
+            # item9 = QTableWidgetItem("私有")
+            # item9.setCheckState(check)
+            #
+            # self.variety_sheet_widget.sheet_table.setItem(row, 9, item9)
+            #
+            # item10_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
+            # setattr(item10_button, "row_index", row)
+            # item10_button.clicked.connect(self.delete_sheet_table)
+            # self.variety_sheet_widget.sheet_table.setCellWidget(row, 10, item10_button)
 
         # 还原表格单元格内容发生变化的信号
         self.variety_sheet_widget.sheet_table.cellChanged.connect(self.sheet_table_cell_changed)
 
+    def set_row_buttons(self, row, row_item):
+        item7_button = OperateButton("media/icons/chart.png", "media/icons/chart_hover.png", self)
+        item7_button.setText(str(row_item['chart_count']))
+        setattr(item7_button, "row_index", row)
+        item7_button.clicked.connect(self.show_sheet_charts_values)
+        self.variety_sheet_widget.sheet_table.setCellWidget(row, 7, item7_button)
+
+        if row > 0:
+            item8_button = OperateButton("media/icons/swap.png", "media/icons/swap_hover.png", self)
+            setattr(item8_button, "row_index", row)
+            item8_button.clicked.connect(self.swap_sheet_suffix)
+            self.variety_sheet_widget.sheet_table.setCellWidget(row, 8, item8_button)
+
+        item10_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
+        setattr(item10_button, "row_index", row)
+        item10_button.clicked.connect(self.delete_sheet_table)
+        self.variety_sheet_widget.sheet_table.setCellWidget(row, 10, item10_button)
+
     def delete_sheet_table(self):
         """ 删除数据表 """
         sender_button = self.sender()
-        current_row = getattr(sender_button, "row_index")
+        # current_row = getattr(sender_button, "row_index")
+        current_row = self.variety_sheet_widget.sheet_table.indexAt(sender_button.pos()).row()
+
         sheet_id = self.variety_sheet_widget.sheet_table.item(current_row, 0).text()
         warning = WarningPopup("确定删除这张数据表吗?删除后与其相关的图形等相关信息也将删除!", self)
         warning.set_data({"sheet_id": sheet_id})
@@ -647,7 +723,9 @@ class UserDataMaintain(UserDataMaintainUI):
 
     def show_sheet_charts_values(self):
         """ 弹窗显示表的图形和数据 """
-        row_index = getattr(self.sender(), "row_index")
+        # row_index = getattr(self.sender(), "row_index")
+        btn = self.sender()
+        row_index = self.variety_sheet_widget.sheet_table.indexAt(btn.pos()).row()
         sheet_id = self.variety_sheet_widget.sheet_table.item(row_index, 0).text()
         sheet_name = self.variety_sheet_widget.sheet_table.item(row_index, 3).text()
         is_own = 1 if self.variety_sheet_widget.only_me_check.checkState() else 0
@@ -658,7 +736,11 @@ class UserDataMaintain(UserDataMaintainUI):
     def swap_sheet_suffix(self):
         """ 交换两行记录 """
         # 取得上行的数据id和当前行的数据id
-        row_index = getattr(self.sender(), "row_index")
+        # row_index = getattr(self.sender(), "row_index")
+        btn = self.sender()
+        row_index = self.variety_sheet_widget.sheet_table.indexAt(btn.pos()).row()
+        if row_index <= 0:
+            return
         swap_id = self.variety_sheet_widget.sheet_table.item(row_index, 0).text()
         to_swap = self.variety_sheet_widget.sheet_table.item(row_index - 1, 0).text()
         body_data = {
@@ -755,7 +837,7 @@ class UserDataMaintain(UserDataMaintainUI):
         sheet_popup = SheetWidgetPopup(sheet_id, self)
         sheet_popup.setWindowTitle(sheet_title)
         sheet_popup.setWindowIcon(QIcon('media/icons/edit_hover.png'))
-        sheet_popup.show()
+        sheet_popup.exec_()
 
     def to_add_sheet_records(self):
         current_row = self.variety_sheet_widget.sheet_table.currentRow()
@@ -771,6 +853,26 @@ class UserDataMaintain(UserDataMaintainUI):
         add_popup.exec_()
 
     """ 数据图形显示 """
+
+    def chart_table_right_mouse(self):
+        r_menu = QMenu(self)
+        compare_action = r_menu.addAction('设置对比解读')
+        compare_action.triggered.connect(self.set_compares)
+        r_menu.exec_(QCursor.pos())
+
+    def set_compares(self):
+        # 设置对比解读栏
+        current_row = self.sheet_chart_widget.chart_table.currentRow()
+        if current_row < 0:
+            return
+        chart_data = self.sheet_chart_widget.chart_table.item(current_row, 0).data(Qt.UserRole)
+        # 请求chart对应sheet所有数据列名称
+        sheet_id = chart_data['sheet_id']
+        chart_id = chart_data['id']
+        # 弹窗设置对比
+        popup = SetComparesPopup(sheet_id, chart_id, self)
+        popup.setWindowTitle(f'设置【{chart_data["title"]}】对比解读')
+        popup.exec_()
 
     def chart_page_variety_changed(self):
         """ 图形显示页品种变化 """
@@ -811,87 +913,123 @@ class UserDataMaintain(UserDataMaintainUI):
         else:
             self.sheet_chart_widget.chart_table.setColumnHidden(9, True)  # 隐藏可见列
 
-        self.sheet_chart_widget.chart_table.setRowCount(len(charts_list))
+        # self.sheet_chart_widget.chart_table.setRowCount(len(charts_list))
         self.sheet_chart_widget.chart_table.cellChanged.disconnect()  # 关闭单元格变化的信号(防止设置勾选时发送请求)
+
+        self.sheet_chart_widget.chart_table.clearContents()
+        self.sheet_chart_widget.chart_table.setRowCount(0)
+
         for row, row_item in enumerate(charts_list):
-            item0 = QTableWidgetItem("%04d" % row_item["id"])
-            item0.setTextAlignment(Qt.AlignCenter)
-            self.sheet_chart_widget.chart_table.setItem(row, 0, item0)
-
-            item1 = QTableWidgetItem(row_item["creator"])
-            item1.setTextAlignment(Qt.AlignCenter)
-            self.sheet_chart_widget.chart_table.setItem(row, 1, item1)
-
-            item2 = QTableWidgetItem(row_item["create_time"])
-            item2.setTextAlignment(Qt.AlignCenter)
-            self.sheet_chart_widget.chart_table.setItem(row, 2, item2)
-
-            item3 = QTableWidgetItem(row_item["title"])
-            item3.setTextAlignment(Qt.AlignCenter)
-            self.sheet_chart_widget.chart_table.setItem(row, 3, item3)
-
-            item4_button = OperateButton("media/icons/edit.png", "media/icons/edit_hover.png", self.sheet_chart_widget.chart_table)
-            setattr(item4_button, "row_index", row)
-            item4_button.clicked.connect(self.edit_chart_decipherment)
-            self.sheet_chart_widget.chart_table.setCellWidget(row, 4, item4_button)
-            # 图形
-            item5_button = OperateButton("media/icons/chart.png", "media/icons/chart_hover.png", self.sheet_chart_widget.chart_table)
-            setattr(item5_button, "row_index", row)
-            item5_button.clicked.connect(self.show_current_chart)
-            self.sheet_chart_widget.chart_table.setCellWidget(row, 5, item5_button)
-            # 上移
-            if row > 0:
-                item6_button = OperateButton("media/icons/swap.png", "media/icons/swap_hover.png", self.sheet_chart_widget.chart_table)
-                setattr(item6_button, "row_index", row)
-                item6_button.clicked.connect(self.swap_chart_suffix)
-                self.sheet_chart_widget.chart_table.setCellWidget(row, 6, item6_button)
-            # 主页
-            item7 = QTableWidgetItem()
-            if row_item["is_principal"] == "0":
-                text = "显示"
-                checked = Qt.Unchecked
-            elif row_item["is_principal"] == "1":
-                text = "审核"
-                checked = Qt.PartiallyChecked
-            else:
-                text = "开启"
-                checked = Qt.Checked
-            item7.setText(text)
-            item7.setCheckState(checked)
-            self.sheet_chart_widget.chart_table.setItem(row, 7, item7)
-
-            # 品种页
-            item8 = QTableWidgetItem()
-            checked = Qt.Checked if row_item["is_petit"] else Qt.Unchecked
-            item8.setText("开启")
-            item8.setCheckState(checked)
-            self.sheet_chart_widget.chart_table.setItem(row, 8, item8)
-
-            # 仅私有可见
-            item9 = QTableWidgetItem("私有")
-            checked = Qt.Checked if row_item["is_private"] else Qt.Unchecked
-            item9.setCheckState(checked)
-            self.sheet_chart_widget.chart_table.setItem(row, 9, item9)
-
-            # 参数
-            item10_button = OperateButton("media/icons/chartOption.png", "media/icons/chartOption_hover.png", self)
-            setattr(item10_button, "row_index", row)
-            item10_button.clicked.connect(self.modify_chart_option)
-            self.sheet_chart_widget.chart_table.setCellWidget(row, 10, item10_button)
-
-            # 删除
-            item11_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
-            setattr(item11_button, "row_index", row)
-            item11_button.clicked.connect(self.user_delete_chart)
-            self.sheet_chart_widget.chart_table.setCellWidget(row, 11, item11_button)
+            self.sheet_chart_widget.chart_table.insert_row_data(row, row_item)
+            # item0 = QTableWidgetItem("%04d" % row_item["id"])
+            # item0.setTextAlignment(Qt.AlignCenter)
+            # item0.setData(Qt.UserRole, row_item)
+            # self.sheet_chart_widget.chart_table.setItem(row, 0, item0)
+            #
+            # item1 = QTableWidgetItem(row_item["creator"])
+            # item1.setTextAlignment(Qt.AlignCenter)
+            # self.sheet_chart_widget.chart_table.setItem(row, 1, item1)
+            #
+            # item2 = QTableWidgetItem(row_item["create_time"])
+            # item2.setTextAlignment(Qt.AlignCenter)
+            # self.sheet_chart_widget.chart_table.setItem(row, 2, item2)
+            #
+            # item3 = QTableWidgetItem(row_item["title"])
+            # item3.setTextAlignment(Qt.AlignCenter)
+            # self.sheet_chart_widget.chart_table.setItem(row, 3, item3)
+            #
+            # item4_button = OperateButton("media/icons/edit.png", "media/icons/edit_hover.png", self.sheet_chart_widget.chart_table)
+            # setattr(item4_button, "row_index", row)
+            # item4_button.clicked.connect(self.edit_chart_decipherment)
+            # self.sheet_chart_widget.chart_table.setCellWidget(row, 4, item4_button)
+            # # 图形
+            # item5_button = OperateButton("media/icons/chart.png", "media/icons/chart_hover.png", self.sheet_chart_widget.chart_table)
+            # setattr(item5_button, "row_index", row)
+            # item5_button.clicked.connect(self.show_current_chart)
+            # self.sheet_chart_widget.chart_table.setCellWidget(row, 5, item5_button)
+            # # 上移
+            # if row > 0:
+            #     item6_button = OperateButton("media/icons/swap.png", "media/icons/swap_hover.png", self.sheet_chart_widget.chart_table)
+            #     setattr(item6_button, "row_index", row)
+            #     item6_button.clicked.connect(self.swap_chart_suffix)
+            #     self.sheet_chart_widget.chart_table.setCellWidget(row, 6, item6_button)
+            # # 主页
+            # item7 = QTableWidgetItem()
+            # if row_item["is_principal"] == "0":
+            #     text = "显示"
+            #     checked = Qt.Unchecked
+            # elif row_item["is_principal"] == "1":
+            #     text = "审核"
+            #     checked = Qt.PartiallyChecked
+            # else:
+            #     text = "开启"
+            #     checked = Qt.Checked
+            # item7.setText(text)
+            # item7.setCheckState(checked)
+            # self.sheet_chart_widget.chart_table.setItem(row, 7, item7)
+            #
+            # # 品种页
+            # item8 = QTableWidgetItem()
+            # checked = Qt.Checked if row_item["is_petit"] else Qt.Unchecked
+            # item8.setText("开启")
+            # item8.setCheckState(checked)
+            # self.sheet_chart_widget.chart_table.setItem(row, 8, item8)
+            #
+            # # 仅私有可见
+            # item9 = QTableWidgetItem("私有")
+            # checked = Qt.Checked if row_item["is_private"] else Qt.Unchecked
+            # item9.setCheckState(checked)
+            # self.sheet_chart_widget.chart_table.setItem(row, 9, item9)
+            #
+            # # 参数
+            # item10_button = OperateButton("media/icons/chartOption.png", "media/icons/chartOption_hover.png", self)
+            # setattr(item10_button, "row_index", row)
+            # item10_button.clicked.connect(self.modify_chart_option)
+            # self.sheet_chart_widget.chart_table.setCellWidget(row, 10, item10_button)
+            #
+            # # 删除
+            # item11_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
+            # setattr(item11_button, "row_index", row)
+            # item11_button.clicked.connect(self.user_delete_chart)
+            # self.sheet_chart_widget.chart_table.setCellWidget(row, 11, item11_button)
 
         # 连接单元格变化的信号
         self.sheet_chart_widget.chart_table.cellChanged.connect(self.chart_table_cell_changed)  # 图形表单元格变化
 
+    def set_row_operation_button(self, row, row_item):
+        item4_button = OperateButton("media/icons/edit.png", "media/icons/edit_hover.png", self.sheet_chart_widget.chart_table)
+        setattr(item4_button, "row_index", row)
+        item4_button.clicked.connect(self.edit_chart_decipherment)
+        self.sheet_chart_widget.chart_table.setCellWidget(row, 4, item4_button)
+        # 图形
+        item5_button = OperateButton("media/icons/chart.png", "media/icons/chart_hover.png", self.sheet_chart_widget.chart_table)
+        setattr(item5_button, "row_index", row)
+        item5_button.clicked.connect(self.show_current_chart)
+        self.sheet_chart_widget.chart_table.setCellWidget(row, 5, item5_button)
+        # 上移
+        if row > 0:
+            item6_button = OperateButton("media/icons/swap.png", "media/icons/swap_hover.png", self.sheet_chart_widget.chart_table)
+            setattr(item6_button, "row_index", row)
+            item6_button.clicked.connect(self.swap_chart_suffix)
+            self.sheet_chart_widget.chart_table.setCellWidget(row, 6, item6_button)
+        # 参数
+        item10_button = OperateButton("media/icons/chartOption.png", "media/icons/chartOption_hover.png", self)
+        setattr(item10_button, "row_index", row)
+        item10_button.clicked.connect(self.modify_chart_option)
+        self.sheet_chart_widget.chart_table.setCellWidget(row, 10, item10_button)
+
+        # 删除
+        item11_button = OperateButton("media/icons/delete.png", "media/icons/delete_hover.png", self)
+        setattr(item11_button, "row_index", row)
+        item11_button.clicked.connect(self.user_delete_chart)
+        self.sheet_chart_widget.chart_table.setCellWidget(row, 11, item11_button)
+
     def modify_chart_option(self):
         """ 调整图形配置 """
         sender_button = self.sender()
-        row = getattr(sender_button, "row_index")
+        btn = self.sender()
+        row = self.sheet_chart_widget.chart_table.indexAt(btn.pos()).row()
+        # row = getattr(sender_button, "row_index")
         title = self.sheet_chart_widget.chart_table.item(row, 3).text()
         chart_id = self.sheet_chart_widget.chart_table.item(row, 0).text()
         popup = EditChartOptionPopup(chart_id, self)
@@ -900,8 +1038,10 @@ class UserDataMaintain(UserDataMaintainUI):
 
     def user_delete_chart(self):
         """ 用户删除图形"""
-        sender_button = self.sender()
-        current_row = getattr(sender_button, "row_index")
+        # sender_button = self.sender()
+        # current_row = getattr(sender_button, "row_index")
+        btn = self.sender()
+        current_row = self.sheet_chart_widget.chart_table.indexAt(btn.pos()).row()
         chart_id = self.sheet_chart_widget.chart_table.item(current_row, 0).text()
         warning = WarningPopup("确定删除这张图形吗?删除后将不可恢复!", self)
         warning.set_data({"chart_id": chart_id})
@@ -931,14 +1071,17 @@ class UserDataMaintain(UserDataMaintainUI):
 
     def edit_chart_decipherment(self):
         """ 编辑当前图形的解说 """
-        current_row = getattr(self.sender(), "row_index")
+        # current_row = getattr(self.sender(), "row_index")
+        btn = self.sender()
+        current_row = self.sheet_chart_widget.chart_table.indexAt(btn.pos()).row()
         chart_id = self.sheet_chart_widget.chart_table.item(current_row, 0).text()
         popup = DeciphermentPopup(chart_id, self)
         popup.show()
 
     def show_current_chart(self):
         """ 显示当前的图形 """
-        current_row = getattr(self.sender(), "row_index")
+        btn = self.sender()
+        current_row = self.sheet_chart_widget.chart_table.indexAt(btn.pos()).row()
         chart_id = self.sheet_chart_widget.chart_table.item(current_row, 0).text()
         chart_name = self.sheet_chart_widget.chart_table.item(current_row, 3).text()
         popup = ChartPopup(chart_id, self)
@@ -947,7 +1090,11 @@ class UserDataMaintain(UserDataMaintainUI):
 
     def swap_chart_suffix(self):
         """ 交换上移行 """
-        row_index = getattr(self.sender(), "row_index")
+        # row_index = getattr(self.sender(), "row_index")
+        btn = self.sender()
+        row_index = self.sheet_chart_widget.chart_table.indexAt(btn.pos()).row()
+        if row_index <=0:
+            return
         swap_id = self.sheet_chart_widget.chart_table.item(row_index, 0).text()
         to_swap = self.sheet_chart_widget.chart_table.item(row_index - 1, 0).text()
         body_data = {
