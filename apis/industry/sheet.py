@@ -6,8 +6,9 @@
 # 与用户表格相关的API
 import json
 
+import requests
 from PyQt5.QtWidgets import qApp
-from PyQt5.QtCore import Qt, QObject, pyqtSignal, QUrl
+from PyQt5.QtCore import Qt, QObject, pyqtSignal, QUrl, QThread
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 from settings import SERVER_API, logger
@@ -56,7 +57,66 @@ class SheetAPI(QObject):
         reply.deleteLater()
 
 
+class SwapSheetSorted(QThread):
+    def __init__(self, *args, **kwargs):
+        super(SwapSheetSorted, self).__init__(*args, **kwargs)
+        self.body_data = {}
+
+    def set_body_data(self, data):
+        self.body_data = data
+
+    def run(self):
+        try:
+            requests.put(SERVER_API + "sheet/suffix/", json=self.body_data)
+        except Exception as e:
+            logger.error(f'用户交换数据表排序错误{e}')
 
 
+class UpdateSheetRows(QThread):
+    update_signal = pyqtSignal(str)
 
+    def __init__(self, *args, **kwargs):
+        super(UpdateSheetRows, self).__init__(*args, **kwargs)
+        self.update_rows = []
+        self.sheet_id = 0
+
+    def set_sheet_id(self, sid):
+        self.sheet_id = sid
+
+    def set_rows(self, rows):
+        self.update_rows = rows
+
+    def run(self):
+        if not self.sheet_id:
+            return
+        try:
+            r = requests.put(SERVER_API + f'sheet/{self.sheet_id}/update/', json=self.update_rows)
+        except Exception as e:
+            self.update_signal.emit(f'数据有误,更新失败!\n{e}')
+        else:
+            self.update_signal.emit('数据更新成功!')
+            
+
+class GetChartSheetColumns(QThread):  # 获取图形对应的列名称
+    columns_reply = pyqtSignal(dict)
+
+    def __init__(self, *args, **kwargs):
+        super(GetChartSheetColumns, self).__init__(*args, **kwargs)
+        self.sheet_id = 0
+        self.chart_id = 0
+
+    def set_sheet_id(self, sid: int, cid: int):
+        self.sheet_id = sid
+        self.chart_id = cid
+
+    def run(self):
+        if self.sheet_id < 1:
+            return
+        try:
+            r = requests.get(SERVER_API + f'chart/sheet-headers/?sid={self.sheet_id}&cid={self.chart_id}')
+            result = r.json()
+        except Exception as e:
+            logger('获取图形对应表的列数据失败{}'.format(e))
+        else:
+            self.columns_reply.emit(result)
 

@@ -13,7 +13,7 @@ from frames.trade_diagnose import pages
 from frames.trade_diagnose.threads import HandleSourceThread
 
 
-class S(QWidget):
+class TradeDiagnose(QWidget):
     # pid为页面id，负数表示不跳转页面是根节点菜单，整数表示页面索引
     MENUS = [
         {'pid': -1, 'name': '账户概况', 'logo': '', 'children': [
@@ -36,7 +36,7 @@ class S(QWidget):
     ]
 
     def __init__(self, *args, **kwargs):
-        super(S, self).__init__(*args, **kwargs)
+        super(TradeDiagnose, self).__init__(*args, **kwargs)
         self.resize(1200, 700)
         layout = QHBoxLayout()
         layout.setContentsMargins(QMargins(0, 0, 0, 0))
@@ -109,7 +109,7 @@ class S(QWidget):
         self.source_data = None
 
     def resizeEvent(self, event):
-        super(S, self).resizeEvent(event)
+        super(TradeDiagnose, self).resizeEvent(event)
         self.tip_popup.resize(self.width(), self.height())
 
     def clear_current_thread(self):
@@ -204,7 +204,6 @@ class S(QWidget):
         self.risk_control_view = pages.RiskControlWidget(self)
         self.risk_control_view.finished.connect(self.tip_popup.hide)
         self.stacked.addWidget(self.risk_control_view)
-
 
         self.tip_popup.hide()
 

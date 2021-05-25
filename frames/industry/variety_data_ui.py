@@ -34,6 +34,7 @@ class HorizontalTabBar(QTabBar):
             painter.drawText(tabRect, Qt.AlignVCenter | Qt.TextDontClip, self.tabText(index))
         painter.end()
 
+
 class MyChartsUI(QWidget):
     def __init__(self, *args, **kwargs):
         super(MyChartsUI, self).__init__(*args, **kwargs)

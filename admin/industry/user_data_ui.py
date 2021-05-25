@@ -10,11 +10,14 @@ from PyQt5.QtWidgets import (QWidget, QSplitter, QHBoxLayout, QVBoxLayout, QList
                              QPushButton, QTableWidget, QAbstractItemView, QFrame, QLineEdit, QCheckBox, QHeaderView,
                              QProgressBar, QTabBar, QStylePainter, QStyleOptionTab, QStyle, QFormLayout, QDateEdit,
                              QTableWidgetItem, qApp, QMessageBox)
-from PyQt5.QtGui import QDoubleValidator
+from PyQt5.QtGui import QDoubleValidator, QPalette, QColor, QBrush
 from PyQt5.QtCore import QMargins, Qt, pyqtSignal, QDate, QUrl
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkAccessManager
 from settings import SERVER_API
+
+from apis.industry.sheet import SwapSheetSorted
+from apis.industry.charts import SwapChartSorted
 
 
 class HorizontalTabBar(QTabBar):
@@ -22,14 +25,14 @@ class HorizontalTabBar(QTabBar):
     def paintEvent(self, event):
         painter = QStylePainter(self)
         option = QStyleOptionTab()
-        painter.begin(self)
+        # painter.begin(self)
         for index in range(self.count()):
             self.initStyleOption(option, index)
             tabRect = self.tabRect(index)
             tabRect.moveLeft(4)
             painter.drawControl(QStyle.CE_TabBarTabShape, option)
             painter.drawText(tabRect, Qt.AlignVCenter | Qt.TextDontClip, self.tabText(index))
-        painter.end()
+        # painter.end()
 
 
 class ConfigSourceUI(QWidget):
@@ -159,11 +162,211 @@ class ConfigSourceUI(QWidget):
 class SheetTable(QTableWidget):
     """ 用户数据表显示控件 """
     right_mouse_clicked = pyqtSignal()
+    cell_changed_signal = pyqtSignal(bool)
+    to_set_row_buttons = pyqtSignal(int, dict)
+
+    def __init__(self, *args, **kwargs):
+        super(SheetTable, self).__init__(*args, **kwargs)
+        self.drag_row = -1
+        self.drag_widget = None
+
+        self.can_show_drag = False
+
+    def init_drag_widget(self):
+        if self.drag_widget is not None and isinstance(self.drag_widget, QWidget):
+            self.drag_widget.deleteLater()
+            self.drag_widget = None
+        self.drag_widget = QWidget(self)
+        p = self.drag_widget.palette()
+        p.setColor(QPalette.Background, QColor(0, 200, 100))
+        self.drag_widget.setPalette(p)
+        self.drag_widget.setAutoFillBackground(True)
+
+        self.drag_widget.resize(self.width(), 30)
+        self.drag_widget.hide()
+        self.can_show_drag = False
+
+    def mouseMoveEvent(self, event) -> None:
+        row, col = self.indexAt(event.pos()).row(), self.indexAt(event.pos()).column()
+        if col == 0:
+            self.drag_widget.move(0, event.pos().y())
+            if self.can_show_drag:
+                self.drag_widget.show()
+            # 设置当前行的背景色
+            self.set_row_bg_color(row, QColor(254, 163, 86))
+            # 还原上下行的背景色
+            color1 = QColor(240, 240, 240) if (row + 1) % 2 == 0 else QColor(245,250,248)  # 偶数行
+            color2 = QColor(240, 240, 240) if (row - 1) % 2 == 0 else QColor(245,250,248)  # 偶数行
+            self.set_row_bg_color(row + 1, color1)
+            self.set_row_bg_color(row - 1, color2)
+        else:
+            self.init_drag_widget()
+            self.drag_row = -1
+
+    def set_row_bg_color(self, row, color):
+        if row < 0:
+            return
+        for col in range(self.columnCount()):
+            item = self.item(row, col)
+            if item:
+                item.setBackground(QBrush(color))
 
     def mousePressEvent(self, event):
-        super(SheetTable, self).mousePressEvent(event)
         if event.buttons() == Qt.RightButton:
             self.right_mouse_clicked.emit()
+        if event.buttons() == Qt.LeftButton:
+            row, col = self.indexAt(event.pos()).row(), self.indexAt(event.pos()).column()
+            cur_item = self.item(row, col)
+            if col == 0 and cur_item:
+                self.cell_changed_signal.emit(False)  # 关掉单元格变化
+                self.init_drag_widget()
+                drag_row_data = cur_item.data(Qt.UserRole)  # 获取数据
+                self.set_drag_data_on_widget(drag_row_data)
+                # 记录老数据行号
+                self.drag_row = row
+        super(SheetTable, self).mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:
+
+        if self.drag_row >= 0:
+            row, col = self.indexAt(event.pos()).row(), self.indexAt(event.pos()).column()
+            # 还原当前行背景色
+            self.set_row_bg_color(row, QColor(255, 255, 255))
+            # 插入目标位置
+            row_data = getattr(self.drag_widget, 'row_data', None)
+            if row_data and row >= 0 and self.drag_row != row:
+                # 异步请求更改排序,然后插入数据
+                swap_thread = SwapSheetSorted()
+                swap_thread.finished.connect(swap_thread.deleteLater)
+                # 取目标数据
+                if self.drag_row > row and row > 0:
+                    to_id = self.item(row - 1, 0).text()
+                else:
+                    to_id = self.item(row, 0).text()
+                move_id = row_data['id']
+                # 组织数据，发起网络请求
+                body_data = {
+                    "move_id": move_id,
+                    "to_id": to_id,
+                }
+                swap_thread.set_body_data(body_data)
+                swap_thread.start()
+
+                self.removeRow(self.drag_row)
+                self.insert_row_data(row, row_data)
+                self.selectRow(row)
+        self.init_drag_widget()
+        # 还原信号
+        self.cell_changed_signal.emit(True)  # 关掉单元格变化
+        super(SheetTable, self).mouseReleaseEvent(event)
+
+    def insert_row_data(self, row, row_item):
+        self.insertRow(row)
+        item0 = QTableWidgetItem("%04d" % row_item["id"])
+        item0.setTextAlignment(Qt.AlignCenter)
+        item0.setToolTip('创建者:{}'.format(row_item["creator"]))
+        # item0.setData(Qt.UserRole, {"is_dated": row_item['is_dated']})
+        item0.setData(Qt.UserRole, row_item)
+        self.setItem(row, 0, item0)
+
+        item1 = QTableWidgetItem(row_item["create_date"])
+        item1.setTextAlignment(Qt.AlignCenter)
+        self.setItem(row, 1, item1)
+
+        date_index = '是' if row_item['is_dated'] else '否'
+        item2 = QTableWidgetItem(date_index)
+        item2.setTextAlignment(Qt.AlignCenter)
+        self.setItem(row, 2, item2)
+
+        item3 = QTableWidgetItem(row_item["sheet_name"])
+        item3.setTextAlignment(Qt.AlignCenter)
+        self.setItem(row, 3, item3)
+
+        item4 = QTableWidgetItem(row_item["update_date"])
+        item4.setTextAlignment(Qt.AlignCenter)
+        self.setItem(row, 4, item4)
+
+        item5 = QTableWidgetItem(row_item["update_by"])
+        item5.setTextAlignment(Qt.AlignCenter)
+        self.setItem(row, 5, item5)
+
+        update_count = row_item["update_count"]
+        item6 = QTableWidgetItem(str(update_count))
+        item6.setTextAlignment(Qt.AlignCenter)
+        item6.setForeground(QBrush(QColor(233, 66, 66))) if update_count > 0 else item6.setForeground(
+            QBrush(QColor(66, 66, 66)))
+        self.setItem(row, 6, item6)
+
+        check = Qt.Checked if row_item["is_private"] else Qt.Unchecked
+        item9 = QTableWidgetItem("私有")
+        item9.setCheckState(check)
+        self.setItem(row, 9, item9)
+
+        self.to_set_row_buttons.emit(row, row_item)
+        
+    def get_sep_button(self):
+        button = QPushButton(self.drag_widget)
+        button.setFocusPolicy(Qt.NoFocus)
+        button.setFixedWidth(1)
+        return button
+
+    def set_drag_data_on_widget(self, row_data):  # 请参照user_data.py的函数show_variety_sheets里的取数方法
+        col_widths = []
+        for col in range(self.columnCount()):
+            col_widths.append(self.columnWidth(col))
+
+        drag_layout = QHBoxLayout(self.drag_widget)
+        drag_layout.setContentsMargins(0, 0, 0, 0)
+        drag_layout.setSpacing(0)
+        label1 = QLabel("%04d" % row_data["id"], self.drag_widget)
+        label1.setMinimumWidth(col_widths[0])
+        label1.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label1)
+
+        drag_layout.addWidget(self.get_sep_button())
+
+        label2 = QLabel(str(row_data['create_date']), self.drag_widget)
+        label2.setMinimumWidth(col_widths[1])
+        label2.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label2)
+
+        drag_layout.addWidget(self.get_sep_button())
+
+        text = '是' if row_data['is_dated'] else '否'
+        label3 = QLabel(text, self.drag_widget)
+        label3.setMinimumWidth(col_widths[2])
+        label3.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label3)
+        drag_layout.addWidget(self.get_sep_button())
+
+        label4 = QLabel(str(row_data['sheet_name']), self.drag_widget)
+        label4.setMinimumWidth(col_widths[3])
+        label4.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label4)
+        drag_layout.addWidget(self.get_sep_button())
+
+        label5 = QLabel(str(row_data['update_date']), self.drag_widget)
+        label5.setMinimumWidth(col_widths[4])
+        label5.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label5)
+        drag_layout.addWidget(self.get_sep_button())
+
+        label6 = QLabel(str(row_data['update_by']), self.drag_widget)
+        label6.setMinimumWidth(col_widths[5])
+        label6.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label6)
+        drag_layout.addWidget(self.get_sep_button())
+
+        label7 = QLabel(str(row_data['update_count']), self.drag_widget)
+        label7.setMinimumWidth(col_widths[6])
+        label7.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label7)
+        drag_layout.addWidget(self.get_sep_button())
+
+        drag_layout.addStretch()
+        self.drag_widget.setLayout(drag_layout)
+        setattr(self.drag_widget, 'row_data', row_data)
+        self.can_show_drag = True
 
 
 class VarietySheetUI(QWidget):
@@ -188,8 +391,27 @@ class VarietySheetUI(QWidget):
         self.only_me_check.setChecked(True)
         opts_layout.addWidget(self.only_me_check)
 
+        tip_label = QLabel(self)
+        tip_label.setText('提示:在第1列范围按住拖动排序!(辅助跨行排序,结果刷新为准.)')
+        pal = tip_label.palette()
+        pal.setColor(QPalette.WindowText, QColor(233, 66, 66))
+        font = tip_label.font()
+        font.setPointSize(9)
+        tip_label.setFont(font)
+        tip_label.setPalette(pal)
+        tip_label.setAutoFillBackground(True)
+        opts_layout.addWidget(tip_label)
+        self.refresh_button = QPushButton('刷新', self)
+        opts_layout.addWidget(self.refresh_button)
         opts_layout.addStretch()
         main_layout.addLayout(opts_layout)
+
+        # 搜索框
+        self.query_edit = QLineEdit(self)
+        self.query_edit.setPlaceholderText('在此输入数据表名称进行检索')
+        self.query_edit.setFixedHeight(22)
+        main_layout.addWidget(self.query_edit)
+
         self.sheet_table = SheetTable(self)
         self.sheet_table.setFrameShape(QFrame.NoFrame)
         self.sheet_table.setFocusPolicy(Qt.NoFocus)
@@ -218,6 +440,198 @@ class VarietySheetUI(QWidget):
         )
 
 
+class ChartTable(QTableWidget):
+    cell_changed_signal = pyqtSignal(bool)
+    to_set_row_buttons = pyqtSignal(int, dict)
+    right_mouse_clicked = pyqtSignal()
+
+    def __init__(self, *args, **kwargs):
+        super(ChartTable, self).__init__(*args, **kwargs)
+        self.drag_row = -1
+        self.drag_widget = None
+        
+        self.can_show_drag = False
+        
+    def init_drag_widget(self):
+        if self.drag_widget is not None and isinstance(self.drag_widget, QWidget):
+            self.drag_widget.deleteLater()
+            self.drag_widget = None
+        self.drag_widget = QWidget(self)
+        p = self.drag_widget.palette()
+        p.setColor(QPalette.Background, QColor(0, 200, 100))
+        self.drag_widget.setPalette(p)
+        self.drag_widget.setAutoFillBackground(True)
+    
+        self.drag_widget.resize(self.width(), 30)
+        self.drag_widget.hide()
+        self.can_show_drag = False
+
+    def get_sep_button(self):
+        button = QPushButton(self.drag_widget)
+        button.setFocusPolicy(Qt.NoFocus)
+        button.setFixedWidth(1)
+        return button
+
+    def set_drag_data_on_widget(self, row_data):
+        col_widths = []
+        for col in range(self.columnCount()):
+            col_widths.append(self.columnWidth(col))
+
+        drag_layout = QHBoxLayout(self.drag_widget)
+        drag_layout.setContentsMargins(0, 0, 0, 0)
+        drag_layout.setSpacing(0)
+        label1 = QLabel("%04d" % row_data["id"], self.drag_widget)
+        label1.setMinimumWidth(col_widths[0])
+        label1.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label1)
+
+        drag_layout.addWidget(self.get_sep_button())
+
+        label2 = QLabel(str(row_data['creator']), self.drag_widget)
+        label2.setMinimumWidth(col_widths[1])
+        label2.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label2)
+
+        drag_layout.addWidget(self.get_sep_button())
+
+        label3 = QLabel(str(row_data['create_time']), self.drag_widget)
+        label3.setMinimumWidth(col_widths[2])
+        label3.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label3)
+
+        drag_layout.addWidget(self.get_sep_button())
+
+        label4 = QLabel(str(row_data['title']), self.drag_widget)
+        label4.setMinimumWidth(col_widths[3])
+        label4.setAlignment(Qt.AlignCenter)
+        drag_layout.addWidget(label4)
+
+        drag_layout.addWidget(self.get_sep_button())
+
+        drag_layout.addStretch()
+        self.drag_widget.setLayout(drag_layout)
+        setattr(self.drag_widget, 'row_data', row_data)
+        self.can_show_drag = True
+
+    def set_row_bg_color(self, row, color):
+        if row < 0:
+            return
+        for col in range(self.columnCount()):
+            item = self.item(row, col)
+            if item:
+                item.setBackground(QBrush(color))
+
+    def insert_row_data(self, row, row_item):
+        self.insertRow(row)
+        item0 = QTableWidgetItem("%04d" % row_item["id"])
+        item0.setTextAlignment(Qt.AlignCenter)
+        item0.setData(Qt.UserRole, row_item)
+        self.setItem(row, 0, item0)
+
+        item1 = QTableWidgetItem(row_item["creator"])
+        item1.setTextAlignment(Qt.AlignCenter)
+        self.setItem(row, 1, item1)
+
+        item2 = QTableWidgetItem(row_item["create_time"])
+        item2.setTextAlignment(Qt.AlignCenter)
+        self.setItem(row, 2, item2)
+
+        item3 = QTableWidgetItem(row_item["title"])
+        item3.setTextAlignment(Qt.AlignCenter)
+        self.setItem(row, 3, item3)
+        # 主页
+        item7 = QTableWidgetItem()
+        if row_item["is_principal"] == "0":
+            text = "显示"
+            checked = Qt.Unchecked
+        elif row_item["is_principal"] == "1":
+            text = "审核"
+            checked = Qt.PartiallyChecked
+        else:
+            text = "开启"
+            checked = Qt.Checked
+        item7.setText(text)
+        item7.setCheckState(checked)
+        self.setItem(row, 7, item7)
+
+        # 品种页
+        item8 = QTableWidgetItem()
+        checked = Qt.Checked if row_item["is_petit"] else Qt.Unchecked
+        item8.setText("开启")
+        item8.setCheckState(checked)
+        self.setItem(row, 8, item8)
+
+        # 仅私有可见
+        item9 = QTableWidgetItem("私有")
+        checked = Qt.Checked if row_item["is_private"] else Qt.Unchecked
+        item9.setCheckState(checked)
+        self.setItem(row, 9, item9)
+
+        self.to_set_row_buttons.emit(row, row_item)
+
+    def mouseMoveEvent(self, event) -> None:
+        row, col = self.indexAt(event.pos()).row(), self.indexAt(event.pos()).column()
+        if col == 0:
+            self.drag_widget.move(0, event.pos().y())
+            if self.can_show_drag:
+                self.drag_widget.show()
+            # 设置当前行的背景色
+            self.set_row_bg_color(row, QColor(254, 163, 86))
+            # 还原上下行的背景色
+            color1 = QColor(255, 255, 255) if (row + 1) % 2 == 0 else QColor(245, 245, 245)  # 偶数行
+            color2 = QColor(255, 255, 255) if (row - 1) % 2 == 0 else QColor(245, 245, 245)  # 偶数行
+            self.set_row_bg_color(row + 1, color1)
+            self.set_row_bg_color(row - 1, color2)
+        else:
+            self.init_drag_widget()
+            self.drag_row = -1
+
+        super(ChartTable, self).mouseMoveEvent(event)
+
+    def mousePressEvent(self, event) -> None:
+        if event.buttons() == Qt.RightButton:
+            self.right_mouse_clicked.emit()
+        if event.buttons() == Qt.LeftButton:
+            row, col = self.indexAt(event.pos()).row(), self.indexAt(event.pos()).column()
+            cur_item = self.item(row, col)
+            if col == 0 and cur_item:
+                self.cell_changed_signal.emit(False)  # 关掉单元格变化
+                self.init_drag_widget()
+                drag_row_data = cur_item.data(Qt.UserRole)
+                self.set_drag_data_on_widget(drag_row_data)
+                self.drag_row = row
+        super(ChartTable, self).mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:
+        if self.drag_row >= 0:
+            row, col = self.indexAt(event.pos()).row(), self.indexAt(event.pos()).column()
+            self.set_row_bg_color(row, QColor(255, 255, 255))
+            # 插入目标位置
+            row_data = getattr(self.drag_widget, 'row_data', None)
+            if row_data and row >=0 and self.drag_row != row:
+                # 异步请求更改排序，然后插入数据
+                sort_thread = SwapChartSorted()
+                sort_thread.finished.connect(sort_thread.deleteLater)
+                move_id = row_data['id']
+                if self.drag_row > row and row > 0:
+                    to_id = self.item(row - 1, 0).text()
+                else:
+                    to_id = self.item(row, 0).text()
+                body_data = {
+                    "move_id": move_id,
+                    "to_id": to_id
+                }
+                sort_thread.set_body_data(body_data)
+                sort_thread.start()
+
+                self.removeRow(self.drag_row)
+                self.insert_row_data(row, row_data)
+                self.selectRow(row)
+        self.init_drag_widget()
+        self.cell_changed_signal.emit(True)
+        super(ChartTable, self).mouseReleaseEvent(event)
+
+
 class SheetChartUI(QWidget):
     def __init__(self, *args, **kwargs):
         super(SheetChartUI, self).__init__(*args, **kwargs)
@@ -243,9 +657,44 @@ class SheetChartUI(QWidget):
         self.only_me_check.setChecked(True)
         opts_layout.addWidget(self.only_me_check)
 
+        tip_label = QLabel(self)
+        tip_label.setText('提示:在第1列范围按住拖动排序!(辅助跨行排序,结果刷新为准.)')
+        pal = tip_label.palette()
+        pal.setColor(QPalette.WindowText, QColor(233, 66, 66))
+        font = tip_label.font()
+        font.setPointSize(9)
+        tip_label.setFont(font)
+        tip_label.setPalette(pal)
+        tip_label.setAutoFillBackground(True)
+        opts_layout.addWidget(tip_label)
+        self.refresh_button = QPushButton('刷新', self)
+        opts_layout.addWidget(self.refresh_button)
+
         opts_layout.addStretch()
         main_layout.addLayout(opts_layout)
-        self.chart_table = QTableWidget(self)
+
+        # 检索框
+        tool_widget = QWidget(self)
+        tool_lt = QHBoxLayout(tool_widget)
+        tool_lt.setContentsMargins(0,0,0,0)
+
+        self.query_edit = QLineEdit(self)
+        self.query_edit.setPlaceholderText('在此输入图形名称进行检索')
+        self.query_edit.setFixedHeight(22)
+        tool_lt.addWidget(self.query_edit)
+        self.compare_explain_btn = QPushButton('对比解读说明', tool_widget)
+        self.compare_explain_btn.setCursor(Qt.PointingHandCursor)
+        self.compare_explain_btn.setFlat(True)
+
+        pal = self.compare_explain_btn.palette()
+        pal.setColor(QPalette.ButtonText, QColor(50,150,250))
+        self.compare_explain_btn.setPalette(pal)
+        tool_lt.addWidget(self.compare_explain_btn)
+
+        tool_widget.setFixedHeight(22)
+        main_layout.addWidget(tool_widget)
+
+        self.chart_table = ChartTable(self)
         self.chart_table.setFrameShape(QFrame.NoFrame)
         self.chart_table.setFocusPolicy(Qt.NoFocus)
         self.chart_table.verticalHeader().hide()

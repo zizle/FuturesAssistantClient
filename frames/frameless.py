@@ -45,6 +45,7 @@ from frames.about_us import CheckVersion
 from frames.passport import UserPassport
 from frames.user_center import UserCenter
 from frames.delivery import DeliveryPage
+from frames.trade_diagnose import TradeDiagnose
 from popup.update import NewVersionPopup
 from popup.message import ExitAppPopup, InformationPopup
 from popup.password import EditPasswordPopup
@@ -428,6 +429,9 @@ class ClientMainApp(FrameLessWindowUI):
             page = DeliveryPage()
         elif module_id == "4":           # 计算平台
             page = CalculatePlat()
+        elif module_id == '5':     # 交易诊断
+            page = TradeDiagnose(self)
+            page.set_all_pages()
         elif module_id == "-9_0_0":      # 后台管理-广告设置
             page = HomepageAdAdmin(self)
         elif module_id == "-9_1_0":
