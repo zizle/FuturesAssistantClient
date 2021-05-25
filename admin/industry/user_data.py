@@ -13,12 +13,13 @@ from PyQt5.QtWidgets import qApp, QListWidgetItem, QTableWidgetItem, QHeaderView
 from PyQt5.QtCore import Qt, QUrl, QThread, pyqtSignal
 from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
 from PyQt5.QtGui import QBrush, QColor, QCursor, QIcon
-from settings import SERVER_API, logger
+from settings import SERVER_API, logger, STATIC_URL
 from utils.client import get_user_token, get_client_uuid
 from popup.industry_popup import (UpdateFolderPopup, DisposeChartPopup, SheetWidgetPopup, AddSheetRecordPopup,
                                   ExportSheetPopup,SetComparesPopup)
 from popup.sheet_charts import SheetChartsPopup, DeciphermentPopup, ChartPopup, EditChartOptionPopup
 from popup.message import InformationPopup, WarningPopup
+from widgets.pdf_shower import PDFContentPopup
 from widgets import OperateButton
 from .user_data_ui import UserDataMaintainUI, SheetChartUI
 
@@ -168,6 +169,12 @@ class UserDataMaintain(UserDataMaintainUI):
         self.sheet_chart_widget.chart_table.to_set_row_buttons.connect(self.set_row_operation_button)
         self.sheet_chart_widget.refresh_button.clicked.connect(self.chart_page_variety_changed)
         self.sheet_chart_widget.chart_table.right_mouse_clicked.connect(self.chart_table_right_mouse)
+        # 对比解读说明
+        self.sheet_chart_widget.compare_explain_btn.clicked.connect(self.view_compare_explain_file)
+
+    def view_compare_explain_file(self):
+        popup = PDFContentPopup('对比解读说明', STATIC_URL + 'compare_explain.pdf', self)
+        popup.exec_()
 
     def open_close_cell_change_signal(self, flag):
         if flag:

@@ -15,6 +15,8 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 from frames.trade_diagnose import threads
 from frames.trade_diagnose.utils import set_table_style
+from apis import LoggerApi
+from utils.client import get_client_uuid_with_ini
 
 """
 展示echarts图的类和管道
@@ -73,6 +75,15 @@ class LoadDataWidget(QWidget):
         selector_layout.addWidget(self.daily_bill)
         selector_layout.addWidget(self.month_daily)
         selector_layout.addWidget(self.month_bill)
+
+        self.daily_bill.hide()
+        self.month_daily.hide()
+        self.month_bill.hide()
+        self.t_label = QLabel('当前仅支持逐日盯市的日账单诊断。', self)
+        self.t_label.setFixedHeight(30)
+        self.t_label.setStyleSheet('color: #d0604d')
+        selector_layout.addWidget(self.t_label)
+
         selector_layout.addStretch()
         layout.addLayout(selector_layout)
 
@@ -297,6 +308,20 @@ class BaseViewWidget(QScrollArea):
             {'nkey': '夏普比率', 'nrow': 12, 'ncol': 0, 'vkey': 'xpbl', 'vrow': 12, 'vcol': 1},
             {'nkey': '卡玛比率', 'nrow': 12, 'ncol': 2, 'vkey': 'kmbl', 'vrow': 12, 'vcol': 3},
         ]
+
+        self.log_api = LoggerApi()
+        self.is_logged = False
+
+    def showEvent(self, ev) -> None:
+        # 发送网络请求到服务端记录使用了本模块
+        super(BaseViewWidget, self).showEvent(ev)
+        if not self.is_logged:
+            data = {
+                'client': get_client_uuid_with_ini(),
+                'error': '访问了交易诊断'
+            }
+            self.log_api.post(data)
+            self.is_logged = True
 
     def clear_thread(self):
         if self.thread_:

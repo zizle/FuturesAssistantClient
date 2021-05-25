@@ -25,14 +25,14 @@ class HorizontalTabBar(QTabBar):
     def paintEvent(self, event):
         painter = QStylePainter(self)
         option = QStyleOptionTab()
-        painter.begin(self)
+        # painter.begin(self)
         for index in range(self.count()):
             self.initStyleOption(option, index)
             tabRect = self.tabRect(index)
             tabRect.moveLeft(4)
             painter.drawControl(QStyle.CE_TabBarTabShape, option)
             painter.drawText(tabRect, Qt.AlignVCenter | Qt.TextDontClip, self.tabText(index))
-        painter.end()
+        # painter.end()
 
 
 class ConfigSourceUI(QWidget):
@@ -674,10 +674,25 @@ class SheetChartUI(QWidget):
         main_layout.addLayout(opts_layout)
 
         # 检索框
+        tool_widget = QWidget(self)
+        tool_lt = QHBoxLayout(tool_widget)
+        tool_lt.setContentsMargins(0,0,0,0)
+
         self.query_edit = QLineEdit(self)
         self.query_edit.setPlaceholderText('在此输入图形名称进行检索')
         self.query_edit.setFixedHeight(22)
-        main_layout.addWidget(self.query_edit)
+        tool_lt.addWidget(self.query_edit)
+        self.compare_explain_btn = QPushButton('对比解读说明', tool_widget)
+        self.compare_explain_btn.setCursor(Qt.PointingHandCursor)
+        self.compare_explain_btn.setFlat(True)
+
+        pal = self.compare_explain_btn.palette()
+        pal.setColor(QPalette.ButtonText, QColor(50,150,250))
+        self.compare_explain_btn.setPalette(pal)
+        tool_lt.addWidget(self.compare_explain_btn)
+
+        tool_widget.setFixedHeight(22)
+        main_layout.addWidget(tool_widget)
 
         self.chart_table = ChartTable(self)
         self.chart_table.setFrameShape(QFrame.NoFrame)
