@@ -4,8 +4,9 @@
 # Author: zizle
 # Created: 2020-05-18
 # ---------------------------
-from PyQt5.QtWidgets import QDialog, QLabel, QGridLayout, QPushButton
-from PyQt5.QtCore import Qt
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtWidgets import QDialog, QLabel, QGridLayout, QPushButton, QDesktopWidget, QVBoxLayout
+from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QPixmap
 
 
@@ -35,3 +36,20 @@ class InformationPopup(QDialog):
         }
         """)
         self.setAttribute(Qt.WA_DeleteOnClose)
+
+
+class WebPopup(QDialog):
+    def __init__(self, *args, **kwargs):
+        super(WebPopup, self).__init__(*args, **kwargs)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        lt = QVBoxLayout(self)
+        lt.setContentsMargins(0, 0, 0, 0)
+        self.web = QWebEngineView(self)
+        lt.addWidget(self.web)
+        self.setLayout(lt)
+        available_size = QDesktopWidget().availableGeometry()  # 用户的桌面信息,来改变自身窗体大小
+        available_width, available_height = available_size.width(), available_size.height()
+        self.resize(available_width * 0.7, available_height * 0.72)
+
+    def load_page(self, url):
+        self.web.load(QUrl(url))

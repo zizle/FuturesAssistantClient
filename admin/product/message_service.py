@@ -5,7 +5,7 @@
 
 """ 后台管理 - 产品服务 - 资讯服务"""
 from .abstract import ProductServiceAdmin, Qt
-from .message import ShortMsgAdmin, ReportFileAdmin, TechnicalDiskAdmin
+from .message import ShortMsgAdmin, ReportFileAdmin, TechnicalDiskAdmin, ProductArticle
 
 
 class MessageServiceAdmin(ProductServiceAdmin):
@@ -13,6 +13,7 @@ class MessageServiceAdmin(ProductServiceAdmin):
         {"id": 1, "name": "短信通"},
         {"id": 2, "name": "报告管理"},
         {"id": 3, "name": "市场路演"},
+        {"id": 4, "name": "分析文章"},
         # {"id": 4, "name": "技术解盘"},
     ]
 
@@ -24,7 +25,7 @@ class MessageServiceAdmin(ProductServiceAdmin):
         elif menu_id == 2:
             page = ReportFileAdmin(self)
         elif menu_id == 4:
-            page = TechnicalDiskAdmin(self)
+            page = ProductArticle(self)
         else:
             return
         self.frame_container.setCentralWidget(page)

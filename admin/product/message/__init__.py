@@ -5,3 +5,4 @@
 from .shortmsg import ShortMsgAdmin
 from .report import ReportFileAdmin
 from .technical_disk import TechnicalDiskAdmin
+from .article import ProductArticle

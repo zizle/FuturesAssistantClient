@@ -12,8 +12,9 @@ from settings import STATIC_URL, ADMINISTRATOR
 from widgets import OptionWidget, Paginator, PDFContentPopup
 from apis.variety import VarietyAPI
 from apis.product import ReportsAPI
+from apis.product.analysis_article import GetAnalysisArticle, PutAnalysisArticle
 from utils.constant import VERTICAL_SCROLL_STYLE, HORIZONTAL_SCROLL_STYLE, HORIZONTAL_STYLE_NO_GRID, HORIZONTAL_HEADER_STYLE
-
+from popup import WebPopup
 
 class ReportTable(QTableWidget):
     def __init__(self, *args, **kwargs):
@@ -88,6 +89,33 @@ class ReportTable(QTableWidget):
         p = PDFContentPopup(file=file_url, title=title, parent=self)
         p.set_file_id(file_id)
         p.exec_()
+
+
+class ArticleTable(ReportTable):
+    def __init__(self, *args, **kwargs):
+        super(ArticleTable, self).__init__(*args, **kwargs)
+        self.put_thread = PutAnalysisArticle(self)
+
+    def view_detail_report(self, row, col):
+        item = self.item(row, 0)
+        title = self.item(row, 1).text()
+        file_data = item.data(Qt.UserRole)
+        file_url = file_data.get('file_url', '')
+        file_id = file_data.get('id', -1)
+        if file_id > 0:
+            self.put_thread.set_body(file_data)
+            self.put_thread.start()
+        if file_url:
+            filepath = STATIC_URL + file_url
+            p = PDFContentPopup(file=filepath, title=title, parent=self)
+            p.exec_()
+        else:
+            web_url = file_data.get('web_url', '')
+            if web_url:
+                pop = WebPopup(self)
+                pop.setWindowTitle('查看内容')
+                pop.load_page(web_url)
+                pop.exec_()
 
 
 class MultiReport(QWidget):
@@ -215,14 +243,75 @@ class RegularReport(MultiReport):
         self.REPORT_TYPE = 1
 
 
-class SpecialReport(MultiReport):
-    """ 分析文章 """
-    REPORT_TYPE = 5
+# class SpecialReport(MultiReport):
+#     """ 分析文章 """
+#     REPORT_TYPE = 5
+#
+#     def __init__(self, *args, **kwargs):
+#         super(SpecialReport, self).__init__(*args, **kwargs)
+#         self.type_label.hide()
+#         self.report_combobox.hide()
 
+# 2021-06-01分析文章独立了
+class SpecialReport(QWidget):
     def __init__(self, *args, **kwargs):
         super(SpecialReport, self).__init__(*args, **kwargs)
-        self.type_label.hide()
-        self.report_combobox.hide()
+        lt = QVBoxLayout(self)
+        lt.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(lt)
+
+        # 显示的表格
+        self.article_table = ArticleTable(self)
+        self.article_table.setColumnCount(3)
+        self.article_table.setHorizontalHeaderLabels(['品种', '标题', '日期'])
+        self.article_table.horizontalHeader().setSectionHidden(4, True)  # 20210312更新追加的；20210324决定不显示了，没人读
+
+        self.article_table.horizontalHeader().setStyleSheet(HORIZONTAL_STYLE_NO_GRID)
+        self.article_table.horizontalHeader().setDefaultSectionSize(150)
+        self.article_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+
+        lt.addWidget(self.article_table)
+
+        # 分页器
+        paginator_widget = QWidget(self)
+        pag_lt = QHBoxLayout(paginator_widget)
+        paginator_widget.setLayout(pag_lt)
+        paginator_widget.setFixedHeight(40)
+        self.paginator = Paginator()
+        self.paginator.setParent(paginator_widget)
+        self.paginator.clicked.connect(self.query_analysis_article)
+        pag_lt.addStretch()
+        pag_lt.addWidget(self.paginator)
+
+        lt.addWidget(paginator_widget)
+
+        self.article_api = GetAnalysisArticle()
+        self.article_api.article_reply.connect(self.show_articles)
+        self.initial = False
+
+    def showEvent(self, event) -> None:
+        super(SpecialReport, self).showEvent(event)
+        if not self.initial:
+            self.query_analysis_article()
+            self.initial = True
+
+    def query_analysis_article(self):
+        current_page = self.paginator.current_page
+        self.article_api.set_pages(current_page, 30)
+        self.article_api.start()
+
+    def show_articles(self, data):
+        self.paginator.setTotalPages(data.get('total_page', 1))
+        articles = data.get('articles', [])
+        # 显示数据
+        self.article_table.clearContents()
+        self.article_table.setRowCount(len(articles))
+        for row, row_item in enumerate(articles):
+            for col, k in enumerate(['variety_name', 'title', 'create_date']):
+                item = QTableWidgetItem(row_item[k])
+                item.setData(Qt.UserRole, row_item)
+                item.setTextAlignment(Qt.AlignCenter)
+                self.article_table.setItem(row, col, item)
 
 
 class ResearchReport(MultiReport):
