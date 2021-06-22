@@ -218,12 +218,12 @@ class SheetTable(QTableWidget):
             row, col = self.indexAt(event.pos()).row(), self.indexAt(event.pos()).column()
             cur_item = self.item(row, col)
             if col == 0 and cur_item:
-                self.cell_changed_signal.emit(False)  # 关掉单元格变化
                 self.init_drag_widget()
                 drag_row_data = cur_item.data(Qt.UserRole)  # 获取数据
                 self.set_drag_data_on_widget(drag_row_data)
                 # 记录老数据行号
                 self.drag_row = row
+        self.cell_changed_signal.emit(False)  # 关掉单元格变化
         super(SheetTable, self).mousePressEvent(event)
 
     def mouseReleaseEvent(self, event) -> None:
@@ -257,7 +257,7 @@ class SheetTable(QTableWidget):
                 self.selectRow(row)
         self.init_drag_widget()
         # 还原信号
-        self.cell_changed_signal.emit(True)  # 关掉单元格变化
+        self.cell_changed_signal.emit(True)  # 还原单元格变化
         super(SheetTable, self).mouseReleaseEvent(event)
 
     def insert_row_data(self, row, row_item):
@@ -595,11 +595,12 @@ class ChartTable(QTableWidget):
             row, col = self.indexAt(event.pos()).row(), self.indexAt(event.pos()).column()
             cur_item = self.item(row, col)
             if col == 0 and cur_item:
-                self.cell_changed_signal.emit(False)  # 关掉单元格变化
+
                 self.init_drag_widget()
                 drag_row_data = cur_item.data(Qt.UserRole)
                 self.set_drag_data_on_widget(drag_row_data)
                 self.drag_row = row
+        self.cell_changed_signal.emit(False)  # 关掉单元格变化
         super(ChartTable, self).mousePressEvent(event)
 
     def mouseReleaseEvent(self, event) -> None:
@@ -628,7 +629,7 @@ class ChartTable(QTableWidget):
                 self.insert_row_data(row, row_data)
                 self.selectRow(row)
         self.init_drag_widget()
-        self.cell_changed_signal.emit(True)
+        self.cell_changed_signal.emit(True)  # 开启信号
         super(ChartTable, self).mouseReleaseEvent(event)
 
 

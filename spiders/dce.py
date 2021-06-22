@@ -252,7 +252,6 @@ class DCEParser(QObject):
         value_df = self._parser_variety_rank(cache_folder)
         if not value_df.empty:
             # 填充空值(合并后产生空值)
-            print("改变数据类型")
             value_df = value_df.fillna('-')
             # 将数据需要为int列转为int
             value_df["rank"] = value_df["rank"].apply(str_to_int)

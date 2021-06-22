@@ -223,9 +223,9 @@ class CZCEParser(QObject):
         contract_en = None
         is_variety = True
         # 遍历每一行，取出每个品种的数据表
-        print(self.date)
+        # print(self.date)
         for row_content in xls_df.itertuples():
-            print(row_content[1])
+            # print(row_content[1])
             info_for_match_ = full_width_to_half_width(str(row_content[1]))
             search_variety = re.search(r'品种:(.*)\s日期.*', info_for_match_)  # 找到品种行开头
             search_contract = re.search(r'合约:(.*)\s日期.*', info_for_match_)  # 找到合约
